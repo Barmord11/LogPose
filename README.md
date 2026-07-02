@@ -1,32 +1,39 @@
-# React + TypeScript + Vite
+# LogPose — Find Your Way
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+An anime list website with a nautical theme. Browse a catalogue, track watched episodes, keep Watched / Plan-to-Watch / Favorites lists, and jump straight to external watch links.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Home** — featured hero, popular grid, newly-released bento with live Captain's Log stats
+- **Search** — live text search (title, alt title, genre), clickable genre cards, working filter chips, result counts, clear-filters
+- **My List** — Watched / Plan to Watch / Favorites tabs with per-series episode progress bars
+- **Detail** — overview, characters, per-episode tracker (mark all / clear all), anchor up/down rating, favorite
+- **Profile** — live stats (episodes, series, plan, favorites) and navigator level computed from real state
+- **Watch links** — every card and detail page routes to the series' external `watchUrl`
+- State persists to `localStorage`; no backend required
 
-## React Compiler
+## Responsive layout
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Mobile (<768px)**: sticky glass header + bottom nav with compass FAB (opens a random anime)
+- **Desktop (≥768px)**: fixed sidebar nav + top bar with global search; mobile chrome hidden via CSS
 
-## Expanding the Oxlint configuration
+Global design tokens and shared component classes live in `src/index.css`; layout/breakpoint rules in `src/responsive.css`; page-specific styling stays inside each page component.
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+## Scripts
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm run dev      # start dev server
+npm run build    # typecheck + production build
+npm test         # vitest unit tests (state reducer + data integrity)
+npm run lint     # oxlint
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Structure
+
+```
+src/
+  context/     AppContext (provider + hooks), reducer.ts (pure logic + tests)
+  components/  Shared UI: nav bars, PlayButton, AddDropdown, AnchorRating, StatusBadge…
+  pages/       Home, Search, MyList, AnimeDetail, Profile
+  data/        Anime catalogue, genres, filter chips (+ integrity tests)
+```
