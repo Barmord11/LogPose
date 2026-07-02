@@ -1,21 +1,24 @@
 import type { Page } from '../App'
+import { useProfileStats } from '../context/AppContext'
 
 interface SidebarProps {
   activePage: Page
   navigate: (page: Page) => void
 }
 
+/* Same destinations + labels as mobile BottomNav — one nav model everywhere */
 const NAV_ITEMS = [
   { page: 'home'    as Page, icon: 'home',          label: 'Home'    },
-  { page: 'search'  as Page, icon: 'explore',        label: 'Trending'},
-  { page: 'mylist'  as Page, icon: 'movie',          label: 'Library' },
-  { page: 'profile' as Page, icon: 'manage_accounts',label: 'Settings'},
+  { page: 'search'  as Page, icon: 'search',        label: 'Search'  },
+  { page: 'mylist'  as Page, icon: 'subscriptions', label: 'My List' },
+  { page: 'profile' as Page, icon: 'person',        label: 'Profile' },
 ]
 
 /** Desktop-only sidebar navigation.
  *  Hidden on mobile via CSS (.sidebar { display: none } until md breakpoint).
  */
 export default function Sidebar({ activePage, navigate }: SidebarProps) {
+  const { level } = useProfileStats()
   return (
     <aside className="sidebar glass-nav">
 
@@ -61,22 +64,17 @@ export default function Sidebar({ activePage, navigate }: SidebarProps) {
         ))}
       </nav>
 
-      {/* User card at bottom */}
-      <div className="sidebar-user">
+      {/* User card at bottom → profile */}
+      <button
+        className="sidebar-user"
+        onClick={() => navigate('profile')}
+        style={{ cursor: 'pointer', textAlign: 'left', width: '100%' }}
+        aria-label="Open profile"
+      >
         <img
           src="/images/user-avatar.jpg"
           alt="Profile"
           style={{ width: '40px', height: '40px', borderRadius: '9999px', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.5)', flexShrink: 0 }}
         />
         <div style={{ overflow: 'hidden' }}>
-          <p style={{ fontFamily: 'var(--font)', fontSize: '14px', fontWeight: 700, color: 'var(--primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            Captain's Cabin
-          </p>
-          <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--outline)' }}>
-            Lvl 14 Navigator
-          </p>
-        </div>
-      </div>
-    </aside>
-  )
-}
+          <p style={{ fontFamily: 'var(--font)', fontSize: '14px', fontWeight: 700, color: 'var(--p

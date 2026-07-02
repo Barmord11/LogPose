@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { Page } from '../App'
+import { animes } from '../data/animes'
 
 interface BottomNavProps {
   navigate: (page: Page, animeId?: number) => void
@@ -20,16 +21,18 @@ const NAV_ITEMS = [
 export default function BottomNav({ navigate, activePage }: BottomNavProps) {
   const [spin, setSpin] = useState(false)
 
+  /** Compass = "chart a random course": opens a random anime's detail page.
+   *  (Home already has its own nav item — no duplicate feature.) */
   const handleCompass = () => {
     setSpin(true)
     setTimeout(() => setSpin(false), 700)
-    navigate('home')
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    const random = animes[Math.floor(Math.random() * animes.length)]
+    navigate('detail', random.id)
   }
 
   return (
     <nav
-      className="glass-nav"
+      className="glass-nav bottom-nav"
       style={{
         position: 'fixed',
         bottom: 0,
@@ -77,7 +80,8 @@ export default function BottomNav({ navigate, activePage }: BottomNavProps) {
           }}
           onMouseDown={e => (e.currentTarget.style.transform = 'scale(0.9)')}
           onMouseUp={e => (e.currentTarget.style.transform = 'scale(1)')}
-          aria-label="Navigate home"
+          aria-label="Open a random anime"
+          title="Chart a random course"
         >
           <span
             className="material-symbols-outlined"
@@ -142,15 +146,4 @@ function NavButton({
       aria-current={active ? 'page' : undefined}
     >
       <span
-        className="material-symbols-outlined"
-        style={{
-          fontSize: '24px',
-          fontVariationSettings: active && fillWhenActive ? "'FILL' 1" : "'FILL' 0",
-        }}
-      >
-        {icon}
-      </span>
-      <span style={{ fontSize: '10px', fontWeight: 700 }}>{label}</span>
-    </button>
-  )
-}
+        className="material-symbols-outlin

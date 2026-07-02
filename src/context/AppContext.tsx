@@ -191,10 +191,9 @@ export function useProfileStats() {
   const { state } = useApp()
   const totalEpisodes = Object.values(state.watchedEpisodes)
     .reduce((sum, eps) => sum + eps.length, 0)
+  const seriesWatched = state.watchedList.length
   return {
-    seriesWatched:   state.watchedList.length,
+    seriesWatched,
     planCount:       state.planToWatchList.length,
     favoritesCount:  state.favorites.length,
-    totalEpisodes,
-  }
-}
+    

@@ -100,7 +100,7 @@ export default function ProfilePage({ navigate }: NavProps) {
           Grand Line Voyager
         </h1>
         <p style={{ fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--secondary-container)' }}>
-          Navigator · Level {Math.max(1, Math.floor(stats.seriesWatched / 3) + 1)}
+          Navigator · Level {stats.level}
         </p>
         <p style={{ fontSize: '13px', color: 'var(--on-surface-variant)', marginTop: '8px', lineHeight: 1.5 }}>
           Charting unknown waters since the dawn of the Grand Line era.

@@ -12,7 +12,7 @@ interface HeaderProps {
 export default function Header({ navigate, activePage }: HeaderProps) {
   return (
     <header
-      className="glass-nav"
+      className="glass-nav mobile-header"
       style={{
         position: 'sticky',
         top: 0,
@@ -117,6 +117,4 @@ export default function Header({ navigate, activePage }: HeaderProps) {
           />
         </button>
       </div>
-    </header>
-  )
-}
+    </

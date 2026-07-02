@@ -1,88 +1,70 @@
+import { useState } from 'react'
 import type { Page } from '../App'
 
 interface DesktopTopBarProps {
   activePage: Page
   navigate: (page: Page) => void
+  onSearch: (query: string) => void
 }
 
-const TOP_NAV = [
-  { page: 'home'    as Page, label: 'Home'      },
-  { page: 'mylist'  as Page, label: 'My List'   },
-  { page: 'search'  as Page, label: 'Explore'   },
-]
-
-/** Desktop-only top navigation bar (offset by sidebar width).
- *  Hidden on mobile via CSS.
+/** Desktop-only top bar (offset by sidebar width). Hidden on mobile via CSS.
+ *  Page navigation lives in the Sidebar — this bar only hosts global search
+ *  and the profile shortcut, so no features are duplicated.
  */
-export default function DesktopTopBar({ activePage, navigate }: DesktopTopBarProps) {
+export default function DesktopTopBar({ activePage, navigate, onSearch }: DesktopTopBarProps) {
+  const [value, setValue] = useState('')
+
+  const submit = () => {
+    onSearch(value.trim())
+    setValue('')
+  }
+
   return (
     <header className="desktop-topbar glass-nav">
-      {/* Left: nav links + search */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-        <nav style={{ display: 'flex', gap: '24px' }}>
-          {TOP_NAV.map(item => (
-            <button
-              key={item.page}
-              onClick={() => navigate(item.page)}
-              style={{
-                background: 'none',
-                border: 'none',
-                fontSize: '14px',
-                fontWeight: 700,
-                fontFamily: 'var(--font)',
-                cursor: 'pointer',
-                color: activePage === item.page ? 'var(--secondary)' : 'var(--on-surface-variant)',
-                borderBottom: activePage === item.page ? '2px solid var(--secondary)' : '2px solid transparent',
-                paddingBottom: '4px',
-                transition: 'color 0.2s, border-color 0.2s',
-              }}
-            >
-              {item.label}
-            </button>
-          ))}
-        </nav>
-
-        {/* Search */}
-        <div style={{ position: 'relative' }}>
-          <span
-            className="material-symbols-outlined"
-            style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--outline)', fontSize: '20px', pointerEvents: 'none' }}
-          >
-            search
-          </span>
-          <input
-            className="search-input-desktop"
-            placeholder="Search the Grand Line..."
-            type="text"
-          />
-        </div>
+      {/* Global search */}
+      <div style={{ position: 'relative' }}>
+        <span
+          className="material-symbols-outlined"
+          style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--outline)', fontSize: '20px', pointerEvents: 'none' }}
+        >
+          search
+        </span>
+        <input
+          className="search-input-desktop"
+          placeholder="Search the Grand Line..."
+          type="text"
+          value={value}
+          onChange={e => setValue(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') submit() }}
+          aria-label="Search anime"
+        />
       </div>
 
-      {/* Right: notification, history */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        {['notifications', 'history'].map(icon => (
-          <button
-            key={icon}
-            style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '9999px',
-              background: 'none',
-              border: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--on-surface-variant)',
-              cursor: 'pointer',
-              transition: 'color 0.2s, background 0.2s',
-            }}
-            onMouseEnter={e => (e.currentTarget.style.color = 'var(--secondary)')}
-            onMouseLeave={e => (e.currentTarget.style.color = 'var(--on-surface-variant)')}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: '22px' }}>{icon}</span>
-          </button>
-        ))}
-      </div>
+      {/* Profile shortcut */}
+      <button
+        onClick={() => navigate('profile')}
+        style={{
+          width: '40px',
+          height: '40px',
+          borderRadius: '9999px',
+          overflow: 'hidden',
+          border: activePage === 'profile'
+            ? '2px solid var(--secondary-container)'
+            : '2px solid rgba(255,255,255,0.4)',
+          cursor: 'pointer',
+          background: 'none',
+          padding: 0,
+          flexShrink: 0,
+          transition: 'border-color 0.2s',
+        }}
+        aria-label="Profile"
+      >
+        <img
+          src="/images/user-avatar.jpg"
+          alt="Profile"
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        />
+      </button>
     </header>
   )
 }
