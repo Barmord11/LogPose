@@ -344,3 +344,49 @@
 @media (min-width: 768px) { .fab { display: flex; } }
 .fab:hover { transform: scale(1.1); }
 .fab:active { transform: scale(0.95); }
+
+/* ── DETAIL PAGE GRID ─────────────────────────────────────── */
+.detail-grid {
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+  .detail-grid {
+    grid-template-columns: 280px 1fr;
+    margin-top: -180px;
+  }
+}
+
+/* ── MYLIST RESPONSIVE GRID ───────────────────────────────── */
+.mylist-responsive-grid {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+@media (min-width: 640px) {
+  .mylist-responsive-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (min-width: 1024px) {
+  .mylist-responsive-grid { grid-template-columns: repeat(4, 1fr); }
+}
+@media (min-width: 1280px) {
+  .mylist-responsive-grid { grid-template-columns: repeat(5, 1fr); }
+}
+
+/* ── PROFILE STATS GRID ───────────────────────────────────── */
+.profile-stats-grid {
+  grid-template-columns: repeat(2, 1fr);
+}
+@media (min-width: 768px) {
+  .profile-stats-grid { grid-template-columns: repeat(4, 1fr); }
+  .profile-stats-grid > *:first-child { grid-column: span 4; }
+}
+
+/* ── GENRE GRID (desktop 4-col with wide cards) ───────────── */
+@media (min-width: 768px) {
+  .genre-grid-bento {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  .genre-grid-bento .genre-wide {
+    grid-column: span 2;
+  }
+}

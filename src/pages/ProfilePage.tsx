@@ -1,274 +1,281 @@
-import type { NavProps } from '../App'
-import GlassCard    from '../components/GlassCard'
-import SunsetButton from '../components/SunsetButton'
-import SectionHeader from '../components/SectionHeader'
+/**
+ * ProfilePage — The Captain's Cabin
+ * ───────────────────────────────────
+ * User dashboard with live-computed stats from global state.
+ * - Episodes Watched: sum of all individually tracked episodes
+ * - Series Watched: total entries in watchedList
+ * Both counters auto-update when any episode or list changes.
+ */
 
-// ─────────────────────────────────────────────────────────────
-// ProfilePage — page-specific layout only.
-// Shared UI: GlassCard, SunsetButton, SectionHeader (components).
-// Shared styling: glass-card, profile-stat, action-item,
-//   sunset-gradient, list-item-hover (from index.css).
-// ─────────────────────────────────────────────────────────────
+import type { NavProps } from '../App'
+import { useProfileStats, useApp } from '../context/AppContext'
+
 export default function ProfilePage({ navigate }: NavProps) {
+  const stats = useProfileStats()
+  const { state } = useApp()
+
   const actionItems = [
-    { icon: 'person_edit',        label: 'Edit Details'              },
-    { icon: 'notifications_active', label: 'Notification Preferences' },
-    { icon: 'history',            label: 'Watch History'             },
-    { icon: 'help_center',        label: 'Help Center'               },
+    { icon: 'subscriptions', label: 'My Watched List',    sub: `${stats.seriesWatched} series`,        page: 'mylist' as const },
+    { icon: 'bookmark',      label: 'Plan to Watch',       sub: `${stats.planCount} series queued`,     page: 'mylist' as const },
+    { icon: 'favorite',      label: 'Favourites',          sub: `${stats.favoritesCount} series saved`, page: 'mylist' as const },
+    { icon: 'explore',       label: 'Discover New Series', sub: 'Chart your next voyage',               page: 'search' as const },
   ]
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        background: 'var(--background)',
-        paddingBottom: '32px',
-      }}
-    >
-      {/* Wave decoration — page-specific SVG */}
-      <div style={{ position: 'relative', overflow: 'hidden', height: 0 }}>
-        <svg
-          viewBox="0 0 480 80"
+    <div style={{ minHeight: '100vh', paddingBottom: '80px' }}>
+
+      {/* ══ AVATAR HERO CARD ═══════════════════════════════════ */}
+      <div style={{ position: 'relative', paddingBottom: '60px' }}>
+        {/* Banner gradient */}
+        <div
+          style={{
+            height: '200px',
+            background: 'linear-gradient(135deg, var(--primary) 0%, #405f91 60%, rgba(0,49,52,0.8) 100%)',
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+        >
+          {/* Decorative nautical circles */}
+          {[
+            { size: 200, top: '-60px', right: '-40px', opacity: 0.08 },
+            { size: 120, top: '30px',  right: '80px',  opacity: 0.06 },
+            { size: 80,  top: '80px',  left: '40px',   opacity: 0.07 },
+          ].map((c, i) => (
+            <div
+              key={i}
+              style={{
+                position: 'absolute',
+                width: c.size,
+                height: c.size,
+                borderRadius: '9999px',
+                border: '2px solid rgba(255,255,255,0.9)',
+                top: c.top,
+                right: 'right' in c ? c.right : undefined,
+                left: 'left' in c ? c.left : undefined,
+                opacity: c.opacity,
+              }}
+            />
+          ))}
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'flex-end', padding: '0 16px 0' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: '16px', color: 'rgba(255,255,255,0.3)', marginBottom: '16px', fontVariationSettings: "'FILL' 1" }}>
+              anchor
+            </span>
+          </div>
+        </div>
+
+        {/* Avatar */}
+        <div
           style={{
             position: 'absolute',
             bottom: 0,
-            width: '100%',
-            opacity: 0.05,
-            fill: 'var(--primary)',
-          }}
-        >
-          <path d="M0,40L48,45C96,50,192,60,288,55C384,50,432,35,480,32L480,80L432,80C384,80,288,80,192,80C96,80,48,80,0,80Z" />
-        </svg>
-      </div>
-
-      <div style={{ padding: '32px 16px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-
-        {/* ══ PROFILE HERO CARD ══════════════════════════════ */}
-        <GlassCard
-          radius="20px"
-          style={{
-            padding: '28px 20px',
-            textAlign: 'center',
+            left: '50%',
+            transform: 'translateX(-50%)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: '12px',
           }}
         >
-          {/* Avatar with gradient ring */}
-          <div style={{ position: 'relative', display: 'inline-block' }}>
-            <div
-              style={{
-                width: '96px',
-                height: '96px',
-                borderRadius: '9999px',
-                padding: '3px',
-                background: 'linear-gradient(135deg, var(--secondary-container), var(--tertiary-fixed-dim))',
-              }}
-            >
-              <div
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  borderRadius: '9999px',
-                  overflow: 'hidden',
-                  background: '#fff',
-                }}
-              >
-                <img
-                  src="/images/user-avatar.jpg"
-                  alt="Profile avatar"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-              </div>
-            </div>
-            {/* Level badge */}
-            <div
+          <div
+            style={{
+              width: '96px',
+              height: '96px',
+              borderRadius: '9999px',
+              overflow: 'hidden',
+              border: '4px solid #fff',
+              boxShadow: '0 8px 32px rgba(0,23,54,0.2)',
+              background: 'var(--surface-container)',
+            }}
+          >
+            <img
+              src="/images/user-avatar.jpg"
+              alt="Captain's avatar"
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* ══ NAME & RANK ════════════════════════════════════════ */}
+      <div style={{ textAlign: 'center', padding: '16px 16px 24px', maxWidth: '480px', margin: '0 auto' }}>
+        <h1 style={{ fontFamily: 'var(--font)', fontSize: '26px', fontWeight: 800, color: 'var(--primary)', letterSpacing: '-0.02em', marginBottom: '4px' }}>
+          Grand Line Voyager
+        </h1>
+        <p style={{ fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--secondary-container)' }}>
+          Navigator · Level {Math.max(1, Math.floor(stats.seriesWatched / 3) + 1)}
+        </p>
+        <p style={{ fontSize: '13px', color: 'var(--on-surface-variant)', marginTop: '8px', lineHeight: 1.5 }}>
+          Charting unknown waters since the dawn of the Grand Line era.
+        </p>
+      </div>
+
+      {/* ══ LIVE STATS GRID ════════════════════════════════════ */}
+      <section style={{ padding: '0 16px 32px', maxWidth: '1280px', margin: '0 auto' }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: '12px',
+          }}
+          className="profile-stats-grid"
+        >
+          {/* Episodes Watched — PRIMARY stat, larger */}
+          <div
+            className="glass-card profile-stat"
+            style={{
+              gridColumn: 'span 2',
+              borderRadius: '20px',
+              background: 'linear-gradient(135deg, rgba(0,23,54,0.96) 0%, rgba(64,95,145,0.92) 100%)',
+              padding: '28px',
+              position: 'relative',
+              overflow: 'hidden',
+            }}
+          >
+            <span
+              className="material-symbols-outlined"
               style={{
                 position: 'absolute',
-                bottom: 0,
-                right: 0,
-                background: 'var(--secondary)',
-                color: '#fff',
-                fontSize: '10px',
-                fontWeight: 700,
-                padding: '2px 7px',
-                borderRadius: '9999px',
-                border: '2px solid #fff',
-                fontFamily: 'var(--font)',
+                right: '-16px',
+                bottom: '-16px',
+                fontSize: '110px',
+                color: 'rgba(255,255,255,0.05)',
+                fontVariationSettings: "'FILL' 1",
               }}
             >
-              LV 14
-            </div>
-          </div>
-
-          <div>
-            <h2 className="text-headline-lg text-primary" style={{ fontSize: '22px' }}>Nakama Voyager</h2>
+              movie
+            </span>
+            <p style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'rgba(169,199,255,0.8)', marginBottom: '8px' }}>
+              Episodes Watched
+            </p>
             <p
-              className="text-label-sm text-on-surface-var"
-              style={{ marginTop: '4px', textTransform: 'uppercase', letterSpacing: '0.1em' }}
+              className="profile-stat__value"
+              style={{ fontSize: '52px', color: '#fff', fontWeight: 800, letterSpacing: '-0.04em', lineHeight: 1 }}
             >
-              Grand Line Rank: Rookie
+              {stats.totalEpisodes.toLocaleString()}
+            </p>
+            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '8px' }}>
+              across {stats.seriesWatched} series · updated live
             </p>
           </div>
-        </GlassCard>
 
-        {/* ══ STATS GRID ══════════════════════════════════════ */}
-        {/* Uses universal .profile-stat CSS class */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-          <GlassCard
-            radius="16px"
-            style={{
-              borderBottom: '4px solid var(--tertiary-fixed)',
-              overflow: 'hidden',
-            }}
-          >
-            <div className="profile-stat">
-              <span
-                className="profile-stat__value"
-                style={{ color: 'var(--on-tertiary-fixed-variant)' }}
-              >
-                142
-              </span>
-              <span className="profile-stat__label">Series Watched</span>
-            </div>
-          </GlassCard>
+          {/* Series Watched */}
+          <StatCard
+            label="Series Watched"
+            value={stats.seriesWatched}
+            icon="check_circle"
+            gradient="linear-gradient(135deg, rgba(254,106,52,0.12), rgba(171,53,0,0.06))"
+            accent="var(--secondary)"
+          />
 
-          <GlassCard
-            radius="16px"
-            style={{
-              borderBottom: '4px solid var(--secondary-container)',
-              overflow: 'hidden',
-            }}
-          >
-            <div className="profile-stat">
-              <span
-                className="profile-stat__value"
-                style={{ color: 'var(--on-secondary-container)' }}
-              >
-                3,420
-              </span>
-              <span className="profile-stat__label">Episodes Seen</span>
-            </div>
-          </GlassCard>
+          {/* Plan to Watch */}
+          <StatCard
+            label="On the Horizon"
+            value={stats.planCount}
+            icon="bookmark"
+            gradient="linear-gradient(135deg, rgba(0,49,52,0.10), rgba(102,247,255,0.05))"
+            accent="var(--on-tertiary-container)"
+          />
 
-          {/* Full-width time stat */}
-          <GlassCard
-            radius="16px"
-            style={{ gridColumn: 'span 2' }}
-          >
-            <div
+          {/* Favourites */}
+          <StatCard
+            label="Favourites"
+            value={stats.favoritesCount}
+            icon="favorite"
+            gradient="linear-gradient(135deg, rgba(232,67,147,0.10), rgba(232,67,147,0.04))"
+            accent="#e84393"
+          />
+
+          {/* Total tracked (episodes across all series in plan list) */}
+          <StatCard
+            label="Total Logged"
+            value={stats.seriesWatched + stats.planCount}
+            icon="auto_stories"
+            gradient="linear-gradient(135deg, rgba(64,95,145,0.10), rgba(0,23,54,0.05))"
+            accent="var(--on-primary-container)"
+          />
+        </div>
+      </section>
+
+      {/* ══ ACTION LIST ════════════════════════════════════════ */}
+      <section style={{ padding: '0 16px', maxWidth: '1280px', margin: '0 auto' }}>
+        <h2
+          className="section-header--border"
+          style={{ fontSize: '17px', marginBottom: '16px' }}
+        >
+          Quick Navigation
+        </h2>
+        <div className="glass-card" style={{ borderRadius: '20px', overflow: 'hidden' }}>
+          {actionItems.map((item, i) => (
+            <button
+              key={item.label}
+              onClick={() => navigate(item.page)}
+              className="action-item"
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '16px',
+                borderBottom: i < actionItems.length - 1 ? '1px solid rgba(196,198,208,0.15)' : 'none',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                 <div
                   style={{
                     width: '40px',
                     height: '40px',
-                    borderRadius: '9999px',
-                    background: 'rgba(0,43,91,0.08)',
+                    borderRadius: '12px',
+                    background: 'linear-gradient(135deg, rgba(254,106,52,0.12), rgba(0,23,54,0.06))',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    flexShrink: 0,
                   }}
                 >
-                  <span
-                    className="material-symbols-outlined"
-                    style={{ color: 'var(--on-primary-container)', fontSize: '20px' }}
-                  >
-                    schedule
+                  <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--secondary-container)', fontVariationSettings: "'FILL' 1" }}>
+                    {item.icon}
                   </span>
                 </div>
                 <div>
-                  <p
-                    className="text-label-sm text-on-surface-var"
-                    style={{ marginBottom: '2px', textTransform: 'uppercase' }}
-                  >
-                    Total Time At Sea
+                  <p style={{ fontFamily: 'var(--font)', fontSize: '14px', fontWeight: 700, color: 'var(--primary)', lineHeight: 1.3 }}>
+                    {item.label}
                   </p>
-                  <p className="text-title-md text-primary">42 Days, 12h</p>
+                  <p style={{ fontSize: '11px', color: 'var(--on-surface-variant)', marginTop: '2px' }}>
+                    {item.sub}
+                  </p>
                 </div>
               </div>
-              <span className="material-symbols-outlined text-outline">insights</span>
-            </div>
-          </GlassCard>
+              <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--outline)' }}>
+                chevron_right
+              </span>
+            </button>
+          ))}
         </div>
+      </section>
 
-        {/* ══ NAVIGATOR SETTINGS ══════════════════════════════ */}
-        <SectionHeader
-          variant="border"
-          title="Navigator Settings"
-          style={{ marginBottom: '8px' }}
-        />
+      {/* ══ FOOTER ═════════════════════════════════════════════ */}
+      <p style={{ textAlign: 'center', fontSize: '11px', color: 'var(--outline)', marginTop: '40px', fontWeight: 600, letterSpacing: '0.08em' }}>
+        © 742 LogPose Navigational Systems — Set Sail into Adventure
+      </p>
+    </div>
+  )
+}
 
-        {/* Action list — uses universal .action-item + .list-item-hover CSS classes */}
-        <GlassCard
-          radius="16px"
-          style={{ overflow: 'hidden' }}
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', divideY: '1px solid rgba(255,255,255,0.2)' } as React.CSSProperties}>
-            {actionItems.map((item, i) => (
-              <button
-                key={item.icon}
-                className="action-item list-item-hover"
-                style={{
-                  borderTop: i > 0 ? '1px solid rgba(255,255,255,0.22)' : 'none',
-                  borderRadius: 0,
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <span
-                    className="material-symbols-outlined text-on-surface-var"
-                    style={{ fontSize: '22px' }}
-                  >
-                    {item.icon}
-                  </span>
-                  <span
-                    style={{
-                      fontFamily: 'var(--font)',
-                      fontSize: '15px',
-                      fontWeight: 600,
-                      color: 'var(--primary)',
-                    }}
-                  >
-                    {item.label}
-                  </span>
-                </div>
-                <span
-                  className="material-symbols-outlined text-outline"
-                  style={{ fontSize: '20px' }}
-                >
-                  chevron_right
-                </span>
-              </button>
-            ))}
-          </div>
-        </GlassCard>
-
-        {/* ══ LOGOUT — uses SunsetButton ══════════════════════ */}
-        <SunsetButton
-          icon="logout"
-          iconFilled={false}
-          size="lg"
-          fullWidth
-          style={{ padding: '16px', marginTop: '8px', justifyContent: 'center' }}
-          onClick={() => {}}
-        >
-          Logout from Voyage
-        </SunsetButton>
-
-        <p
-          className="text-label-sm text-outline"
-          style={{ textAlign: 'center', letterSpacing: '0.05em', opacity: 0.7, marginTop: '4px' }}
-        >
-          LogPose Engine v4.2.0 • Made for the Grand Line
-        </p>
-      </div>
+/* ── Stat Card sub-component ── */
+function StatCard({
+  label, value, icon, gradient, accent,
+}: {
+  label: string; value: number; icon: string; gradient: string; accent: string;
+}) {
+  return (
+    <div
+      className="profile-stat glass-card"
+      style={{ borderRadius: '18px', background: gradient, padding: '20px 16px' }}
+    >
+      <span
+        className="material-symbols-outlined"
+        style={{ fontSize: '28px', color: accent, fontVariationSettings: "'FILL' 1", marginBottom: '8px' }}
+      >
+        {icon}
+      </span>
+      <p className="profile-stat__value" style={{ color: 'var(--primary)', fontSize: '32px' }}>
+        {value}
+      </p>
+      <p className="profile-stat__label">{label}</p>
     </div>
   )
 }
