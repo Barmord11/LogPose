@@ -1,0 +1,232 @@
+/**
+ * AddDropdown — The Navigator's Log Entry
+ * ────────────────────────────────────────
+ * A glass-morphic dropdown that lets users add a series to either
+ * "Watched" or "Plan to Watch". The main button shows a (+) when
+ * not added, and a checkmark when already in any list.
+ * Hovering/clicking the button opens the dropdown.
+ */
+
+import { useState, useRef, useEffect } from 'react'
+import { useApp, useAnimeStatus } from '../context/AppContext'
+
+interface AddDropdownProps {
+  animeId: number
+  /** 'overlay' = white text for dark poster backgrounds; 'glass' = dark for light UI */
+  variant?: 'overlay' | 'glass'
+  size?: 'sm' | 'md'
+}
+
+export default function AddDropdown({
+  animeId,
+  variant = 'overlay',
+  size = 'md',
+}: AddDropdownProps) {
+  const { dispatch } = useApp()
+  const { inWatched, inPlan } = useAnimeStatus(animeId)
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  const isAdded = inWatched || inPlan
+  const btnSize = size === 'sm' ? '28px' : '36px'
+  const iconSize = size === 'sm' ? '16px' : '20px'
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function onOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onOutside)
+    return () => document.removeEventListener('mousedown', onOutside)
+  }, [])
+
+  function addToWatched() {
+    dispatch({ type: 'ADD_TO_WATCHED', id: animeId })
+    setOpen(false)
+  }
+  function addToPlan() {
+    dispatch({ type: 'ADD_TO_PLAN', id: animeId })
+    setOpen(false)
+  }
+  function removeFromList() {
+    dispatch({ type: 'REMOVE_FROM_LIST', id: animeId })
+    setOpen(false)
+  }
+
+  return (
+    <div
+      ref={ref}
+      style={{ position: 'relative', flexShrink: 0 }}
+      onClick={e => e.stopPropagation()}
+    >
+      {/* ── Trigger button ── */}
+      <button
+        title={isAdded ? 'Logged — click to change' : 'Log this voyage'}
+        onClick={() => setOpen(o => !o)}
+        style={{
+          width: btnSize,
+          height: btnSize,
+          borderRadius: '9999px',
+          border: isAdded
+            ? '1px solid var(--secondary-container)'
+            : variant === 'overlay'
+            ? '1px solid rgba(255,255,255,0.40)'
+            : '1px solid rgba(255,255,255,0.50)',
+          background: isAdded
+            ? 'var(--secondary-container)'
+            : variant === 'overlay'
+            ? 'rgba(255,255,255,0.20)'
+            : 'rgba(255,255,255,0.65)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          color: isAdded ? '#fff' : variant === 'overlay' ? '#fff' : 'var(--primary)',
+          transition: 'background 0.25s, transform 0.18s cubic-bezier(0.34,1.56,0.64,1)',
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.1)' }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)' }}
+        onMouseDown={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(0.88)' }}
+        onMouseUp={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)' }}
+      >
+        <span
+          className="material-symbols-outlined"
+          style={{
+            fontSize: iconSize,
+            fontVariationSettings: isAdded ? "'FILL' 1" : "'FILL' 0",
+            transition: 'transform 0.3s',
+            transform: open ? 'rotate(45deg)' : 'rotate(0deg)',
+          }}
+        >
+          {isAdded ? 'check' : 'add'}
+        </span>
+      </button>
+
+      {/* ── Dropdown panel ── */}
+      {open && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 'calc(100% + 10px)',
+            right: 0,
+            width: '176px',
+            background: 'rgba(255,255,255,0.94)',
+            backdropFilter: 'blur(24px)',
+            WebkitBackdropFilter: 'blur(24px)',
+            border: '1px solid rgba(255,255,255,0.55)',
+            borderRadius: '16px',
+            boxShadow: '0 12px 40px rgba(0,23,54,0.18)',
+            padding: '8px',
+            zIndex: 200,
+            animation: 'dropUp 0.2s cubic-bezier(0.34,1.56,0.64,1)',
+          }}
+        >
+          <DropItem
+            icon="check_circle"
+            label="Watched"
+            sublabel="Already seen it"
+            active={inWatched}
+            activeColor="var(--secondary)"
+            onClick={inWatched ? removeFromList : addToWatched}
+          />
+          <DropItem
+            icon="bookmark"
+            label="Plan to Watch"
+            sublabel="On the horizon"
+            active={inPlan}
+            activeColor="var(--on-tertiary-container)"
+            onClick={inPlan ? removeFromList : addToPlan}
+          />
+          {isAdded && (
+            <button
+              onClick={removeFromList}
+              style={{
+                width: '100%',
+                marginTop: '4px',
+                padding: '8px 12px',
+                borderRadius: '10px',
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+                fontFamily: 'var(--font)',
+                fontSize: '11px',
+                fontWeight: 700,
+                color: 'var(--outline)',
+                textAlign: 'center',
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                transition: 'background 0.15s',
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--error-container)'; (e.currentTarget as HTMLElement).style.color = 'var(--error)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--outline)' }}
+            >
+              Remove from Log
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ── Helper sub-component ── */
+function DropItem({
+  icon, label, sublabel, active, activeColor, onClick,
+}: {
+  icon: string
+  label: string
+  sublabel: string
+  active: boolean
+  activeColor: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        width: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        padding: '10px 12px',
+        borderRadius: '10px',
+        background: active ? `color-mix(in srgb, ${activeColor} 12%, transparent)` : 'transparent',
+        border: 'none',
+        cursor: 'pointer',
+        fontFamily: 'var(--font)',
+        textAlign: 'left',
+        transition: 'background 0.15s',
+      }}
+      onMouseEnter={e => {
+        if (!active) (e.currentTarget as HTMLElement).style.background = 'var(--surface-container-low)'
+      }}
+      onMouseLeave={e => {
+        if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent'
+      }}
+    >
+      <span
+        className="material-symbols-outlined"
+        style={{
+          fontSize: '20px',
+          color: active ? activeColor : 'var(--outline)',
+          fontVariationSettings: active ? "'FILL' 1" : "'FILL' 0",
+          flexShrink: 0,
+        }}
+      >
+        {icon}
+      </span>
+      <div>
+        <p style={{ fontSize: '13px', fontWeight: 700, color: active ? activeColor : 'var(--on-surface)', lineHeight: 1.2, margin: 0 }}>
+          {label}
+        </p>
+        <p style={{ fontSize: '10px', color: 'var(--outline)', lineHeight: 1, marginTop: '2px' }}>
+          {sublabel}
+        </p>
+      </div>
+    </button>
+  )
+}

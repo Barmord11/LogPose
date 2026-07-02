@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import Header          from './components/Header'
 import BottomNav       from './components/BottomNav'
+import Sidebar         from './components/Sidebar'
+import DesktopTopBar   from './components/DesktopTopBar'
 import HomePage        from './pages/HomePage'
+import SearchPage      from './pages/SearchPage'
 import MyListPage      from './pages/MyListPage'
 import AnimeDetailPage from './pages/AnimeDetailPage'
 import ProfilePage     from './pages/ProfilePage'
@@ -14,7 +17,7 @@ export interface NavProps {
 }
 
 function App() {
-  const [activePage,      setActivePage     ] = useState<Page>('home')
+  const [activePage,      setActivePage]      = useState<Page>('home')
   const [selectedAnimeId, setSelectedAnimeId] = useState<number>(1)
 
   const navigate = (page: Page, animeId?: number) => {
@@ -25,21 +28,30 @@ function App() {
 
   return (
     <div className="app-shell">
-      {/* Universal header — always rendered */}
+
+      {/* ── Desktop Sidebar (hidden on mobile via CSS) ── */}
+      <Sidebar activePage={activePage} navigate={navigate} />
+
+      {/* ── Desktop Top Bar (hidden on mobile via CSS) ── */}
+      <DesktopTopBar activePage={activePage} navigate={navigate} />
+
+      {/* ── Mobile Header (hidden on desktop via CSS) ── */}
       <Header navigate={navigate} activePage={activePage} />
 
-      {/* Main content — page swap */}
+      {/* ── Page Content ── */}
       <main className="app-main">
-        {activePage === 'home'    && <HomePage    navigate={navigate} />}
-        {activePage === 'search'  && <HomePage    navigate={navigate} />}
-        {activePage === 'mylist'  && <MyListPage  navigate={navigate} />}
-        {activePage === 'profile' && <ProfilePage navigate={navigate} />}
-        {activePage === 'detail'  && (
-          <AnimeDetailPage animeId={selectedAnimeId} navigate={navigate} />
-        )}
+        <div className="page-enter" key={activePage}>
+          {activePage === 'home'    && <HomePage    navigate={navigate} />}
+          {activePage === 'search'  && <SearchPage  navigate={navigate} />}
+          {activePage === 'mylist'  && <MyListPage  navigate={navigate} />}
+          {activePage === 'profile' && <ProfilePage navigate={navigate} />}
+          {activePage === 'detail'  && (
+            <AnimeDetailPage animeId={selectedAnimeId} navigate={navigate} />
+          )}
+        </div>
       </main>
 
-      {/* Universal bottom nav — always rendered */}
+      {/* ── Mobile Bottom Nav (hidden on desktop via CSS) ── */}
       <BottomNav activePage={activePage} navigate={navigate} />
     </div>
   )
