@@ -1,0 +1,527 @@
+/* ============================================================
+   LOGPOSE DESIGN SYSTEM
+   Universal tokens, resets, and component utility classes.
+   Page-specific layout lives in each page's own component.
+   ============================================================ */
+
+/* ── 1. DESIGN TOKENS ─────────────────────────────────────── */
+:root {
+  /* Surface scale */
+  --surface:                   #f7f9fb;
+  --surface-dim:               #d8dadc;
+  --surface-bright:            #f7f9fb;
+  --surface-container-lowest:  #ffffff;
+  --surface-container-low:     #f2f4f6;
+  --surface-container:         #eceef0;
+  --surface-container-high:    #e6e8ea;
+  --surface-container-highest: #e0e3e5;
+  --on-surface:                #191c1e;
+  --on-surface-variant:        #43474f;
+  --inverse-surface:           #2d3133;
+  --inverse-on-surface:        #eff1f3;
+
+  /* Outline */
+  --outline:                   #747780;
+  --outline-variant:           #c4c6d0;
+  --surface-tint:              #405f91;
+
+  /* Primary — Deep Navy */
+  --primary:                   #001736;
+  --on-primary:                #ffffff;
+  --primary-container:         #002b5b;
+  --on-primary-container:      #7594ca;
+  --inverse-primary:           #a9c7ff;
+  --primary-fixed:             #d6e3ff;
+  --primary-fixed-dim:         #a9c7ff;
+  --on-primary-fixed:          #001b3d;
+  --on-primary-fixed-variant:  #264778;
+
+  /* Secondary — Sunset Orange */
+  --secondary:                 #ab3500;
+  --on-secondary:              #ffffff;
+  --secondary-container:       #fe6a34;
+  --on-secondary-container:    #5d1900;
+  --secondary-fixed:           #ffdbd0;
+  --secondary-fixed-dim:       #ffb59d;
+  --on-secondary-fixed:        #390c00;
+  --on-secondary-fixed-variant:#832600;
+
+  /* Tertiary — Teal/Cyan */
+  --tertiary:                  #001b1c;
+  --on-tertiary:               #ffffff;
+  --tertiary-container:        #003134;
+  --on-tertiary-container:     #00a3aa;
+  --tertiary-fixed:            #66f7ff;
+  --tertiary-fixed-dim:        #00dce5;
+  --on-tertiary-fixed:         #002021;
+  --on-tertiary-fixed-variant: #004f53;
+
+  /* Error */
+  --error:                     #ba1a1a;
+  --on-error:                  #ffffff;
+  --error-container:           #ffdad6;
+  --on-error-container:        #93000a;
+
+  /* Background */
+  --background:                #f7f9fb;
+  --on-background:             #191c1e;
+  --surface-variant:           #e0e3e5;
+
+  /* ── Brand shortcut aliases ── */
+  --navy:        #002b5b;
+  --orange:      #ff6b35;
+  --orange-dark: #ab3500;
+  --cyan:        #2af5ff;
+  --white:       #f8fafc;
+
+  /* ── Typography ── */
+  --font: 'Plus Jakarta Sans', system-ui, sans-serif;
+
+  /* ── Radius scale ── */
+  --r-sm:   0.25rem;   /*  4px */
+  --r:      0.5rem;    /*  8px */
+  --r-md:   0.75rem;   /* 12px */
+  --r-lg:   1rem;      /* 16px */
+  --r-xl:   1.5rem;    /* 24px */
+  --r-full: 9999px;
+
+  /* ── Spacing ── */
+  --u:              8px;
+  --container-max:  1280px;
+  --gutter:         24px;
+  --margin-mobile:  16px;
+  --margin-desktop: 40px;
+
+  /* ── Glass recipe ── */
+  --glass-bg:     rgba(255, 255, 255, 0.70);
+  --glass-border: rgba(255, 255, 255, 0.30);
+  --glass-blur:   12px;
+
+  /* ── Elevation / Glow ── */
+  --shadow-card:    0 2px 16px rgba(0, 27, 61, 0.08);
+  --shadow-float:   0 8px 32px rgba(0, 27, 61, 0.14);
+  --glow-orange:    0 0 20px rgba(254, 106, 52, 0.45);
+  --glow-cyan:      0 0 20px rgba(42, 245, 255, 0.35);
+  --glow-navy:      0 4px 20px rgba(0, 43, 91, 0.25);
+}
+
+/* ── 2. RESET ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body {
+  font-family: var(--font);
+  background: var(--background);
+  color: var(--on-surface);
+  line-height: 1.6;
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+img, svg { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+ul, ol { list-style: none; }
+button { cursor: pointer; border: none; background: none; font-family: inherit; }
+input, textarea { font-family: inherit; }
+#root { min-height: 100dvh; display: flex; flex-direction: column; }
+
+/* ── 3. MATERIAL SYMBOLS ─────────────────────────────────── */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  user-select: none;
+  vertical-align: middle;
+}
+
+/* ── 4. GLASS SURFACES ────────────────────────────────────── */
+/* Standard frosted-glass card */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+}
+
+/* Heavier blur for modals/panels */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.30);
+}
+
+/* Navigation glass (slightly more opaque) */
+.glass-nav {
+  background: rgba(247, 249, 251, 0.82);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+/* ── 5. GRADIENT UTILITIES ───────────────────────────────── */
+/* Sunset orange — used for primary CTAs and active states */
+.sunset-gradient {
+  background: linear-gradient(135deg, #fe6a34 0%, #ab3500 100%);
+}
+
+/* Deep navy — used for genre card overlays */
+.oceanic-gradient {
+  background: linear-gradient(135deg, #001736 0%, #405f91 100%);
+}
+
+/* Fade to white — used as hero image vignette */
+.ocean-gradient {
+  background: linear-gradient(180deg, rgba(25, 28, 30, 0) 0%, rgba(247, 249, 251, 1) 90%);
+}
+
+/* Subtle radial background tint for page sections */
+.bg-oceanic {
+  background:
+    radial-gradient(circle at top right, rgba(214, 227, 255, 0.45) 0%, transparent 50%),
+    radial-gradient(circle at bottom left, rgba(230, 232, 234, 0.55) 0%, transparent 45%);
+}
+
+/* ── 6. SHADOW / GLOW UTILITIES ──────────────────────────── */
+/* Soft teal drop shadow — ambient oceanic feel */
+.ocean-glow { box-shadow: 0 0 20px rgba(0, 49, 52, 0.15); }
+
+/* Orange drop-shadow for the compass FAB */
+.compass-active { filter: drop-shadow(0 0 8px rgba(254, 106, 52, 0.60)); }
+
+/* Active tab glow (orange) */
+.active-tab-glow { box-shadow: 0 0 15px rgba(254, 106, 52, 0.30); }
+
+/* CTA button glow */
+.active-glow { box-shadow: 0 0 20px rgba(254, 106, 52, 0.40); }
+
+/* Elevated card shadow */
+.shadow-card { box-shadow: var(--shadow-card); }
+.shadow-float { box-shadow: var(--shadow-float); }
+
+/* ── 7. TYPOGRAPHY UTILITIES ─────────────────────────────── */
+.text-display-lg {
+  font-size: clamp(2rem, 5vw, 48px);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+.text-headline-lg  { font-size: clamp(28px, 4vw, 32px); font-weight: 700; line-height: 1.2; }
+.text-title-md     { font-size: 20px;  font-weight: 600; line-height: 1.4; }
+.text-body-lg      { font-size: 16px;  font-weight: 400; line-height: 1.6; }
+.text-label-bold   { font-size: 14px;  font-weight: 700; line-height: 1; }
+.text-label-sm     { font-size: 11px;  font-weight: 700; line-height: 1; letter-spacing: 0.08em; }
+
+/* Color tokens as text utilities */
+.text-primary          { color: var(--primary); }
+.text-secondary        { color: var(--secondary); }
+.text-on-surface       { color: var(--on-surface); }
+.text-on-surface-var   { color: var(--on-surface-variant); }
+.text-outline          { color: var(--outline); }
+.text-white            { color: #ffffff; }
+.text-cyan             { color: var(--cyan); }
+.text-orange           { color: var(--secondary-container); }
+
+/* ── 8. INTERACTIVE STATES ───────────────────────────────── */
+/* Underline tab indicator */
+.tab-active { border-bottom: 3px solid var(--secondary); }
+
+/* Teal tint on list hover */
+.list-item-hover:hover { background: rgba(42, 245, 255, 0.06); }
+
+/* ── 9. SCROLLBAR ─────────────────────────────────────────── */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--outline-variant); border-radius: var(--r-full); }
+
+/* ── 10. APP SHELL ────────────────────────────────────────── */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  max-width: 480px;
+  margin: 0 auto;
+  background: var(--background);
+  position: relative;
+  overflow-x: hidden;
+  box-shadow: 0 0 60px rgba(0, 27, 61, 0.10);
+}
+
+.app-main {
+  flex: 1;
+  padding-bottom: 88px; /* bottom nav clearance */
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* ── 11. PLACEHOLDER PAGE ─────────────────────────────────── */
+.placeholder-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 16px;
+}
+.placeholder-icon { font-size: 56px; opacity: 0.25; }
+.placeholder-text { font-size: 16px; color: var(--on-surface-variant); font-weight: 500; }
+
+/* ── 12. CHIP / BADGE ─────────────────────────────────────── */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 11px;
+  border-radius: var(--r-full);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.chip-navy   { background: var(--primary-fixed);    color: var(--on-primary-fixed); }
+.chip-orange { background: var(--secondary-container); color: #fff; }
+.chip-cyan   { background: var(--tertiary-fixed);   color: var(--on-tertiary-fixed); }
+.chip-glass  {
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: var(--primary);
+  border: 1px solid rgba(255,255,255,0.5);
+}
+.chip-airing    { color: var(--secondary-container); font-weight: 700; }
+.chip-completed { color: var(--on-tertiary-container); font-weight: 700; }
+
+/* ── 13. FILTER CHIP (interactive) ───────────────────────── */
+.filter-chip {
+  padding: 10px 20px;
+  border-radius: var(--r-full);
+  border: 1.5px solid rgba(116, 119, 128, 0.20);
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--on-surface);
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font);
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  transition: all 0.2s ease;
+}
+.filter-chip:hover {
+  background: var(--primary);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: var(--glow-navy);
+}
+.filter-chip.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 4px 14px rgba(0, 27, 61, 0.25);
+}
+
+/* ── 14. STAT CELL ────────────────────────────────────────── */
+.stat-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 14px 12px;
+  border-radius: var(--r-lg);
+}
+.stat-cell__label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--on-surface-variant);
+  margin-bottom: 4px;
+}
+.stat-cell__value {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--primary);
+}
+.stat-cell__value--highlight { color: var(--secondary-container); font-size: 14px; font-weight: 700; }
+
+/* ── 15. SECTION HEADER ───────────────────────────────────── */
+/* Variant A: left border accent (e.g. "Narrow Your Compass") */
+.section-header--border {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--primary);
+  font-family: var(--font);
+  border-left: 4px solid var(--secondary);
+  padding-left: 12px;
+}
+/* Variant B: icon + decorative right line (e.g. "Popular Genres") */
+.section-header--icon {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--primary);
+  font-family: var(--font);
+}
+
+/* ── 16. ACTION LIST ITEM ─────────────────────────────────── */
+.action-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-family: var(--font);
+}
+.action-item:hover { background: rgba(42, 245, 255, 0.06); }
+.action-item:active { transform: scale(0.99); }
+
+/* ── 17. SUNSET BUTTON ────────────────────────────────────── */
+.btn-sunset {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: var(--r-full);
+  border: none;
+  background: linear-gradient(135deg, #fe6a34 0%, #ab3500 100%);
+  color: #fff;
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow: var(--glow-orange);
+  transition: filter 0.2s, transform 0.15s, box-shadow 0.2s;
+}
+.btn-sunset:hover { filter: brightness(1.08); box-shadow: 0 6px 24px rgba(254,106,52,0.55); }
+.btn-sunset:active { transform: scale(0.95); }
+
+/* glass secondary button */
+.btn-glass {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: var(--r-full);
+  border: 1px solid rgba(255,255,255,0.4);
+  background: rgba(255,255,255,0.60);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--primary);
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+}
+.btn-glass:hover  { background: rgba(255,255,255,0.82); }
+.btn-glass:active { transform: scale(0.93); }
+
+/* ── 18. ANIME CARD ───────────────────────────────────────── */
+.anime-card { display: flex; flex-direction: column; cursor: pointer; }
+.anime-card__poster {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  margin-bottom: 10px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+  transition: transform 0.3s ease;
+}
+.anime-card__poster:hover { transform: scale(1.02); }
+.anime-card__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+.anime-card__poster:hover .anime-card__img { transform: scale(1.06); }
+.anime-card__overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 23, 54, 0.45);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 12px;
+}
+.anime-card__poster:hover .anime-card__overlay { opacity: 1; }
+.anime-card__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font);
+}
+
+/* ── 19. CHARACTER CARD ───────────────────────────────────── */
+.char-card { flex-shrink: 0; width: 112px; text-align: center; }
+.char-card__avatar {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: var(--r-full);
+  overflow: hidden;
+  border: 2px solid var(--secondary-fixed);
+  margin-bottom: 8px;
+}
+.char-card__avatar img { width: 100%; height: 100%; object-fit: cover; }
+.char-card__name  { font-size: 13px; font-weight: 700; color: var(--primary); font-family: var(--font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.char-card__role  { font-size: 11px; color: var(--on-surface-variant); }
+
+/* ── 20. TAB BAR (underline variant) ─────────────────────── */
+.tab-bar { display: flex; gap: 28px; border-bottom: 1px solid var(--outline-variant); }
+.tab-bar__item {
+  padding-bottom: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--on-surface-variant);
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+  font-family: var(--font);
+  margin-bottom: -1px;
+}
+.tab-bar__item:hover { color: var(--primary); }
+.tab-bar__item.active {
+  color: var(--secondary);
+  border-bottom-color: var(--secondary);
+}
+
+/* ── 21. PROFILE STAT CARD ────────────────────────────────── */
+.profile-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 20px 12px;
+  border-radius: var(--r-lg);
+}
+.profile-stat__value { font-size: 28px; font-weight: 800; line-height: 1; letter-spacing: -0.02em; }
+.profile-stat__label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--on-surface-variant); text-align: center; line-height: 1.3; }
