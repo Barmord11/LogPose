@@ -32,16 +32,18 @@ export interface Genre {
   badgeVariant: 'orange' | 'cyan' | 'navy' | 'light'
   image: string
   description: string
+  /** Anime.genres tags this genre card maps to when used as a filter */
+  matchTags: string[]
 }
 
 /* ─── Genres ─────────────────────────────────────────────── */
 export const genres: Genre[] = [
-  { id: 'shonen',     label: 'Shonen',       badge: 'HIGH ENERGY',      badgeVariant: 'orange', image: '/images/genre-shonen.jpg',       description: 'Journey to distant horizons beyond imagination.' },
-  { id: 'seinen',     label: 'Seinen',       badge: 'MATURE THEMES',    badgeVariant: 'navy',   image: '/images/genre-seinen.jpg',       description: 'Complex narratives for the experienced voyager.' },
-  { id: 'isekai',     label: 'Isekai',       badge: 'NEW WORLDS',       badgeVariant: 'cyan',   image: '/images/genre-isekai.jpg',       description: 'Cross the horizon into worlds unknown.' },
-  { id: 'slice-life', label: 'Slice of Life',badge: 'PEACEFUL MOMENTS', badgeVariant: 'light',  image: '/images/genre-slice-of-life.jpg',description: 'The beauty in the everyday currents of life.' },
-  { id: 'mystery',    label: 'Mystery',      badge: 'HIDDEN TRUTHS',    badgeVariant: 'navy',   image: '/images/genre-mystery.jpg',      description: 'Hidden truths lurk beneath the surface.' },
-  { id: 'fantasy',    label: 'Fantasy',      badge: 'EPIC SAGAS',       badgeVariant: 'orange', image: '/images/genre-fantasy.jpg',      description: 'Legendary battles and kingdoms of wonder.' },
+  { id: 'shonen',     label: 'Shonen',       badge: 'HIGH ENERGY',      badgeVariant: 'orange', image: '/images/genre-shonen.jpg',       description: 'Journey to distant horizons beyond imagination.', matchTags: ['ACTION', 'ADVENTURE'] },
+  { id: 'seinen',     label: 'Seinen',       badge: 'MATURE THEMES',    badgeVariant: 'navy',   image: '/images/genre-seinen.jpg',       description: 'Complex narratives for the experienced voyager.', matchTags: ['DRAMA', 'MECHA'] },
+  { id: 'isekai',     label: 'Isekai',       badge: 'NEW WORLDS',       badgeVariant: 'cyan',   image: '/images/genre-isekai.jpg',       description: 'Cross the horizon into worlds unknown.',           matchTags: ['FANTASY', 'SCI-FI'] },
+  { id: 'slice-life', label: 'Slice of Life',badge: 'PEACEFUL MOMENTS', badgeVariant: 'light',  image: '/images/genre-slice-of-life.jpg',description: 'The beauty in the everyday currents of life.',     matchTags: ['SLICE OF LIFE', 'ROMANCE'] },
+  { id: 'mystery',    label: 'Mystery',      badge: 'HIDDEN TRUTHS',    badgeVariant: 'navy',   image: '/images/genre-mystery.jpg',      description: 'Hidden truths lurk beneath the surface.',          matchTags: ['MYSTERY'] },
+  { id: 'fantasy',    label: 'Fantasy',      badge: 'EPIC SAGAS',       badgeVariant: 'orange', image: '/images/genre-fantasy.jpg',      description: 'Legendary battles and kingdoms of wonder.',        matchTags: ['FANTASY'] },
 ]
 
 /* ─── Animes ─────────────────────────────────────────────── */
@@ -157,13 +159,14 @@ Now, three rival fleets converge on the same heading, and only one crew carries 
   },
 ]
 
-export const recentSearches = ['One Piece', 'Solo Leveling', 'Berserk']
+export const recentSearches = ['Grand Blue', 'Iron Sails', 'Kōkai']
 
-export const filterChips = [
-  'Latest Manga',
-  'Staff Picks',
-  'Top Rated',
-  'Newest Anime',
-  'Completed Series',
-  'Hidden Gems',
+/** Each chip is a real predicate over the catalogue — no dead filters. */
+export const filterChips: { label: string; test: (a: Anime) => boolean }[] = [
+  { label: 'Top Rated',        test: a => a.score >= 8.7 },
+  { label: 'Airing Now',       test: a => a.status === 'AIRING' },
+  { label: 'Completed',        test: a => a.status === 'COMPLETED' },
+  { label: 'Short Series',     test: a => a.episodes <= 13 },
+  { label: 'Epic Voyages',     test: a => a.episodes >= 24 },
+  { label: 'Crowd Favorites',  test: a => a.liked >= 85 },
 ]

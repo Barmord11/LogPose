@@ -1,16 +1,18 @@
 /**
  * SearchPage — Find Your Way
  * ──────────────────────────
- * Discovery hub: search bar hero → genre bento → filter chips → anime grid
+ * Discovery hub: search bar hero → genre bento → filter chips → anime grid.
+ * Query, genre and chip filters all actually narrow the results grid.
  * Each anime card has the full action overlay: AddDropdown + AnchorRating + PlayButton
  */
 
-import { useState }     from 'react'
+import { useEffect, useState } from 'react'
 import type { NavProps } from '../App'
-import { animes, genres, filterChips, recentSearches } from '../data/animes'
+import { animes, genres, filterChips, recentSearches, type Genre } from '../data/animes'
 import AddDropdown  from '../components/AddDropdown'
 import AnchorRating from '../components/AnchorRating'
 import PlayButton   from '../components/PlayButton'
+import StatusBadge  from '../components/StatusBadge'
 
 // ── Genre card badge colour map ──────────────────────────────
 const BADGE_STYLES: Record<string, { bg: string; color: string }> = {
@@ -30,13 +32,42 @@ const GENRE_OVERLAYS: Record<string, string> = {
   fantasy:    'rgba(171,53,0,0.65)',
 }
 
-export default function SearchPage({ navigate }: NavProps) {
-  const [query,       setQuery]       = useState('')
-  const [activeChip,  setActiveChip]  = useState<string | null>(null)
+interface SearchPageProps extends NavProps {
+  /** Query handed over from the global (desktop top bar) search */
+  initialQuery?: string
+}
 
-  const filtered = animes.filter(a =>
-    query.trim() === '' || a.title.toLowerCase().includes(query.toLowerCase()),
-  )
+export default function SearchPage({ navigate, initialQuery = '' }: SearchPageProps) {
+  const [query,       setQuery]       = useState(initialQuery)
+  const [activeChip,  setActiveChip]  = useState<string | null>(null)
+  const [activeGenre, setActiveGenre] = useState<Genre | null>(null)
+
+  // Keep in sync when a new global search arrives
+  useEffect(() => { setQuery(initialQuery) }, [initialQuery])
+
+  const chip = filterChips.find(c => c.label === activeChip)
+
+  const filtered = animes.filter(a => {
+    const q = query.trim().toLowerCase()
+    const matchesQuery = q === ''
+      || a.title.toLowerCase().includes(q)
+      || (a.altTitle ?? '').toLowerCase().includes(q)
+      || a.genres.some(g => g.toLowerCase().includes(q))
+    const matchesChip  = !chip || chip.test(a)
+    const matchesGenre = !activeGenre || a.genres.some(g => activeGenre.matchTags.includes(g))
+    return matchesQuery && matchesChip && matchesGenre
+  })
+
+  const hasActiveFilter = query.trim() !== '' || activeChip !== null || activeGenre !== null
+
+  const scrollToResults = () => {
+    document.getElementById('search-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  const pickGenre = (genre: Genre) => {
+    setActiveGenre(current => (current?.id === genre.id ? null : genre))
+    scrollToResults()
+  }
 
   return (
     <div className="search-hero" style={{ minHeight: '100vh', paddingBottom: '48px' }}>
@@ -73,7 +104,8 @@ export default function SearchPage({ navigate }: NavProps) {
               type="text"
               value={query}
               onChange={e => setQuery(e.target.value)}
-              placeholder="Search anime, manga, or creators..."
+              onKeyDown={e => { if (e.key === 'Enter') scrollToResults() }}
+              placeholder="Search anime by title or genre..."
               style={{
                 flex: 1,
                 background: 'transparent',
@@ -83,25 +115,27 @@ export default function SearchPage({ navigate }: NavProps) {
                 fontSize: '16px',
                 color: 'var(--on-surface)',
                 padding: '10px 12px',
+                minWidth: 0,
               }}
             />
             <button
               className="btn-sunset"
+              onClick={scrollToResults}
               style={{ padding: '10px 24px', fontSize: '13px', borderRadius: 'var(--r-full)' }}
             >
               EXPLORE
             </button>
           </div>
 
-          {/* Recent searches */}
+          {/* Quick searches */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center', marginTop: '20px' }}>
             <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--outline)', alignSelf: 'center' }}>
-              Recent:
+              Try:
             </span>
             {recentSearches.map(s => (
               <button
                 key={s}
-                onClick={() => setQuery(s)}
+                onClick={() => { setQuery(s); scrollToResults() }}
                 style={{
                   background: 'none',
                   border: 'none',
@@ -134,25 +168,25 @@ export default function SearchPage({ navigate }: NavProps) {
               <div style={{ height: '3px', width: '64px', background: 'linear-gradient(135deg, #fe6a34, #ab3500)', borderRadius: '9999px' }} />
             </div>
 
-            {/* Bento grid: 2×3 mobile, 4-col with spanning on desktop */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(2, 1fr)',
-                gap: '16px',
-              }}
-            >
+            {/* Bento grid: 2-col mobile, 4-col on desktop */}
+            <div className="genre-grid-bento">
               {genres.map(genre => {
                 const bs = BADGE_STYLES[genre.badgeVariant]
                 const overlay = GENRE_OVERLAYS[genre.id] ?? 'rgba(0,23,54,0.6)'
-                // Isekai and Slice of Life are wide on desktop
-                const isWide = genre.id === 'isekai' || genre.id === 'slice-life'
+                // Isekai and Slice of Life are wide
+                const isWide  = genre.id === 'isekai' || genre.id === 'slice-life'
+                const isActive = activeGenre?.id === genre.id
                 return (
                   <div
                     key={genre.id}
                     className="genre-card"
+                    onClick={() => pickGenre(genre)}
+                    role="button"
+                    aria-pressed={isActive}
                     style={{
                       gridColumn: isWide ? 'span 2' : 'span 1',
+                      outline: isActive ? '3px solid var(--secondary-container)' : 'none',
+                      outlineOffset: '2px',
                     }}
                   >
                     <div
@@ -178,7 +212,7 @@ export default function SearchPage({ navigate }: NavProps) {
                           backdropFilter: 'blur(8px)',
                         }}
                       >
-                        {genre.badge}
+                        {isActive ? '✓ FILTERING' : genre.badge}
                       </span>
                       <h3
                         style={{
@@ -216,13 +250,13 @@ export default function SearchPage({ navigate }: NavProps) {
               Narrow Your Compass
             </h2>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-              {filterChips.map(chip => (
+              {filterChips.map(c => (
                 <button
-                  key={chip}
-                  className={`filter-chip${activeChip === chip ? ' active' : ''}`}
-                  onClick={() => setActiveChip(activeChip === chip ? null : chip)}
+                  key={c.label}
+                  className={`filter-chip${activeChip === c.label ? ' active' : ''}`}
+                  onClick={() => setActiveChip(activeChip === c.label ? null : c.label)}
                 >
-                  {chip}
+                  {c.label}
                 </button>
               ))}
             </div>
@@ -231,18 +265,42 @@ export default function SearchPage({ navigate }: NavProps) {
       )}
 
       {/* ══ ANIME DISCOVERY GRID ═══════════════════════════════ */}
-      <section style={{ padding: '0 16px', maxWidth: '1280px', margin: '0 auto' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+      <section id="search-results" style={{ padding: '0 16px', maxWidth: '1280px', margin: '0 auto', scrollMarginTop: '96px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '8px' }}>
           <h2 style={{ fontFamily: 'var(--font)', fontSize: 'clamp(20px, 2.5vw, 26px)', fontWeight: 700, color: 'var(--primary)' }}>
             {query.trim() !== ''
               ? `Results for "${query}"`
-              : 'Trending This Season'}
+              : activeGenre
+                ? `${activeGenre.label} Voyages`
+                : activeChip ?? 'Trending This Season'}
           </h2>
-          {query.trim() !== '' && (
-            <span style={{ fontSize: '13px', color: 'var(--outline)', fontWeight: 600 }}>
-              {filtered.length} found
-            </span>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {hasActiveFilter && (
+              <>
+                <span style={{ fontSize: '13px', color: 'var(--outline)', fontWeight: 600 }}>
+                  {filtered.length} found
+                </span>
+                <button
+                  onClick={() => { setQuery(''); setActiveChip(null); setActiveGenre(null) }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    fontFamily: 'var(--font)',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    color: 'var(--secondary)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                  }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '15px' }}>close</span>
+                  Clear filters
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         {filtered.length === 0 ? (
@@ -250,7 +308,7 @@ export default function SearchPage({ navigate }: NavProps) {
             <span className="material-symbols-outlined" style={{ fontSize: '56px', opacity: 0.25, display: 'block', marginBottom: '12px' }}>
               explore_off
             </span>
-            <p style={{ fontWeight: 600 }}>No voyages found for "{query}"</p>
+            <p style={{ fontWeight: 600 }}>No voyages found{query.trim() !== '' ? ` for "${query}"` : ''}</p>
           </div>
         ) : (
           <div className="anime-grid">
@@ -283,25 +341,7 @@ function SearchCard({ anime, navigate }: { anime: typeof animes[0]; navigate: Na
           </div>
         </div>
 
-        {/* Status badge */}
-        <div
-          style={{
-            position: 'absolute',
-            top: '10px',
-            left: '10px',
-            padding: '3px 10px',
-            borderRadius: '9999px',
-            fontSize: '9px',
-            fontWeight: 800,
-            textTransform: 'uppercase',
-            letterSpacing: '0.1em',
-            background: anime.status === 'AIRING' ? 'var(--secondary-container)' : 'rgba(255,255,255,0.85)',
-            color: anime.status === 'AIRING' ? '#fff' : 'var(--primary)',
-            backdropFilter: 'blur(8px)',
-          }}
-        >
-          {anime.status}
-        </div>
+        <StatusBadge status={anime.status} />
       </div>
 
       <div className="search-card__body">

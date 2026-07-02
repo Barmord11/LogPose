@@ -8,6 +8,7 @@
 
 import type { NavProps } from '../App'
 import { animes }         from '../data/animes'
+import { useProfileStats } from '../context/AppContext'
 import SectionHeader      from '../components/SectionHeader'
 import AddDropdown        from '../components/AddDropdown'
 import PlayButton         from '../components/PlayButton'
@@ -16,6 +17,7 @@ import AnchorRating       from '../components/AnchorRating'
 const FEATURED = animes[4] // Kōkai no Kiroku — most legendary
 
 export default function HomePage({ navigate }: NavProps) {
+  const stats = useProfileStats()
   return (
     <div style={{ minHeight: '100vh', paddingBottom: '32px', background: 'var(--background)' }}>
 
@@ -181,7 +183,7 @@ export default function HomePage({ navigate }: NavProps) {
             <span className="material-symbols-outlined" style={{ fontSize: '32px', color: 'var(--tertiary-fixed)', marginBottom: '8px', fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
             <div>
               <h4 style={{ fontFamily: 'var(--font)', fontSize: '18px', fontWeight: 700, color: '#fff', marginBottom: '6px' }}>New Dubs</h4>
-              <p style={{ fontSize: '12px', color: 'rgba(0,161,170,0.85)', marginBottom: '16px', lineHeight: 1.5 }}>15 new series now in your language.</p>
+              <p style={{ fontSize: '12px', color: 'rgba(0,161,170,0.85)', marginBottom: '16px', lineHeight: 1.5 }}>Fresh dubbed voyages dock here regularly.</p>
             </div>
             <button onClick={() => navigate('search')} style={{ background: 'var(--tertiary-fixed)', color: 'var(--tertiary-container)', padding: '8px 16px', borderRadius: '8px', border: 'none', fontSize: '12px', fontWeight: 700, cursor: 'pointer', alignSelf: 'flex-start' }}>
               Browse Now
@@ -189,7 +191,7 @@ export default function HomePage({ navigate }: NavProps) {
             <span className="material-symbols-outlined" style={{ position: 'absolute', right: '-16px', bottom: '-16px', fontSize: '110px', color: '#fff', opacity: 0.07, fontVariationSettings: "'FILL' 1" }}>language</span>
           </div>
 
-          {/* Upgrade tile */}
+          {/* Captain's Log tile — live stats from global state */}
           <div
             className="sunset-gradient"
             style={{
@@ -204,15 +206,22 @@ export default function HomePage({ navigate }: NavProps) {
             }}
           >
             <div>
-              <h4 style={{ fontFamily: 'var(--font)', fontSize: '18px', fontWeight: 700, color: '#fff', marginBottom: '6px' }}>Join the Fleet</h4>
-              <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.8)', marginBottom: '16px', lineHeight: 1.5 }}>Premium members get early access to all seasonal premieres.</p>
+              <h4 style={{ fontFamily: 'var(--font)', fontSize: '18px', fontWeight: 700, color: '#fff', marginBottom: '6px' }}>Captain's Log</h4>
+              <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.8)', marginBottom: '16px', lineHeight: 1.5 }}>
+                {stats.totalEpisodes > 0
+                  ? `${stats.totalEpisodes} episodes logged across ${stats.seriesWatched} series. Keep sailing!`
+                  : 'Your voyage log is empty — track episodes as you watch.'}
+              </p>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
               <span style={{ fontFamily: 'var(--font)', fontSize: '22px', fontWeight: 800, color: '#fff' }}>
-                $9.99<span style={{ fontSize: '11px', opacity: 0.6 }}>/mo</span>
+                Lv {stats.level}<span style={{ fontSize: '11px', opacity: 0.6 }}> navigator</span>
               </span>
-              <button style={{ background: '#fff', color: 'var(--secondary)', padding: '8px 16px', borderRadius: '8px', border: 'none', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
-                Upgrade
+              <button
+                onClick={() => navigate('mylist')}
+                style={{ background: '#fff', color: 'var(--secondary)', padding: '8px 16px', borderRadius: '8px', border: 'none', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+              >
+                Open My Log
               </button>
             </div>
             <span className="material-symbols-outlined" style={{ position: 'absolute', right: '-24px', top: '-24px', fontSize: '140px', color: '#fff', opacity: 0.10, fontVariationSettings: "'FILL' 1" }}>military_tech</span>

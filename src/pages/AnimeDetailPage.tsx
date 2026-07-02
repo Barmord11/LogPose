@@ -7,7 +7,7 @@
  */
 
 import { useState } from 'react'
-import type { NavProps } from '../App'
+import type { NavProps, Page } from '../App'
 import { animes }        from '../data/animes'
 import { useApp, useAnimeStatus } from '../context/AppContext'
 import AnchorRating from '../components/AnchorRating'
@@ -18,9 +18,11 @@ type DetailTab = 'overview' | 'characters' | 'episodes'
 
 interface AnimeDetailPageProps extends NavProps {
   animeId: number
+  /** Page to return to when the back button is pressed */
+  backTo?: Page
 }
 
-export default function AnimeDetailPage({ animeId, navigate }: AnimeDetailPageProps) {
+export default function AnimeDetailPage({ animeId, navigate, backTo = 'home' }: AnimeDetailPageProps) {
   const anime = animes.find(a => a.id === animeId) ?? animes[0]
   const [activeTab, setActiveTab] = useState<DetailTab>('overview')
   const { dispatch } = useApp()
@@ -43,7 +45,8 @@ export default function AnimeDetailPage({ animeId, navigate }: AnimeDetailPagePr
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(25,28,30,0) 0%, rgba(247,249,251,1) 90%)' }} />
         {/* Back button */}
         <button
-          onClick={() => navigate('home')}
+          onClick={() => navigate(backTo)}
+          aria-label="Go back"
           style={{
             position: 'absolute',
             top: '20px',

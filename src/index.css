@@ -167,23 +167,6 @@ input, textarea { font-family: inherit; }
   background: linear-gradient(135deg, #fe6a34 0%, #ab3500 100%);
 }
 
-/* Deep navy — used for genre card overlays */
-.oceanic-gradient {
-  background: linear-gradient(135deg, #001736 0%, #405f91 100%);
-}
-
-/* Fade to white — used as hero image vignette */
-.ocean-gradient {
-  background: linear-gradient(180deg, rgba(25, 28, 30, 0) 0%, rgba(247, 249, 251, 1) 90%);
-}
-
-/* Subtle radial background tint for page sections */
-.bg-oceanic {
-  background:
-    radial-gradient(circle at top right, rgba(214, 227, 255, 0.45) 0%, transparent 50%),
-    radial-gradient(circle at bottom left, rgba(230, 232, 234, 0.55) 0%, transparent 45%);
-}
-
 /* ── 6. SHADOW / GLOW UTILITIES ──────────────────────────── */
 /* Soft teal drop shadow — ambient oceanic feel */
 .ocean-glow { box-shadow: 0 0 20px rgba(0, 49, 52, 0.15); }
@@ -191,47 +174,10 @@ input, textarea { font-family: inherit; }
 /* Orange drop-shadow for the compass FAB */
 .compass-active { filter: drop-shadow(0 0 8px rgba(254, 106, 52, 0.60)); }
 
-/* Active tab glow (orange) */
-.active-tab-glow { box-shadow: 0 0 15px rgba(254, 106, 52, 0.30); }
-
 /* CTA button glow */
 .active-glow { box-shadow: 0 0 20px rgba(254, 106, 52, 0.40); }
 
-/* Elevated card shadow */
-.shadow-card { box-shadow: var(--shadow-card); }
-.shadow-float { box-shadow: var(--shadow-float); }
-
-/* ── 7. TYPOGRAPHY UTILITIES ─────────────────────────────── */
-.text-display-lg {
-  font-size: clamp(2rem, 5vw, 48px);
-  font-weight: 800;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
-}
-.text-headline-lg  { font-size: clamp(28px, 4vw, 32px); font-weight: 700; line-height: 1.2; }
-.text-title-md     { font-size: 20px;  font-weight: 600; line-height: 1.4; }
-.text-body-lg      { font-size: 16px;  font-weight: 400; line-height: 1.6; }
-.text-label-bold   { font-size: 14px;  font-weight: 700; line-height: 1; }
-.text-label-sm     { font-size: 11px;  font-weight: 700; line-height: 1; letter-spacing: 0.08em; }
-
-/* Color tokens as text utilities */
-.text-primary          { color: var(--primary); }
-.text-secondary        { color: var(--secondary); }
-.text-on-surface       { color: var(--on-surface); }
-.text-on-surface-var   { color: var(--on-surface-variant); }
-.text-outline          { color: var(--outline); }
-.text-white            { color: #ffffff; }
-.text-cyan             { color: var(--cyan); }
-.text-orange           { color: var(--secondary-container); }
-
-/* ── 8. INTERACTIVE STATES ───────────────────────────────── */
-/* Underline tab indicator */
-.tab-active { border-bottom: 3px solid var(--secondary); }
-
-/* Teal tint on list hover */
-.list-item-hover:hover { background: rgba(42, 245, 255, 0.06); }
-
-/* ── 9. SCROLLBAR ─────────────────────────────────────────── */
+/* ── 7. SCROLLBAR ─────────────────────────────────────────── */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
@@ -278,18 +224,6 @@ input, textarea { font-family: inherit; }
   }
 }
 
-/* ── 11. PLACEHOLDER PAGE ─────────────────────────────────── */
-.placeholder-page {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 60vh;
-  gap: 16px;
-}
-.placeholder-icon { font-size: 56px; opacity: 0.25; }
-.placeholder-text { font-size: 16px; color: var(--on-surface-variant); font-weight: 500; }
-
 /* ── 12. CHIP / BADGE ─────────────────────────────────────── */
 .chip {
   display: inline-flex;
@@ -304,17 +238,6 @@ input, textarea { font-family: inherit; }
   white-space: nowrap;
 }
 .chip-navy   { background: var(--primary-fixed);    color: var(--on-primary-fixed); }
-.chip-orange { background: var(--secondary-container); color: #fff; }
-.chip-cyan   { background: var(--tertiary-fixed);   color: var(--on-tertiary-fixed); }
-.chip-glass  {
-  background: rgba(255,255,255,0.85);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  color: var(--primary);
-  border: 1px solid rgba(255,255,255,0.5);
-}
-.chip-airing    { color: var(--secondary-container); font-weight: 700; }
-.chip-completed { color: var(--on-tertiary-container); font-weight: 700; }
 
 /* ── 13. FILTER CHIP (interactive) ───────────────────────── */
 .filter-chip {
@@ -344,32 +267,6 @@ input, textarea { font-family: inherit; }
   border-color: transparent;
   box-shadow: 0 4px 14px rgba(0, 27, 61, 0.25);
 }
-
-/* ── 14. STAT CELL ────────────────────────────────────────── */
-.stat-cell {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 14px 12px;
-  border-radius: var(--r-lg);
-}
-.stat-cell__label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--on-surface-variant);
-  margin-bottom: 4px;
-}
-.stat-cell__value {
-  font-size: 22px;
-  font-weight: 700;
-  line-height: 1.1;
-  color: var(--primary);
-}
-.stat-cell__value--highlight { color: var(--secondary-container); font-size: 14px; font-weight: 700; }
 
 /* ── 15. SECTION HEADER ───────────────────────────────────── */
 /* Variant A: left border accent (e.g. "Narrow Your Compass") */
@@ -451,7 +348,6 @@ input, textarea { font-family: inherit; }
 .btn-glass:active { transform: scale(0.93); }
 
 /* ── 18. ANIME CARD ───────────────────────────────────────── */
-.anime-card { display: flex; flex-direction: column; cursor: pointer; }
 .anime-card__poster {
   position: relative;
   aspect-ratio: 3 / 4;
@@ -487,15 +383,6 @@ input, textarea { font-family: inherit; }
   padding: 12px;
 }
 .anime-card__poster:hover .anime-card__overlay { opacity: 1; }
-.anime-card__title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: var(--font);
-}
 
 /* ── 19. CHARACTER CARD ───────────────────────────────────── */
 .char-card { flex-shrink: 0; width: 112px; text-align: center; }
@@ -554,28 +441,6 @@ input, textarea { font-family: inherit; }
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes slideInRight {
-  from { opacity: 0; transform: translateX(20px); }
-  to   { opacity: 1; transform: translateX(0); }
-}
-
-@keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.92); }
-  to   { opacity: 1; transform: scale(1); }
-}
-
-@keyframes compassSpin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
-
-@keyframes anchorBounce {
-  0%   { transform: translateY(0); }
-  40%  { transform: translateY(-6px); }
-  70%  { transform: translateY(2px); }
-  100% { transform: translateY(0); }
 }
 
 .page-enter { animation: fadeIn 0.28s ease forwards; }

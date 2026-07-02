@@ -42,19 +42,6 @@
   .desktop-topbar { display: flex; }
 }
 
-/* ── DESKTOP MAIN CONTENT OFFSET ─────────────────────────── */
-.desktop-main-offset {
-  margin-left: 0;
-  padding-top: 0;
-}
-
-@media (min-width: 768px) {
-  .desktop-main-offset {
-    margin-left: 256px;
-    padding-top: 80px;
-  }
-}
-
 /* ── SIDEBAR NAV ITEM ─────────────────────────────────────── */
 .sidebar-item {
   display: flex;
@@ -148,29 +135,6 @@
 }
 .desktop-footer a:hover { color: var(--secondary); }
 
-/* ── NAUTICAL BG (desktop pages) ─────────────────────────── */
-.nautical-bg {
-  background-color: var(--background);
-  position: relative;
-}
-
-@media (min-width: 768px) {
-  .nautical-bg::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image: url('/images/detail-hero.jpg');
-    background-size: cover;
-    background-position: center;
-    background-attachment: fixed;
-    opacity: 0.06;
-    z-index: 0;
-    pointer-events: none;
-  }
-}
-
-.nautical-bg > * { position: relative; z-index: 1; }
-
 /* ── DESKTOP SEARCH INPUT ─────────────────────────────────── */
 .search-input-desktop {
   background: rgba(230, 232, 234, 0.5);
@@ -189,23 +153,6 @@
   box-shadow: 0 0 0 3px rgba(254,106,52,0.2);
 }
 
-/* ── HERO SECTION (home page) ─────────────────────────────── */
-.hero-section {
-  position: relative;
-  width: 100%;
-  height: 70vh;
-  min-height: 400px;
-  overflow: hidden;
-}
-
-@media (min-width: 768px) {
-  .hero-section { height: 65vh; }
-}
-
-.hero-gradient {
-  background: linear-gradient(0deg, rgba(0,23,54,1) 0%, rgba(0,23,54,0.4) 50%, rgba(0,23,54,0) 100%);
-}
-
 /* ── ANIME GRID RESPONSIVE ────────────────────────────────── */
 .anime-grid {
   display: grid;
@@ -221,17 +168,6 @@
 }
 @media (min-width: 1280px) {
   .anime-grid { grid-template-columns: repeat(5, 1fr); }
-}
-
-/* ── GENRE GRID (DESKTOP: 4 col) ─────────────────────────── */
-.genre-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-@media (min-width: 768px) {
-  .genre-grid { grid-template-columns: repeat(4, 1fr); }
 }
 
 /* ── MYLIST CARD (with progress bar) ─────────────────────── */
@@ -321,30 +257,6 @@
   .bento-main { grid-row: span 2; }
 }
 
-/* ── FAB (desktop floating button) ───────────────────────── */
-.fab {
-  display: none;
-  position: fixed;
-  bottom: 32px;
-  right: 32px;
-  width: 64px;
-  height: 64px;
-  border-radius: 9999px;
-  background: linear-gradient(135deg, #fe6a34 0%, #ab3500 100%);
-  color: #fff;
-  border: none;
-  cursor: pointer;
-  z-index: 40;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 8px 32px rgba(254,106,52,0.45);
-  transition: transform 0.25s;
-}
-
-@media (min-width: 768px) { .fab { display: flex; } }
-.fab:hover { transform: scale(1.1); }
-.fab:active { transform: scale(0.95); }
-
 /* ── DETAIL PAGE GRID ─────────────────────────────────────── */
 .detail-grid {
   grid-template-columns: 1fr;
@@ -359,6 +271,7 @@
 
 /* ── MYLIST RESPONSIVE GRID ───────────────────────────────── */
 .mylist-responsive-grid {
+  display: grid;
   grid-template-columns: repeat(2, 1fr);
 }
 
@@ -381,12 +294,15 @@
   .profile-stats-grid > *:first-child { grid-column: span 4; }
 }
 
-/* ── GENRE GRID (desktop 4-col with wide cards) ───────────── */
+/* ── GENRE BENTO GRID (2-col mobile → 4-col desktop) ──────── */
+.genre-grid-bento {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
 @media (min-width: 768px) {
   .genre-grid-bento {
     grid-template-columns: repeat(4, 1fr);
-  }
-  .genre-grid-bento .genre-wide {
-    grid-column: span 2;
   }
 }

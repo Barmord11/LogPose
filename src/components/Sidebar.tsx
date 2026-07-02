@@ -77,4 +77,14 @@ export default function Sidebar({ activePage, navigate }: SidebarProps) {
           style={{ width: '40px', height: '40px', borderRadius: '9999px', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.5)', flexShrink: 0 }}
         />
         <div style={{ overflow: 'hidden' }}>
-          <p style={{ fontFamily: 'var(--font)', fontSize: '14px', fontWeight: 700, color: 'var(--p
+          <p style={{ fontFamily: 'var(--font)', fontSize: '14px', fontWeight: 700, color: 'var(--primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            Captain's Cabin
+          </p>
+          <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--outline)' }}>
+            Lvl {level} Navigator
+          </p>
+        </div>
+      </button>
+    </aside>
+  )
+}

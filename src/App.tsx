@@ -54,4 +54,22 @@ function App() {
         <div className="page-enter" key={activePage}>
           {activePage === 'home'    && <HomePage    navigate={navigate} />}
           {activePage === 'search'  && <SearchPage  navigate={navigate} initialQuery={searchQuery} />}
-          {activePage === 'mylist'  && <
+          {activePage === 'mylist'  && <MyListPage  navigate={navigate} />}
+          {activePage === 'profile' && <ProfilePage navigate={navigate} />}
+          {activePage === 'detail'  && (
+            <AnimeDetailPage
+              animeId={selectedAnimeId}
+              navigate={navigate}
+              backTo={previousPage === 'detail' ? 'home' : previousPage}
+            />
+          )}
+        </div>
+      </main>
+
+      {/* ── Mobile Bottom Nav (hidden on desktop via CSS) ── */}
+      <BottomNav activePage={activePage} navigate={navigate} />
+    </div>
+  )
+}
+
+export default App

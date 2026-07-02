@@ -40,7 +40,7 @@ export type AppAction =
   | { type: 'CLEAR_ALL_EPISODES';  animeId: number }
 
 // ── Default State ─────────────────────────────────────────────
-const DEFAULT_STATE: AppState = {
+export const DEFAULT_STATE: AppState = {
   watchedList:      [],
   planToWatchList:  [],
   favorites:        [],
@@ -49,7 +49,7 @@ const DEFAULT_STATE: AppState = {
 }
 
 // ── Reducer ───────────────────────────────────────────────────
-function reducer(state: AppState, action: AppAction): AppState {
+export function reducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
 
     case 'ADD_TO_WATCHED':
@@ -196,4 +196,8 @@ export function useProfileStats() {
     seriesWatched,
     planCount:       state.planToWatchList.length,
     favoritesCount:  state.favorites.length,
-    
+    totalEpisodes,
+    /** Navigator level: +1 every 3 series watched */
+    level:           Math.max(1, Math.floor(seriesWatched / 3) + 1),
+  }
+}

@@ -8,15 +8,15 @@ interface BottomNavProps {
 }
 
 const NAV_ITEMS = [
-  { page: 'home'    as Page, icon: 'home',         label: 'Home'    },
+  { page: 'home'    as Page, icon: 'home',          label: 'Home'    },
   { page: 'search'  as Page, icon: 'search',        label: 'Search'  },
   { page: 'mylist'  as Page, icon: 'subscriptions', label: 'My List' },
   { page: 'profile' as Page, icon: 'person',        label: 'Profile' },
 ]
 
-/** Universal bottom navigation bar.
+/** Mobile-only bottom navigation bar.
  *  Uses .glass-nav from index.css for the backdrop blur surface.
- *  Uses .compass-active + .ocean-glow for the central FAB.
+ *  Hidden on desktop via the .bottom-nav media query.
  */
 export default function BottomNav({ navigate, activePage }: BottomNavProps) {
   const [spin, setSpin] = useState(false)
@@ -146,4 +146,15 @@ function NavButton({
       aria-current={active ? 'page' : undefined}
     >
       <span
-        className="material-symbols-outlin
+        className="material-symbols-outlined"
+        style={{
+          fontSize: '24px',
+          fontVariationSettings: active && fillWhenActive ? "'FILL' 1" : "'FILL' 0",
+        }}
+      >
+        {icon}
+      </span>
+      <span style={{ fontSize: '10px', fontWeight: 700 }}>{label}</span>
+    </button>
+  )
+}

@@ -5,9 +5,9 @@ interface HeaderProps {
   activePage: Page
 }
 
-/** Universal sticky header.
+/** Mobile-only sticky header.
  *  Uses .glass-nav from index.css for the glass effect.
- *  Page-specific concerns are handled by the pages themselves.
+ *  Hidden on desktop via the .mobile-header media query.
  */
 export default function Header({ navigate, activePage }: HeaderProps) {
   return (
@@ -117,4 +117,6 @@ export default function Header({ navigate, activePage }: HeaderProps) {
           />
         </button>
       </div>
-    </
+    </header>
+  )
+}

@@ -2,7 +2,7 @@
  * MyListPage — The Captain's Log
  * ───────────────────────────────
  * Renders the user's personal anime collection.
- * Tabs: "Watched" | "Plan to Watch"
+ * Tabs: "Watched" | "Plan to Watch" | "Favorites"
  * Each card: cover image (→ detail), title, progress bar, action bar
  */
 
@@ -13,14 +13,18 @@ import { useApp, useAnimeStatus } from '../context/AppContext'
 import AnchorRating from '../components/AnchorRating'
 import AddDropdown  from '../components/AddDropdown'
 import PlayButton   from '../components/PlayButton'
+import StatusBadge  from '../components/StatusBadge'
 
-type ListTab = 'watched' | 'plan'
+type ListTab = 'watched' | 'plan' | 'favorites'
 
 export default function MyListPage({ navigate }: NavProps) {
   const { state } = useApp()
   const [activeTab, setActiveTab] = useState<ListTab>('watched')
 
-  const ids = activeTab === 'watched' ? state.watchedList : state.planToWatchList
+  const ids =
+    activeTab === 'watched' ? state.watchedList :
+    activeTab === 'plan'    ? state.planToWatchList :
+    state.favorites
   const list = animes.filter(a => ids.includes(a.id))
 
   return (
@@ -53,6 +57,7 @@ export default function MyListPage({ navigate }: NavProps) {
         <div
           style={{
             display: 'flex',
+            flexWrap: 'wrap',
             background: 'var(--surface-container)',
             borderRadius: '9999px',
             padding: '4px',
@@ -60,14 +65,15 @@ export default function MyListPage({ navigate }: NavProps) {
           }}
         >
           {([
-            { key: 'watched', label: 'Watched', count: state.watchedList.length },
-            { key: 'plan',    label: 'Plan to Watch', count: state.planToWatchList.length },
+            { key: 'watched',   label: 'Watched',       count: state.watchedList.length },
+            { key: 'plan',      label: 'Plan to Watch', count: state.planToWatchList.length },
+            { key: 'favorites', label: 'Favorites',     count: state.favorites.length },
           ] as const).map(tab => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               style={{
-                padding: '8px 20px',
+                padding: '8px 16px',
                 borderRadius: '9999px',
                 border: 'none',
                 fontFamily: 'var(--font)',
@@ -118,7 +124,6 @@ export default function MyListPage({ navigate }: NavProps) {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(2, 1fr)',
               gap: '16px',
             }}
             className="mylist-responsive-grid"
@@ -155,31 +160,13 @@ function MyListCard({ anime, navigate }: { anime: typeof animes[0]; navigate: Na
           <PlayButton watchUrl={anime.watchUrl} variant="icon" />
         </div>
 
-        {/* Status badge */}
-        <div
-          style={{
-            position: 'absolute',
-            top: '10px',
-            left: '10px',
-            padding: '3px 10px',
-            borderRadius: '9999px',
-            fontSize: '9px',
-            fontWeight: 800,
-            textTransform: 'uppercase',
-            letterSpacing: '0.1em',
-            background: anime.status === 'AIRING' ? 'var(--secondary-container)' : 'rgba(255,255,255,0.85)',
-            color: anime.status === 'AIRING' ? '#fff' : 'var(--primary)',
-            backdropFilter: 'blur(8px)',
-          }}
-        >
-          {anime.status}
-        </div>
+        <StatusBadge status={anime.status} />
       </div>
 
       {/* Card body */}
       <div className="mylist-card__body">
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '6px' }}>
-          <div>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px', marginBottom: '6px' }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
             <h3
               onClick={() => navigate('detail', anime.id)}
               style={{
@@ -190,7 +177,6 @@ function MyListCard({ anime, navigate }: { anime: typeof animes[0]; navigate: Na
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
-                maxWidth: '150px',
                 cursor: 'pointer',
                 marginBottom: '2px',
               }}
@@ -257,7 +243,26 @@ function MyListCard({ anime, navigate }: { anime: typeof animes[0]; navigate: Na
 }
 
 /* ── Empty state ── */
+const EMPTY_COPY: Record<ListTab, { icon: string; title: string; body: string }> = {
+  watched: {
+    icon: 'check_circle',
+    title: 'No voyages completed yet',
+    body: 'Start watching and mark episodes as you go — your completed series will appear here.',
+  },
+  plan: {
+    icon: 'bookmark',
+    title: 'The horizon is empty',
+    body: 'Add series to your Plan to Watch list and chart your next adventure.',
+  },
+  favorites: {
+    icon: 'favorite',
+    title: 'No favorites yet',
+    body: 'Tap the heart on any series to keep your most treasured voyages here.',
+  },
+}
+
 function EmptyState({ tab, navigate }: { tab: ListTab; navigate: NavProps['navigate'] }) {
+  const copy = EMPTY_COPY[tab]
   return (
     <div
       style={{
@@ -282,16 +287,14 @@ function EmptyState({ tab, navigate }: { tab: ListTab; navigate: NavProps['navig
         }}
       >
         <span className="material-symbols-outlined" style={{ fontSize: '36px', color: 'var(--secondary-container)', fontVariationSettings: "'FILL' 1" }}>
-          {tab === 'watched' ? 'check_circle' : 'bookmark'}
+          {copy.icon}
         </span>
       </div>
       <h2 style={{ fontFamily: 'var(--font)', fontSize: '22px', fontWeight: 700, color: 'var(--primary)' }}>
-        {tab === 'watched' ? 'No voyages completed yet' : 'The horizon is empty'}
+        {copy.title}
       </h2>
       <p style={{ fontSize: '15px', color: 'var(--on-surface-variant)', maxWidth: '320px', lineHeight: 1.6 }}>
-        {tab === 'watched'
-          ? 'Start watching and mark episodes as you go — your completed series will appear here.'
-          : 'Add series to your Plan to Watch list and chart your next adventure.'}
+        {copy.body}
       </p>
       <button
         onClick={() => navigate('search')}
