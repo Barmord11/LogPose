@@ -24,14 +24,11 @@ export default function Sidebar({ activePage, navigate }: SidebarProps) {
 
       {/* Logo */}
       <div className="sidebar-logo">
-        <div className="sidebar-logo__icon">
-          <span
-            className="material-symbols-outlined"
-            style={{ fontSize: '22px', fontVariationSettings: "'FILL' 1" }}
-          >
-            explore
-          </span>
-        </div>
+        <img
+          src="/images/logo-compass.png"
+          alt=""
+          style={{ width: '40px', height: '40px', objectFit: 'contain', flexShrink: 0 }}
+        />
         <div>
           <h1 style={{ fontFamily: 'var(--font)', fontSize: '22px', fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--primary)', lineHeight: 1 }}>
             LogPose

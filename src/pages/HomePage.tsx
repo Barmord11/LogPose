@@ -19,7 +19,7 @@ const FEATURED = animes[4] // Kōkai no Kiroku — most legendary
 export default function HomePage({ navigate }: NavProps) {
   const stats = useProfileStats()
   return (
-    <div style={{ minHeight: '100vh', paddingBottom: '32px', background: 'var(--background)' }}>
+    <div style={{ minHeight: '100vh', paddingBottom: '32px' }}>
 
       {/* ══ HERO ════════════════════════════════════════════════ */}
       <section style={{ position: 'relative', width: '100%', height: '72vh', minHeight: '420px', overflow: 'hidden' }}>

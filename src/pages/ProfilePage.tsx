@@ -3,21 +3,49 @@
  * ───────────────────────────────────
  * User dashboard with live-computed stats from global state.
  * - Episodes Watched: sum of all individually tracked episodes
- * - Series Watched: total entries in watchedList
- * Both counters auto-update when any episode or list changes.
+ * - Time at Sea: watch time derived from tracked episodes
+ * Captain name is editable (Edit Profile) and persisted to localStorage.
  */
 
+import { useState } from 'react'
 import type { NavProps } from '../App'
 import { useProfileStats } from '../context/AppContext'
+import { formatWatchTime, EPISODE_MINUTES } from '../context/reducer'
+
+const NAME_KEY = 'logpose-profile-name'
+const DEFAULT_NAME = 'Grand Line Voyager'
+
+function loadName(): string {
+  try {
+    return localStorage.getItem(NAME_KEY) || DEFAULT_NAME
+  } catch {
+    return DEFAULT_NAME
+  }
+}
 
 export default function ProfilePage({ navigate }: NavProps) {
   const stats = useProfileStats()
+  const [name, setName]       = useState(loadName)
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft]     = useState('')
+
+  const startEdit = () => {
+    setDraft(name)
+    setEditing(true)
+  }
+
+  const saveEdit = () => {
+    const next = draft.trim() || DEFAULT_NAME
+    setName(next)
+    setEditing(false)
+    try { localStorage.setItem(NAME_KEY, next) } catch { /* storage full — skip */ }
+  }
 
   const actionItems = [
-    { icon: 'subscriptions', label: 'My Watched List',    sub: `${stats.seriesWatched} series`,        page: 'mylist' as const },
-    { icon: 'bookmark',      label: 'Plan to Watch',       sub: `${stats.planCount} series queued`,     page: 'mylist' as const },
-    { icon: 'favorite',      label: 'Favourites',          sub: `${stats.favoritesCount} series saved`, page: 'mylist' as const },
-    { icon: 'explore',       label: 'Discover New Series', sub: 'Chart your next voyage',               page: 'search' as const },
+    { icon: 'edit',          label: 'Edit Profile',     sub: 'Change your captain name',             onClick: startEdit },
+    { icon: 'subscriptions', label: 'My Watched List',  sub: `${stats.seriesWatched} series`,        onClick: () => navigate('mylist') },
+    { icon: 'bookmark',      label: 'Plan to Watch',    sub: `${stats.planCount} series queued`,     onClick: () => navigate('mylist') },
+    { icon: 'favorite',      label: 'Favourites',       sub: `${stats.favoritesCount} series saved`, onClick: () => navigate('mylist') },
   ]
 
   return (
@@ -96,9 +124,52 @@ export default function ProfilePage({ navigate }: NavProps) {
 
       {/* ══ NAME & RANK ════════════════════════════════════════ */}
       <div style={{ textAlign: 'center', padding: '16px 16px 24px', maxWidth: '480px', margin: '0 auto' }}>
-        <h1 style={{ fontFamily: 'var(--font)', fontSize: '26px', fontWeight: 800, color: 'var(--primary)', letterSpacing: '-0.02em', marginBottom: '4px' }}>
-          Grand Line Voyager
-        </h1>
+        {editing ? (
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center', marginBottom: '4px' }}>
+            <input
+              autoFocus
+              value={draft}
+              maxLength={28}
+              onChange={e => setDraft(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') saveEdit()
+                if (e.key === 'Escape') setEditing(false)
+              }}
+              aria-label="Captain name"
+              style={{
+                fontFamily: 'var(--font)',
+                fontSize: '22px',
+                fontWeight: 800,
+                color: 'var(--primary)',
+                textAlign: 'center',
+                border: '2px solid var(--secondary-container)',
+                borderRadius: '12px',
+                padding: '4px 12px',
+                outline: 'none',
+                background: 'rgba(255,255,255,0.85)',
+                maxWidth: '280px',
+              }}
+            />
+            <button
+              onClick={saveEdit}
+              className="btn-sunset"
+              style={{ padding: '8px 14px', fontSize: '12px' }}
+            >
+              Save
+            </button>
+            <button
+              onClick={() => setEditing(false)}
+              className="btn-glass"
+              style={{ padding: '8px 14px', fontSize: '12px' }}
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <h1 style={{ fontFamily: 'var(--font)', fontSize: '26px', fontWeight: 800, color: 'var(--primary)', letterSpacing: '-0.02em', marginBottom: '4px' }}>
+            {name}
+          </h1>
+        )}
         <p style={{ fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--secondary-container)' }}>
           Navigator · Level {stats.level}
         </p>
@@ -159,7 +230,7 @@ export default function ProfilePage({ navigate }: NavProps) {
           {/* Series Watched */}
           <StatCard
             label="Series Watched"
-            value={stats.seriesWatched}
+            value={String(stats.seriesWatched)}
             icon="check_circle"
             gradient="linear-gradient(135deg, rgba(254,106,52,0.12), rgba(171,53,0,0.06))"
             accent="var(--secondary)"
@@ -168,7 +239,7 @@ export default function ProfilePage({ navigate }: NavProps) {
           {/* Plan to Watch */}
           <StatCard
             label="On the Horizon"
-            value={stats.planCount}
+            value={String(stats.planCount)}
             icon="bookmark"
             gradient="linear-gradient(135deg, rgba(0,49,52,0.10), rgba(102,247,255,0.05))"
             accent="var(--on-tertiary-container)"
@@ -177,17 +248,18 @@ export default function ProfilePage({ navigate }: NavProps) {
           {/* Favourites */}
           <StatCard
             label="Favourites"
-            value={stats.favoritesCount}
+            value={String(stats.favoritesCount)}
             icon="favorite"
             gradient="linear-gradient(135deg, rgba(232,67,147,0.10), rgba(232,67,147,0.04))"
             accent="#e84393"
           />
 
-          {/* Total tracked (episodes across all series in plan list) */}
+          {/* Time at Sea — watch time derived from tracked episodes */}
           <StatCard
-            label="Total Logged"
-            value={stats.seriesWatched + stats.planCount}
-            icon="auto_stories"
+            label="Time at Sea"
+            value={formatWatchTime(stats.totalEpisodes)}
+            sub={`~${EPISODE_MINUTES} min per episode`}
+            icon="sailing"
             gradient="linear-gradient(135deg, rgba(64,95,145,0.10), rgba(0,23,54,0.05))"
             accent="var(--on-primary-container)"
           />
@@ -206,7 +278,7 @@ export default function ProfilePage({ navigate }: NavProps) {
           {actionItems.map((item, i) => (
             <button
               key={item.label}
-              onClick={() => navigate(item.page)}
+              onClick={item.onClick}
               className="action-item"
               style={{
                 borderBottom: i < actionItems.length - 1 ? '1px solid rgba(196,198,208,0.15)' : 'none',
@@ -256,9 +328,9 @@ export default function ProfilePage({ navigate }: NavProps) {
 
 /* ── Stat Card sub-component ── */
 function StatCard({
-  label, value, icon, gradient, accent,
+  label, value, icon, gradient, accent, sub,
 }: {
-  label: string; value: number; icon: string; gradient: string; accent: string;
+  label: string; value: string; icon: string; gradient: string; accent: string; sub?: string;
 }) {
   return (
     <div
@@ -275,6 +347,9 @@ function StatCard({
         {value}
       </p>
       <p className="profile-stat__label">{label}</p>
+      {sub && (
+        <p style={{ fontSize: '9px', color: 'var(--outline)', fontWeight: 600, marginTop: '2px' }}>{sub}</p>
+      )}
     </div>
   )
 }

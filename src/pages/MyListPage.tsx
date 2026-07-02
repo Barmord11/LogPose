@@ -1,8 +1,8 @@
 /**
  * MyListPage — The Captain's Log
  * ───────────────────────────────
- * Renders the user's personal anime collection.
- * Tabs: "Watched" | "Plan to Watch" | "Favorites"
+ * Main column: "Watched" | "Plan to Watch" tabs with progress cards.
+ * Right side: Favorites panel — hearts live apart from the watch lists.
  * Each card: cover image (→ detail), title, progress bar, action bar
  */
 
@@ -15,20 +15,17 @@ import AddDropdown  from '../components/AddDropdown'
 import PlayButton   from '../components/PlayButton'
 import StatusBadge  from '../components/StatusBadge'
 
-type ListTab = 'watched' | 'plan' | 'favorites'
+type ListTab = 'watched' | 'plan'
 
 export default function MyListPage({ navigate }: NavProps) {
   const { state } = useApp()
   const [activeTab, setActiveTab] = useState<ListTab>('watched')
 
-  const ids =
-    activeTab === 'watched' ? state.watchedList :
-    activeTab === 'plan'    ? state.planToWatchList :
-    state.favorites
+  const ids = activeTab === 'watched' ? state.watchedList : state.planToWatchList
   const list = animes.filter(a => ids.includes(a.id))
 
   return (
-    <div style={{ minHeight: '100vh', paddingBottom: '48px', background: 'var(--background)' }}>
+    <div style={{ minHeight: '100vh', paddingBottom: '48px' }}>
 
       {/* ══ PAGE HEADER ════════════════════════════════════════ */}
       <section
@@ -53,11 +50,10 @@ export default function MyListPage({ navigate }: NavProps) {
           </p>
         </div>
 
-        {/* Tab toggle pill */}
+        {/* Tab toggle pill — watch lists only; favorites live in their own panel */}
         <div
           style={{
             display: 'flex',
-            flexWrap: 'wrap',
             background: 'var(--surface-container)',
             borderRadius: '9999px',
             padding: '4px',
@@ -65,15 +61,14 @@ export default function MyListPage({ navigate }: NavProps) {
           }}
         >
           {([
-            { key: 'watched',   label: 'Watched',       count: state.watchedList.length },
-            { key: 'plan',      label: 'Plan to Watch', count: state.planToWatchList.length },
-            { key: 'favorites', label: 'Favorites',     count: state.favorites.length },
+            { key: 'watched', label: 'Watched',       count: state.watchedList.length },
+            { key: 'plan',    label: 'Plan to Watch', count: state.planToWatchList.length },
           ] as const).map(tab => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               style={{
-                padding: '8px 16px',
+                padding: '8px 20px',
                 borderRadius: '9999px',
                 border: 'none',
                 fontFamily: 'var(--font)',
@@ -115,26 +110,104 @@ export default function MyListPage({ navigate }: NavProps) {
         </div>
       </section>
 
-      {/* ══ LIST GRID ══════════════════════════════════════════ */}
-      <section style={{ padding: '0 16px', maxWidth: '1280px', margin: '0 auto' }}>
+      {/* ══ MAIN + FAVORITES SIDE PANEL ════════════════════════ */}
+      <div className="mylist-layout" style={{ padding: '0 16px', maxWidth: '1280px', margin: '0 auto' }}>
 
-        {list.length === 0 ? (
-          <EmptyState tab={activeTab} navigate={navigate} />
-        ) : (
-          <div
-            style={{
-              display: 'grid',
-              gap: '16px',
-            }}
-            className="mylist-responsive-grid"
-          >
-            {list.map(anime => (
-              <MyListCard key={anime.id} anime={anime} navigate={navigate} />
-            ))}
-          </div>
-        )}
-      </section>
+        {/* Main column: active watch list */}
+        <section style={{ minWidth: 0 }}>
+          {list.length === 0 ? (
+            <EmptyState tab={activeTab} navigate={navigate} />
+          ) : (
+            <div style={{ display: 'grid', gap: '16px' }} className="mylist-responsive-grid">
+              {list.map(anime => (
+                <MyListCard key={anime.id} anime={anime} navigate={navigate} />
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Right column: favorites */}
+        <FavoritesPanel navigate={navigate} />
+      </div>
     </div>
+  )
+}
+
+/* ── Favorites side panel ── */
+function FavoritesPanel({ navigate }: { navigate: NavProps['navigate'] }) {
+  const { state, dispatch } = useApp()
+  const favs = animes.filter(a => state.favorites.includes(a.id))
+
+  return (
+    <aside
+      className="glass-card"
+      style={{
+        borderRadius: '20px',
+        padding: '18px',
+        alignSelf: 'start',
+        position: 'sticky',
+        top: '96px',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+        <span className="material-symbols-outlined" style={{ fontSize: '20px', color: '#e84393', fontVariationSettings: "'FILL' 1" }}>
+          favorite
+        </span>
+        <h2 style={{ fontFamily: 'var(--font)', fontSize: '16px', fontWeight: 800, color: 'var(--primary)', flex: 1 }}>
+          Favorites
+        </h2>
+        <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--outline)' }}>{favs.length}</span>
+      </div>
+
+      {favs.length === 0 ? (
+        <p style={{ fontSize: '12px', color: 'var(--on-surface-variant)', lineHeight: 1.6 }}>
+          Tap the heart on any series to keep your most treasured voyages here.
+        </p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          {favs.map(anime => (
+            <div
+              key={anime.id}
+              onClick={() => navigate('detail', anime.id)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '6px',
+                borderRadius: '12px',
+                cursor: 'pointer',
+                transition: 'background 0.15s',
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(232,67,147,0.06)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+            >
+              <img
+                src={anime.cover}
+                alt={anime.title}
+                style={{ width: '42px', height: '56px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }}
+              />
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <p style={{ fontFamily: 'var(--font)', fontSize: '13px', fontWeight: 700, color: 'var(--primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {anime.title}
+                </p>
+                <p style={{ fontSize: '10px', fontWeight: 700, color: 'var(--outline)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '2px' }}>
+                  {anime.genres[0]} · ★ {anime.score}
+                </p>
+              </div>
+              <button
+                className="heart-btn active"
+                title="Remove from favorites"
+                onClick={e => { e.stopPropagation(); dispatch({ type: 'TOGGLE_FAVORITE', id: anime.id }) }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '18px', fontVariationSettings: "'FILL' 1" }}>
+                  favorite
+                </span>
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </aside>
   )
 }
 
@@ -253,11 +326,6 @@ const EMPTY_COPY: Record<ListTab, { icon: string; title: string; body: string }>
     icon: 'bookmark',
     title: 'The horizon is empty',
     body: 'Add series to your Plan to Watch list and chart your next adventure.',
-  },
-  favorites: {
-    icon: 'favorite',
-    title: 'No favorites yet',
-    body: 'Tap the heart on any series to keep your most treasured voyages here.',
   },
 }
 

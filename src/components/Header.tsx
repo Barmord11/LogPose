@@ -42,16 +42,11 @@ export default function Header({ navigate, activePage }: HeaderProps) {
         onMouseUp={e => (e.currentTarget.style.opacity = '1')}
         aria-label="Go to home"
       >
-        <span
-          className="material-symbols-outlined"
-          style={{
-            color: 'var(--primary)',
-            fontSize: '26px',
-            fontVariationSettings: "'FILL' 0, 'wght' 400",
-          }}
-        >
-          explore
-        </span>
+        <img
+          src="/images/logo-compass.png"
+          alt=""
+          style={{ width: '30px', height: '30px', objectFit: 'contain' }}
+        />
         <span
           style={{
             fontFamily: 'var(--font)',

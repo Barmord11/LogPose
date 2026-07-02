@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { reducer, DEFAULT_STATE, navigatorLevel, type AppState } from './reducer'
+import { reducer, DEFAULT_STATE, navigatorLevel, formatWatchTime, type AppState } from './reducer'
 
 const base = (): AppState => structuredClone(DEFAULT_STATE)
 
@@ -105,5 +105,26 @@ describe('navigatorLevel', () => {
     expect(navigatorLevel(2)).toBe(1)
     expect(navigatorLevel(3)).toBe(2)
     expect(navigatorLevel(9)).toBe(4)
+  })
+})
+
+describe('formatWatchTime (Time at Sea)', () => {
+  it('formats minutes under an hour', () => {
+    expect(formatWatchTime(0)).toBe('0m')
+    expect(formatWatchTime(2)).toBe('46m')
+  })
+
+  it('formats hours with remainder minutes', () => {
+    expect(formatWatchTime(3)).toBe('1h 9m')     // 69 min
+    expect(formatWatchTime(12)).toBe('4h 36m')   // 276 min
+  })
+
+  it('drops zero remainders', () => {
+    expect(formatWatchTime(60)).toBe('23h')      // 1380 min exactly
+  })
+
+  it('formats days once past 24h', () => {
+    expect(formatWatchTime(63)).toBe('1d')       // 1449 min = 24h9m → 24h floor → 1d 0h → "1d"
+    expect(formatWatchTime(100)).toBe('1d 14h')  // 2300 min = 38h20m → 38h → 1d 14h
   })
 })

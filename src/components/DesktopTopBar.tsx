@@ -21,8 +21,8 @@ export default function DesktopTopBar({ activePage, navigate, onSearch }: Deskto
 
   return (
     <header className="desktop-topbar glass-nav">
-      {/* Global search */}
-      <div style={{ position: 'relative' }}>
+      {/* Global search — hidden on the Search page (it has its own hero search) */}
+      <div style={{ position: 'relative', visibility: activePage === 'search' ? 'hidden' : 'visible' }}>
         <span
           className="material-symbols-outlined"
           style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--outline)', fontSize: '20px', pointerEvents: 'none' }}

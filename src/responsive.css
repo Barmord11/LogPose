@@ -83,18 +83,6 @@
   margin-bottom: 32px;
 }
 
-.sidebar-logo__icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #fe6a34 0%, #ab3500 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  flex-shrink: 0;
-}
-
 /* ── DESKTOP USER CARD ────────────────────────────────────── */
 .sidebar-user {
   display: flex;
@@ -269,6 +257,20 @@
   }
 }
 
+/* ── MYLIST LAYOUT: main column + favorites side panel ────── */
+.mylist-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+@media (min-width: 1024px) {
+  .mylist-layout {
+    grid-template-columns: minmax(0, 1fr) 300px;
+    align-items: start;
+  }
+}
+
 /* ── MYLIST RESPONSIVE GRID ───────────────────────────────── */
 .mylist-responsive-grid {
   display: grid;
@@ -279,10 +281,10 @@
   .mylist-responsive-grid { grid-template-columns: repeat(3, 1fr); }
 }
 @media (min-width: 1024px) {
-  .mylist-responsive-grid { grid-template-columns: repeat(4, 1fr); }
+  .mylist-responsive-grid { grid-template-columns: repeat(3, 1fr); }
 }
 @media (min-width: 1280px) {
-  .mylist-responsive-grid { grid-template-columns: repeat(5, 1fr); }
+  .mylist-responsive-grid { grid-template-columns: repeat(4, 1fr); }
 }
 
 /* ── PROFILE STATS GRID ───────────────────────────────────── */

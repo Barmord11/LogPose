@@ -33,7 +33,7 @@ export default function AnimeDetailPage({ animeId, navigate, backTo = 'home' }: 
   const allWatched    = watchedEps.length === anime.episodes
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(180deg, #f7f9fb 0%, #eef2f7 100%)' }}>
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(180deg, rgba(247,249,251,0.55) 0%, rgba(238,242,247,0.75) 100%)' }}>
 
       {/* ══ HERO BANNER ════════════════════════════════════════ */}
       <div style={{ position: 'relative', height: '55vh', minHeight: '320px', overflow: 'hidden' }}>

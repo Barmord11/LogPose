@@ -121,3 +121,23 @@ export function reducer(state: AppState, action: AppAction): AppState {
 export function navigatorLevel(seriesWatched: number): number {
   return Math.max(1, Math.floor(seriesWatched / 3) + 1)
 }
+
+/** Average anime episode runtime, in minutes */
+export const EPISODE_MINUTES = 23
+
+/**
+ * "Time at Sea" — total watch time from episodes watched,
+ * formatted for humans: "0m" → "45m" → "3h 20m" → "2d 5h".
+ */
+export function formatWatchTime(episodes: number): string {
+  const mins = episodes * EPISODE_MINUTES
+  if (mins < 60) return `${mins}m`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) {
+    const rem = mins % 60
+    return rem === 0 ? `${hours}h` : `${hours}h ${rem}m`
+  }
+  const days = Math.floor(hours / 24)
+  const remH = hours % 24
+  return remH === 0 ? `${days}d` : `${days}d ${remH}h`
+}
