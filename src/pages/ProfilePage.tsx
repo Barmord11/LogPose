@@ -8,11 +8,10 @@
  */
 
 import type { NavProps } from '../App'
-import { useProfileStats, useApp } from '../context/AppContext'
+import { useProfileStats } from '../context/AppContext'
 
 export default function ProfilePage({ navigate }: NavProps) {
   const stats = useProfileStats()
-  const { state } = useApp()
 
   const actionItems = [
     { icon: 'subscriptions', label: 'My Watched List',    sub: `${stats.seriesWatched} series`,        page: 'mylist' as const },

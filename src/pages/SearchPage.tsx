@@ -142,7 +142,7 @@ export default function SearchPage({ navigate }: NavProps) {
                 gap: '16px',
               }}
             >
-              {genres.map((genre, i) => {
+              {genres.map(genre => {
                 const bs = BADGE_STYLES[genre.badgeVariant]
                 const overlay = GENRE_OVERLAYS[genre.id] ?? 'rgba(0,23,54,0.6)'
                 // Isekai and Slice of Life are wide on desktop
@@ -274,7 +274,7 @@ function SearchCard({ anime, navigate }: { anime: typeof animes[0]; navigate: Na
         {/* Hover action overlay */}
         <div className="search-card__overlay" onClick={e => e.stopPropagation()}>
           {/* Play button — centred large */}
-          <PlayButton watchUrl={anime.watchUrl} variant="icon" size="md" />
+          <PlayButton watchUrl={anime.watchUrl} variant="icon" />
 
           {/* Bottom row: AnchorRating + AddDropdown */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

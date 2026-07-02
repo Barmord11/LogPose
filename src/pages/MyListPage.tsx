@@ -135,7 +135,7 @@ export default function MyListPage({ navigate }: NavProps) {
 
 /* ── My List Card ── */
 function MyListCard({ anime, navigate }: { anime: typeof animes[0]; navigate: NavProps['navigate'] }) {
-  const { state, dispatch } = useApp()
+  const { dispatch } = useApp()
   const { isFavorite, watchedEps } = useAnimeStatus(anime.id)
   const progress = Math.round((watchedEps.length / anime.episodes) * 100)
 
