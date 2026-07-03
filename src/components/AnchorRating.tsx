@@ -2,7 +2,7 @@
  * AnchorRating — The Voyager's Verdict
  * ─────────────────────────────────────
  * Replaces standard like/dislike with nautical Anchor Up / Anchor Down.
- * Anchor UP  = approve, glows orange when active.
+ * Anchor UP  = approve, glows green when active.
  * Anchor DOWN = disapprove, glows red when active.
  * Clicking the same direction again toggles it off.
  */
@@ -16,6 +16,10 @@ interface AnchorRatingProps {
 }
 
 const ICON_SIZES = { sm: '18px', md: '22px', lg: '26px' }
+
+// Anchor Up "approve" accent — kept local since there's no green token
+// in the shared design system (navy/orange/teal only).
+const ANCHOR_UP_COLOR = '#1b8a4a'
 
 export default function AnchorRating({
   animeId,
@@ -46,16 +50,16 @@ export default function AnchorRating({
           height: size === 'sm' ? '28px' : '36px',
           borderRadius: '9999px',
           border: rating === 'up'
-            ? '1px solid rgba(254,106,52,0.35)'
+            ? '1px solid rgba(27,138,74,0.35)'
             : '1px solid transparent',
           background: rating === 'up'
-            ? 'rgba(254,106,52,0.12)'
+            ? 'rgba(27,138,74,0.12)'
             : 'transparent',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           cursor: 'pointer',
-          color: rating === 'up' ? 'var(--secondary-container)' : baseColor,
+          color: rating === 'up' ? ANCHOR_UP_COLOR : baseColor,
           transition: 'all 0.2s cubic-bezier(0.34,1.56,0.64,1)',
           flexShrink: 0,
         }}
