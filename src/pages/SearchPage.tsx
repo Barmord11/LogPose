@@ -2,13 +2,20 @@
  * SearchPage — Find Your Way
  * ──────────────────────────
  * Discovery hub: search bar hero → genre bento → filter chips → anime grid.
- * Query, genre and chip filters all actually narrow the results grid.
- * Each anime card has the full action overlay: AddDropdown + AnchorRating + PlayButton
+ *
+ * Typing a query (2+ chars) switches the results grid to a LIVE Anilist
+ * search via Consumet (GET /api/anime/search), debounced. Clicking a
+ * live result opens the real SeriesPage (/anime/:anilistId).
+ *
+ * With an empty query, the page falls back to the original mock
+ * catalogue browsing experience (genre bento + filter chips) — that
+ * catalogue isn't wired to live data yet (see README "Known follow-ups").
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { NavProps } from '../App'
 import { animes, genres, filterChips, recentSearches, type Genre } from '../data/animes'
+import { searchAnime, type AnimeSearchResult } from '../services/animeApi'
 import AddDropdown  from '../components/AddDropdown'
 import AnchorRating from '../components/AnchorRating'
 import PlayButton   from '../components/PlayButton'
@@ -32,6 +39,9 @@ const GENRE_OVERLAYS: Record<string, string> = {
   fantasy:    'rgba(171,53,0,0.65)',
 }
 
+const MIN_QUERY_LENGTH = 2
+const DEBOUNCE_MS = 350
+
 interface SearchPageProps extends NavProps {
   /** Query handed over from the global (desktop top bar) search */
   initialQuery?: string
@@ -42,23 +52,57 @@ export default function SearchPage({ navigate, initialQuery = '' }: SearchPagePr
   const [activeChip,  setActiveChip]  = useState<string | null>(null)
   const [activeGenre, setActiveGenre] = useState<Genre | null>(null)
 
+  const [liveResults, setLiveResults] = useState<AnimeSearchResult[]>([])
+  const [liveLoading, setLiveLoading] = useState(false)
+  const [liveError,   setLiveError]   = useState<string | null>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   // Keep in sync when a new global search arrives
   useEffect(() => { setQuery(initialQuery) }, [initialQuery])
 
+  const trimmedQuery = query.trim()
+  const isLiveSearch = trimmedQuery.length >= MIN_QUERY_LENGTH
+
+  // Debounced live Anilist search via Consumet
+  useEffect(() => {
+    if (!isLiveSearch) {
+      setLiveResults([])
+      setLiveError(null)
+      setLiveLoading(false)
+      return
+    }
+
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    setLiveLoading(true)
+    setLiveError(null)
+
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const results = await searchAnime(trimmedQuery)
+        setLiveResults(results)
+      } catch (err) {
+        setLiveError(err instanceof Error ? err.message : 'Search failed. Please try again.')
+        setLiveResults([])
+      } finally {
+        setLiveLoading(false)
+      }
+    }, DEBOUNCE_MS)
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [trimmedQuery, isLiveSearch])
+
   const chip = filterChips.find(c => c.label === activeChip)
 
-  const filtered = animes.filter(a => {
-    const q = query.trim().toLowerCase()
-    const matchesQuery = q === ''
-      || a.title.toLowerCase().includes(q)
-      || (a.altTitle ?? '').toLowerCase().includes(q)
-      || a.genres.some(g => g.toLowerCase().includes(q))
+  // Mock-catalogue browsing (only used while the query is empty)
+  const filteredMock = animes.filter(a => {
     const matchesChip  = !chip || chip.test(a)
     const matchesGenre = !activeGenre || a.genres.some(g => activeGenre.matchTags.includes(g))
-    return matchesQuery && matchesChip && matchesGenre
+    return matchesChip && matchesGenre
   })
 
-  const hasActiveFilter = query.trim() !== '' || activeChip !== null || activeGenre !== null
+  const hasActiveFilter = trimmedQuery !== '' || activeChip !== null || activeGenre !== null
 
   const scrollToResults = () => {
     document.getElementById('search-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -105,7 +149,7 @@ export default function SearchPage({ navigate, initialQuery = '' }: SearchPagePr
               value={query}
               onChange={e => setQuery(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') scrollToResults() }}
-              placeholder="Search anime by title or genre..."
+              placeholder="Search real anime titles (live Anilist search)..."
               style={{
                 flex: 1,
                 background: 'transparent',
@@ -156,8 +200,8 @@ export default function SearchPage({ navigate, initialQuery = '' }: SearchPagePr
         </div>
       </section>
 
-      {/* ══ POPULAR GENRES BENTO ═══════════════════════════════ */}
-      {query.trim() === '' && (
+      {/* ══ POPULAR GENRES BENTO (mock catalogue, empty query only) ══ */}
+      {!isLiveSearch && (
         <>
           <section style={{ padding: '0 16px', maxWidth: '1280px', margin: '0 auto 48px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '28px' }}>
@@ -264,12 +308,12 @@ export default function SearchPage({ navigate, initialQuery = '' }: SearchPagePr
         </>
       )}
 
-      {/* ══ ANIME DISCOVERY GRID ═══════════════════════════════ */}
+      {/* ══ RESULTS GRID ═══════════════════════════════════════ */}
       <section id="search-results" style={{ padding: '0 16px', maxWidth: '1280px', margin: '0 auto', scrollMarginTop: '96px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '8px' }}>
           <h2 style={{ fontFamily: 'var(--font)', fontSize: 'clamp(20px, 2.5vw, 26px)', fontWeight: 700, color: 'var(--primary)' }}>
-            {query.trim() !== ''
-              ? `Results for "${query}"`
+            {isLiveSearch
+              ? `Results for "${trimmedQuery}"`
               : activeGenre
                 ? `${activeGenre.label} Voyages`
                 : activeChip ?? 'Trending This Season'}
@@ -278,7 +322,7 @@ export default function SearchPage({ navigate, initialQuery = '' }: SearchPagePr
             {hasActiveFilter && (
               <>
                 <span style={{ fontSize: '13px', color: 'var(--outline)', fontWeight: 600 }}>
-                  {filtered.length} found
+                  {isLiveSearch ? liveResults.length : filteredMock.length} found
                 </span>
                 <button
                   onClick={() => { setQuery(''); setActiveChip(null); setActiveGenre(null) }}
@@ -303,16 +347,39 @@ export default function SearchPage({ navigate, initialQuery = '' }: SearchPagePr
           </div>
         </div>
 
-        {filtered.length === 0 ? (
+        {isLiveSearch ? (
+          liveLoading ? (
+            <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--on-surface-variant)' }}>
+              <p style={{ fontWeight: 600 }}>Searching the Grand Line…</p>
+            </div>
+          ) : liveError ? (
+            <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--error)' }}>
+              <p style={{ fontWeight: 600 }}>{liveError}</p>
+            </div>
+          ) : liveResults.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--on-surface-variant)' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '56px', opacity: 0.25, display: 'block', marginBottom: '12px' }}>
+                explore_off
+              </span>
+              <p style={{ fontWeight: 600 }}>No voyages found for "{trimmedQuery}"</p>
+            </div>
+          ) : (
+            <div className="anime-grid">
+              {liveResults.map(result => (
+                <LiveSearchCard key={result.id} result={result} navigate={navigate} />
+              ))}
+            </div>
+          )
+        ) : filteredMock.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--on-surface-variant)' }}>
             <span className="material-symbols-outlined" style={{ fontSize: '56px', opacity: 0.25, display: 'block', marginBottom: '12px' }}>
               explore_off
             </span>
-            <p style={{ fontWeight: 600 }}>No voyages found{query.trim() !== '' ? ` for "${query}"` : ''}</p>
+            <p style={{ fontWeight: 600 }}>No voyages found</p>
           </div>
         ) : (
           <div className="anime-grid">
-            {filtered.map(anime => (
+            {filteredMock.map(anime => (
               <SearchCard key={anime.id} anime={anime} navigate={navigate} />
             ))}
           </div>
@@ -322,7 +389,36 @@ export default function SearchPage({ navigate, initialQuery = '' }: SearchPagePr
   )
 }
 
-/* ── Search Card component ── */
+/* ── Live Anilist result card → opens the real SeriesPage ── */
+function LiveSearchCard({ result, navigate }: { result: AnimeSearchResult; navigate: NavProps['navigate'] }) {
+  const anilistIdNum = Number(result.id)
+  return (
+    <div className="search-card" onClick={() => navigate('series', anilistIdNum)}>
+      <div className="search-card__img-wrap">
+        {result.image ? (
+          <img src={result.image} alt={result.title} />
+        ) : (
+          <div style={{ width: '100%', height: '100%', background: 'var(--surface-container)' }} />
+        )}
+      </div>
+      <div className="search-card__body">
+        <h3 style={{ fontFamily: 'var(--font)', fontSize: '14px', fontWeight: 700, color: 'var(--primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '4px' }}>
+          {result.title}
+        </h3>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            {result.totalEpisodes ? `${result.totalEpisodes} episodes` : 'Episodes TBA'}
+          </span>
+          {result.releaseDate && (
+            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--primary)' }}>{result.releaseDate}</span>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ── Mock catalogue card (unchanged) ── */
 function SearchCard({ anime, navigate }: { anime: typeof animes[0]; navigate: NavProps['navigate'] }) {
   return (
     <div className="search-card" onClick={() => navigate('detail', anime.id)}>
