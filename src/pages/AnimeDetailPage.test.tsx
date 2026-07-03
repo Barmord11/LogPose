@@ -17,9 +17,9 @@ const mockAnime: AnimeInfo = {
   image: null,
   genres: ['Action', 'Adventure'],
   description: 'A pirate goes on an adventure.',
-  status: 'ONGOING',
+  status: 'Currently Airing',
   format: 'TV',
-  rating: 88,
+  score: 8.73,
   characters: [],
   totalEpisodes: 3,
   episodes: [
@@ -31,7 +31,7 @@ const mockAnime: AnimeInfo = {
 function trackedRow(overrides: Partial<TrackerRow> = {}): TrackerRow {
   return {
     id: 1,
-    anilistId: 21,
+    malId: 21,
     title: 'One Piece',
     imageUrl: null,
     totalEpisodes: 3,
@@ -64,6 +64,11 @@ it('shows a loading state, then the anime title once fetched', async () => {
   await waitFor(() => expect(screen.getByText('One Piece')).toBeInTheDocument())
 })
 
+it('shows the MyAnimeList score as-is (already 0-10, not divided)', async () => {
+  await renderLive()
+  expect(screen.getByText('★ 8.7')).toBeInTheDocument()
+})
+
 it('renders an outbound watch link on the Episodes tab for episodes with a Consumet url', async () => {
   await renderLive()
   openEpisodesTab()
@@ -82,6 +87,12 @@ it('shows a disabled tile (not a dead link) when Consumet has no url for that ep
   const disabledTile = screen.getByTitle('Episode 2 — no watch link available')
   expect(disabledTile.tagName).toBe('BUTTON')
   expect(disabledTile).toBeDisabled()
+})
+
+it('shows "no watch link available" for the Play button when Consumet returns no episodes at all', async () => {
+  vi.mocked(animeApi.fetchAnimeInfo).mockResolvedValue({ ...mockAnime, episodes: [] })
+  await renderLive()
+  expect(screen.getByText('No watch link available')).toBeInTheDocument()
 })
 
 it('only offers Watched and Plan to Watch - there is no Watching status', async () => {

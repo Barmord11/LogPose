@@ -9,18 +9,20 @@
  *     tracked locally via AppContext/localStorage. Unchanged from the
  *     original design.
  *
- *   - source="live" (Search) — a real Anilist series. Two things come
- *     from Consumet, and only two:
+ *   - source="live" (Search) — a real MyAnimeList series, identified
+ *     by its MAL id. Two independent sources, both server-side:
  *       1. DETAILS — title, image, genres, synopsis, status, format,
- *          score, characters, episode count (real Anilist metadata).
+ *          score, characters, episode count — from Jikan, a stable,
+ *          key-free API over MyAnimeList data.
  *       2. WATCH LINK — the Play button and each episode tile open an
- *          external AnimeKai link in a new tab. Anilist itself has no
- *          video, so this can only ever point at a partner site like
- *          AnimeKai — never at Anilist.
+ *          external AnimeKai link in a new tab, resolved via Consumet.
+ *          This is best-effort: if AnimeKai/Consumet is down, the page
+ *          still loads fine with no watch links, since that scraping
+ *          step is kept separate from the (reliable) details fetch.
  *     List status (Watched / Plan to Watch), the isolated episode
  *     counter, and the Anchor Up/Down community rating are all
- *     LogPose's own data, read from and written to Supabase (not
- *     Anilist's score), scoped to the signed-in user.
+ *     LogPose's own data, read from and written to Supabase, scoped
+ *     to the signed-in user.
  */
 
 import { useEffect, useState } from 'react'
@@ -53,13 +55,13 @@ interface AnimeDetailPageProps extends NavProps {
   animeId: number
   /** Page to return to when the back button is pressed */
   backTo?: Page
-  /** 'mock' (default) = the demo catalogue. 'live' = a real Anilist id from Search. */
+  /** 'mock' (default) = the demo catalogue. 'live' = a real MyAnimeList id from Search. */
   source?: 'mock' | 'live'
 }
 
 export default function AnimeDetailPage({ animeId, navigate, backTo, source = 'mock' }: AnimeDetailPageProps) {
   if (source === 'live') {
-    return <LiveDetail anilistId={animeId} navigate={navigate} backTo={backTo ?? 'search'} />
+    return <LiveDetail malId={animeId} navigate={navigate} backTo={backTo ?? 'search'} />
   }
   return <MockDetail animeId={animeId} navigate={navigate} backTo={backTo ?? 'home'} />
 }
@@ -404,10 +406,10 @@ function MockDetail({ animeId, navigate, backTo }: { animeId: number; navigate: 
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   LIVE — real Consumet/Anilist data + Supabase tracker (from Search)
+   LIVE — real Jikan details + Consumet watch links + Supabase tracker
    ══════════════════════════════════════════════════════════════════ */
 
-function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; navigate: NavProps['navigate']; backTo: Page }) {
+function LiveDetail({ malId, navigate, backTo }: { malId: number; navigate: NavProps['navigate']; backTo: Page }) {
   const [anime, setAnime] = useState<AnimeInfo | null>(null)
   const [animeError, setAnimeError] = useState<string | null>(null)
   const [loadingAnime, setLoadingAnime] = useState(true)
@@ -419,7 +421,7 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
   const [progressBusy, setProgressBusy] = useState(false)
   const [activeTab, setActiveTab] = useState<DetailTab>('overview')
 
-  // LogPose's own community rating (Supabase), separate from Anilist's score.
+  // LogPose's own community rating (Supabase), separate from MyAnimeList's score.
   const [myRating, setMyRating] = useState<RatingValue | null>(null)
   const [ratingSummary, setRatingSummary] = useState<{ upCount: number; downCount: number } | null>(null)
   const [ratingBusy, setRatingBusy] = useState(false)
@@ -429,34 +431,34 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
 
     setLoadingAnime(true)
     setAnimeError(null)
-    fetchAnimeInfo(anilistId)
+    fetchAnimeInfo(malId)
       .then(info => { if (!cancelled) setAnime(info) })
       .catch(err => { if (!cancelled) setAnimeError(err instanceof Error ? err.message : 'Failed to load anime') })
       .finally(() => { if (!cancelled) setLoadingAnime(false) })
 
     setLoadingTracker(true)
-    getTrackerRow(anilistId)
+    getTrackerRow(malId)
       .then(row => { if (!cancelled) setTracker(row) })
       .catch(() => { /* not signed in / RLS denies — treat as untracked */ })
       .finally(() => { if (!cancelled) setLoadingTracker(false) })
 
-    getMyRating(anilistId)
+    getMyRating(malId)
       .then(rating => { if (!cancelled) setMyRating(rating) })
       .catch(() => { /* not signed in — treat as unvoted */ })
 
-    getRatingSummary(anilistId)
+    getRatingSummary(malId)
       .then(summary => { if (!cancelled) setRatingSummary(summary) })
       .catch(() => { /* summary is best-effort — leave it null on failure */ })
 
     return () => { cancelled = true }
-  }, [anilistId])
+  }, [malId])
 
   async function handleSetStatus(status: TrackerStatus) {
     if (!anime || statusBusy) return
     setStatusBusy(true)
     try {
       const row = await upsertStatus({
-        anilistId,
+        malId,
         status,
         title: anime.title,
         imageUrl: anime.image,
@@ -472,7 +474,7 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
     if (statusBusy) return
     setStatusBusy(true)
     try {
-      await removeFromTracker(anilistId)
+      await removeFromTracker(malId)
       setTracker(null)
     } finally {
       setStatusBusy(false)
@@ -488,7 +490,7 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
 
     setProgressBusy(true)
     try {
-      const row = await updateProgress(anilistId, clamped)
+      const row = await updateProgress(malId, clamped)
       setTracker(row)
     } finally {
       setProgressBusy(false)
@@ -503,12 +505,12 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
     setRatingBusy(true)
     try {
       if (next === null) {
-        await clearRating(anilistId)
+        await clearRating(malId)
       } else {
-        await submitRating(anilistId, next)
+        await submitRating(malId, next)
       }
       setMyRating(next)
-      const summary = await getRatingSummary(anilistId)
+      const summary = await getRatingSummary(malId)
       setRatingSummary(summary)
     } finally {
       setRatingBusy(false)
@@ -537,8 +539,8 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
   const percentPositive = totalVotes > 0 ? Math.round(((ratingSummary?.upCount ?? 0) / totalVotes) * 100) : null
 
   // Play button: always opens episode 1's AnimeKai link (or the first
-  // episode with a link, if episode 1 itself has none). Never Anilist —
-  // Anilist has no video. Disabled if nothing is available yet.
+  // episode with a link, if episode 1 itself has none). Best-effort —
+  // Consumet/AnimeKai being down just means no link today.
   const playEpisode = anime.episodes.find(ep => ep.number === 1 && ep.url) ?? anime.episodes.find(ep => ep.url) ?? null
 
   return (
@@ -567,7 +569,7 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
               {anime.image && <img src={anime.image} alt={anime.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
             </div>
 
-            {/* Watch — outbound link to AnimeKai (episode 1), never embedded. */}
+            {/* Watch — outbound link to AnimeKai (episode 1), never embedded, best-effort. */}
             {playEpisode?.url ? (
               <a
                 href={playEpisode.url}
@@ -591,7 +593,7 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
               </button>
             )}
 
-            {/* LogPose's own community rating — separate from Anilist's score. */}
+            {/* LogPose's own community rating — separate from MyAnimeList's score. */}
             <div className="glass-panel" style={{ borderRadius: '16px', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
               <div>
                 <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--on-surface-variant)', marginBottom: '4px' }}>
@@ -688,7 +690,7 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
-              <StatChip label="Anilist Score" value={anime.rating != null ? `★ ${(anime.rating / 10).toFixed(1)}` : '—'} accent />
+              <StatChip label="MAL Score" value={anime.score != null ? `★ ${anime.score.toFixed(1)}` : '—'} accent />
               <StatChip label="Episodes" value={String(anime.totalEpisodes)} />
               <StatChip label="Status" value={anime.status ?? '—'} accent />
               <StatChip label="Format" value={anime.format ?? '—'} />
@@ -699,13 +701,13 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
             {activeTab === 'overview' && (
               <div className="page-enter">
                 <p style={{ fontFamily: 'var(--font)', fontSize: '15px', lineHeight: 1.75, color: 'var(--on-surface)', whiteSpace: 'pre-line' }}>
-                  {anime.description ?? 'No synopsis available yet from Anilist.'}
+                  {anime.description ?? 'No synopsis available yet from MyAnimeList.'}
                 </p>
                 <div style={{ display: 'flex', gap: '12px', marginTop: '20px', flexWrap: 'wrap' }}>
                   {[
                     anime.format ? { icon: 'theaters', label: anime.format } : null,
                     { icon: 'schedule', label: `${anime.totalEpisodes} episodes` },
-                    anime.rating != null ? { icon: 'star', label: `${anime.rating}% Anilist score` } : null,
+                    anime.score != null ? { icon: 'star', label: `${anime.score.toFixed(1)} MAL score` } : null,
                     totalVotes > 0 ? { icon: 'anchor', label: `${percentPositive}% positive on LogPose` } : null,
                   ].filter((item): item is { icon: string; label: string } => item !== null).map(item => (
                     <div
@@ -749,7 +751,7 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
                 </p>
                 {anime.episodes.length === 0 ? (
                   <p style={{ fontSize: '13px', color: 'var(--on-surface-variant)', fontStyle: 'italic' }}>
-                    No episode list available yet from Consumet.
+                    No watch links available right now.
                   </p>
                 ) : (
                   <div className="ep-grid">

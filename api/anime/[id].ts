@@ -1,10 +1,21 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { ConsumetLookupError, fetchAnimeInfo } from '../_lib/consumet.js'
+import { JikanLookupError, fetchAnimeInfo } from '../_lib/jikan.js'
+import { ConsumetLookupError, fetchWatchEpisodes } from '../_lib/consumet.js'
 
 /**
- * GET /api/anime/:id
- * Returns one series' stripped-down Consumet payload:
- * { id, title, image, totalEpisodes, episodes: [{ id, number, title, image, url }] }
+ * GET /api/anime/:id  (id = a MyAnimeList id)
+ *
+ * Returns Jikan's details for the series plus its AnimeKai episode
+ * list, merged into one payload:
+ * { id, title, image, genres, description, status, format, score,
+ *   characters, totalEpisodes, episodes: [{ id, number, title, image, url }] }
+ *
+ * The two sources are independent: Jikan (details) is required — if
+ * it fails, this 404s/502s. Consumet (watch links) is best-effort —
+ * if AnimeKai is down or the scraper fails, we still return the full
+ * details with `episodes: []` rather than failing the whole request.
+ * That's the whole point of splitting them: a flaky scraper should
+ * never take down the details page.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
@@ -13,22 +24,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const rawId = req.query.id
-  const anilistId = Array.isArray(rawId) ? rawId[0] : rawId
+  const malId = Array.isArray(rawId) ? rawId[0] : rawId
 
-  if (!anilistId) {
+  if (!malId) {
     res.status(400).json({ error: 'Missing required "id" path parameter' })
     return
   }
 
+  let anime
   try {
-    const anime = await fetchAnimeInfo(anilistId)
-    res.status(200).json(anime)
+    anime = await fetchAnimeInfo(malId)
   } catch (err) {
-    if (err instanceof ConsumetLookupError) {
+    if (err instanceof JikanLookupError) {
       res.status(404).json({ error: err.message })
       return
     }
     console.error(err)
-    res.status(502).json({ error: 'Failed to fetch anime info from Consumet' })
+    res.status(502).json({ error: 'Failed to fetch anime info from Jikan' })
+    return
   }
+
+  let episodes: Awaited<ReturnType<typeof fetchWatchEpisodes>> = []
+  try {
+    episodes = await fetchWatchEpisodes(malId)
+  } catch (err) {
+    // Best-effort: AnimeKai/Consumet being down means no watch links
+    // today, not a broken details page.
+    if (!(err instanceof ConsumetLookupError)) console.error(err)
+  }
+
+  res.status(200).json({ ...anime, episodes })
 }

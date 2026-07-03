@@ -1,9 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { ConsumetLookupError, searchAnime } from '../_lib/consumet.js'
+import { JikanLookupError, searchAnime } from '../_lib/jikan.js'
 
 /**
  * GET /api/anime/search?q=<title>
- * Returns Consumet Anilist search results, stripped to card-sized data:
+ * Returns Jikan (MyAnimeList) search results, stripped to card-sized data:
  * [{ id, title, image, releaseDate, totalEpisodes }]
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -24,11 +24,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const results = await searchAnime(query.trim())
     res.status(200).json({ results })
   } catch (err) {
-    if (err instanceof ConsumetLookupError) {
+    if (err instanceof JikanLookupError) {
       res.status(502).json({ error: err.message })
       return
     }
     console.error(err)
-    res.status(502).json({ error: 'Failed to search Consumet' })
+    res.status(502).json({ error: 'Failed to search Jikan' })
   }
 }

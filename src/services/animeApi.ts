@@ -1,6 +1,9 @@
 /**
- * Thin fetch wrapper around the Vercel serverless functions in /api/anime,
- * which in turn wrap @consumet/extensions' META.Anilist provider.
+ * Thin fetch wrapper around the Vercel serverless functions in
+ * /api/anime, which combine two independent sources server-side:
+ *  - Jikan (MyAnimeList) for details + search — see api/_lib/jikan.ts
+ *  - Consumet/AnimeKai for the (best-effort) per-episode watch link —
+ *    see api/_lib/consumet.ts
  * Relative paths are same-origin both on Vercel and under `vercel dev`.
  */
 
@@ -11,7 +14,7 @@ export interface AnimeEpisode {
   number: number
   title: string | null
   image: string | null
-  /** External watch link (AnimeKai). LogPose never hosts video — always opened via target="_blank". */
+  /** External watch link (AnimeKai). LogPose never hosts video — always opened via target="_blank". Null when Consumet couldn't resolve one. */
   url: string | null
 }
 
@@ -23,20 +26,22 @@ export interface AnimeCharacter {
 }
 
 export interface AnimeInfo {
+  /** MyAnimeList id (from Jikan). */
   id: string
   title: string
   image: string | null
   genres: string[]
-  /** Plain-text synopsis (HTML already stripped server-side). */
+  /** Plain-text synopsis. */
   description: string | null
-  /** Anilist media status, e.g. "ONGOING", "COMPLETED", "NOT_YET_AIRED". */
+  /** MyAnimeList status, e.g. "Currently Airing", "Finished Airing". */
   status: string | null
-  /** Anilist format, e.g. "TV", "MOVIE", "OVA". */
+  /** MyAnimeList format, e.g. "TV", "Movie", "OVA". */
   format: string | null
-  /** Anilist average score, 0-100, or null if not yet rated. */
-  rating: number | null
+  /** MyAnimeList score, already on a 0-10 scale (not 0-100) — display as-is, don't divide. */
+  score: number | null
   characters: AnimeCharacter[]
   totalEpisodes: number
+  /** Best-effort - empty when Consumet/AnimeKai couldn't be reached. */
   episodes: AnimeEpisode[]
 }
 
@@ -57,13 +62,13 @@ async function parseJsonOrThrow(res: Response) {
   return body
 }
 
-/** GET /api/anime/:id — full series details + episode list with outbound AnimeKai watch links. */
-export async function fetchAnimeInfo(anilistId: string | number): Promise<AnimeInfo> {
-  const res = await fetch(`${BASE_URL}/api/anime/${encodeURIComponent(String(anilistId))}`)
+/** GET /api/anime/:id — full series details (Jikan) + episode list with outbound AnimeKai watch links (Consumet, best-effort). */
+export async function fetchAnimeInfo(malId: string | number): Promise<AnimeInfo> {
+  const res = await fetch(`${BASE_URL}/api/anime/${encodeURIComponent(String(malId))}`)
   return parseJsonOrThrow(res) as Promise<AnimeInfo>
 }
 
-/** GET /api/anime/search?q=... — Anilist title search, card-sized results. */
+/** GET /api/anime/search?q=... — MyAnimeList title search (via Jikan), card-sized results. */
 export async function searchAnime(query: string): Promise<AnimeSearchResult[]> {
   const res = await fetch(`${BASE_URL}/api/anime/search?q=${encodeURIComponent(query)}`)
   const body = await parseJsonOrThrow(res)

@@ -95,7 +95,7 @@ describe('getRatingSummary', () => {
   it('maps the RPC row to camelCase counts', async () => {
     mockRpc.mockResolvedValue({ data: [{ up_count: 12, down_count: 3 }], error: null })
     const summary = await getRatingSummary(21)
-    expect(mockRpc).toHaveBeenCalledWith('anime_rating_summary', { p_anilist_id: 21 })
+    expect(mockRpc).toHaveBeenCalledWith('anime_rating_summary', { p_mal_id: 21 })
     expect(summary).toEqual({ upCount: 12, downCount: 3 })
   })
 

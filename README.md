@@ -1,8 +1,8 @@
 # LogPose — Find Your Way
 
 An anime tracker with a nautical theme. Create an account, search real
-anime via Anilist (through Consumet), track a series as **Watched** or
-**Plan to Watch**, update your episode progress, and cast your own
+anime via MyAnimeList (through Jikan), track a series as **Watched**
+or **Plan to Watch**, update your episode progress, and cast your own
 Anchor Up/Down vote — then jump straight to AnimeKai to actually watch
 it. LogPose never hosts or embeds video; every "Watch" button is an
 outbound link opened in a new tab.
@@ -14,39 +14,57 @@ outbound link opened in a new tab.
   built-in Auth (email/password). The frontend talks to Supabase
   directly via `@supabase/supabase-js`, secured by Row Level Security
   (a signed-in user can only ever see/edit their own rows).
-- **Anime data** — [Consumet](https://github.com/consumet/consumets.wiki)
-  (`@consumet/extensions`, Anilist provider), wrapped by two small
-  Vercel serverless functions under `api/` — Consumet has to run
-  server-side, so it can't be called straight from the browser.
+- **Anime data** — two independent sources, both wrapped by small
+  Vercel serverless functions under `api/` so they run server-side:
+  - [Jikan](https://jikan.moe) (`api/_lib/jikan.ts`) — a free, key-free,
+    CORS-friendly REST API over MyAnimeList data. This is LogPose's
+    **details and search** source: title, image, genres, synopsis,
+    status, format, score, characters, episode count.
+  - [Consumet](https://github.com/consumet/consumets.wiki)
+    (`api/_lib/consumet.ts`, `@consumet/extensions`) — used for exactly
+    one thing: resolving **per-episode watch links on AnimeKai**. This
+    is HTML scraping under the hood, so it's treated as best-effort —
+    see "Why two sources" below.
 - **Hosting** — [Vercel](https://vercel.com): one `vercel deploy` ships
   the static frontend and the `api/` functions together. There is no
   separate backend server to run or keep alive.
 
-### Two Consumet jobs, kept conceptually separate
+### Why two sources
 
-`api/_lib/consumet.ts` does exactly two things with Consumet's Anilist
-meta-provider, both from the same underlying call:
+LogPose originally used Consumet's Anilist meta-provider for both
+details *and* watch links. In practice, Consumet's providers are HTML
+scrapers dependent on third-party sites' live structure — they throw
+Cloudflare timeouts, DNS failures, and break whenever a site changes
+or goes down. That's an acceptable risk for a "nice to have" watch
+link, but not for the core details/search experience.
 
-1. **Details** — real Anilist metadata (title, image, genres, synopsis,
-   status, format, score, characters, episode count). This is what the
-   details page shows.
-2. **Watch link** — a per-episode external URL on **AnimeKai**, the
-   site Consumet's Anilist meta-provider resolves streaming sources
-   through (Consumet's default is HiAnime if no provider is passed;
-   LogPose passes AnimeKai explicitly). Anilist itself has no video and
-   no per-episode links, so this can only ever come from a partner site
-   like AnimeKai — never from Anilist directly.
+So LogPose now splits the two jobs:
+
+1. **Details + search — Jikan.** Stable, official MyAnimeList data,
+   no scraping, no API key. If this fails, the details page shows an
+   error — but in practice it's the reliable half.
+2. **Watch link — Consumet, on AnimeKai.** Kept because per-episode
+   watch links aren't something Jikan/MyAnimeList provides at all.
+   `api/anime/[id].ts` fetches this *separately* from the Jikan call
+   and treats a failure as "no watch link right now" rather than
+   failing the whole request — one flaky scraper should never take
+   down the details page again.
+
+Series are identified by **MyAnimeList id** (`mal_id`, from Jikan)
+everywhere in the app and the database — not an Anilist id. Consumet's
+MyAnimeList meta-provider (`META.Myanimelist`) accepts that same id
+directly, so no id crosswalk between services is needed.
 
 ### LogPose's own community rating
 
-The Anchor Up/Down rating on a series' details page is **not** Anilist's
-score — it's LogPose's own, stored in `public.anime_ratings` (one vote
-per signed-in user per series). The "Anilist Score" stat chip still
-shows Anilist's own average separately, for reference. A
-`security definer` Postgres function (`anime_rating_summary`) returns
-the aggregate up/down counts for a series without exposing which way
-any individual user voted — RLS on the table itself only ever lets a
-user read/change their own row.
+The Anchor Up/Down rating on a series' details page is **not**
+MyAnimeList's score — it's LogPose's own, stored in
+`public.anime_ratings` (one vote per signed-in user per series). The
+"MAL Score" stat chip still shows MyAnimeList's own average separately,
+for reference. A `security definer` Postgres function
+(`anime_rating_summary`) returns the aggregate up/down counts for a
+series without exposing which way any individual user voted — RLS on
+the table itself only ever lets a user read/change their own row.
 
 ## One-time setup
 
@@ -55,13 +73,18 @@ user read/change their own row.
    in the contents of [`supabase/schema.sql`](./supabase/schema.sql).
    This creates:
    - `profiles` (captain name, auto-populated on signup)
-   - `anime_tracker` (per-user series tracking), with Row Level
-     Security policies and a trigger that clamps `episodes_watched`
-     into `[0, total_episodes]` and auto-flips `status` to `'Watched'`
-     once it reaches the total
-   - `anime_ratings` (per-user Anchor Up/Down vote) plus the
-     `anime_rating_summary(anilist_id)` RPC function used to read back
-     aggregate counts
+   - `anime_tracker` (per-user series tracking, keyed by `mal_id`),
+     with Row Level Security policies and a trigger that clamps
+     `episodes_watched` into `[0, total_episodes]` and auto-flips
+     `status` to `'Watched'` once it reaches the total
+   - `anime_ratings` (per-user Anchor Up/Down vote, keyed by `mal_id`)
+     plus the `anime_rating_summary(mal_id)` RPC function used to read
+     back aggregate counts
+   > If you already ran an older version of this schema (with
+   > `anilist_id` columns instead of `mal_id`), `create table if not
+   > exists` won't rename anything for you — run
+   > `alter table public.anime_tracker rename column anilist_id to mal_id;`
+   > (and the same for `anime_ratings`) by hand first.
 3. **Copy your env vars** — `cp .env.example .env.local` and fill in
    `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` from
    Project Settings → API.
@@ -77,17 +100,17 @@ npm run lint     # oxlint
 ```
 
 For local development that also exercises the `api/` serverless
-functions (so live Anilist search and the details page actually work),
-run `npx vercel dev` instead of `npm run dev` — it serves the frontend
-and the `/api/anime/*` functions together on one port, the same way
-they run in production.
+functions (so live search and the details page actually work), run
+`npx vercel dev` instead of `npm run dev` — it serves the frontend and
+the `/api/anime/*` functions together on one port, the same way they
+run in production.
 
 ## Business rules
 
 - **No video hosting** — every episode's "Watch" action opens the
   external AnimeKai `url` Consumet returns, via `target="_blank"`. If
-  Consumet has no link for an episode, the tile is disabled rather
-  than linking nowhere.
+  Consumet has no link for an episode (or is down entirely), the tile
+  is disabled rather than linking nowhere.
 - **Restricted lists** — a tracked series can only be `'Watched'` or
   `'Plan to Watch'`. There is no "Watching" status anywhere in the
   schema, the API, or the UI.
@@ -96,27 +119,32 @@ they run in production.
   and Home never touch it.
 - **One details page** — there is exactly one details screen
   (`AnimeDetailPage`). Opening it from Search (`source="live"`) fetches
-  real Consumet/Supabase data; opening it from Home or My List
+  real Jikan/Consumet/Supabase data; opening it from Home or My List
   (`source="mock"`, the default) shows the built-in demo catalogue.
   Same layout either way.
 - **Own ratings, not imported ones** — the Anchor Up/Down score is
   calculated from LogPose users' own votes, not scraped or copied from
-  Anilist. Each user gets exactly one vote per series; voting the same
-  direction again removes it.
+  MyAnimeList. Each user gets exactly one vote per series; voting the
+  same direction again removes it.
+- **A flaky watch-link scraper never breaks the details page** —
+  details (Jikan) and the watch link (Consumet) are fetched and error-
+  handled independently server-side.
 
 ## Structure
 
 ```
 api/
-  _lib/consumet.ts     Consumet wrapper — see "Two Consumet jobs" above
-  anime/[id].ts         GET /api/anime/:id
-  anime/search.ts       GET /api/anime/search?q=...
-  tests/                vitest coverage for the above (mocked Consumet)
+  _lib/jikan.ts         Jikan wrapper — details + search (see "Why two sources")
+  _lib/consumet.ts       Consumet wrapper — watch links only, best-effort
+  anime/[id].ts           GET /api/anime/:id — merges the two sources
+  anime/search.ts         GET /api/anime/search?q=... — Jikan only
+  tests/                  vitest coverage for the above (mocked fetch/Consumet)
 
 supabase/
-  schema.sql            profiles + anime_tracker + anime_ratings, RLS
-                         policies, the progress-clamping/auto-complete
-                         trigger, and the rating summary RPC function
+  schema.sql            profiles + anime_tracker + anime_ratings (both
+                         keyed by mal_id), RLS policies, the progress-
+                         clamping/auto-complete trigger, and the rating
+                         summary RPC function
 
 src/
   lib/supabaseClient.ts  createClient() from VITE_SUPABASE_* env vars
@@ -132,8 +160,9 @@ src/
     AnimeDetailPage             the one details page — renders mock or
                                 live data depending on the `source` prop
                                 (see "One details page" above)
-    SearchPage                  2+ character queries hit live Anilist search;
-                                empty query still shows the mock catalogue
+    SearchPage                  2+ character queries hit live MyAnimeList
+                                search; empty query still shows the mock
+                                catalogue
     HomePage / MyListPage / ProfilePage
                                 original mock-data screens (see below)
 ```
@@ -152,9 +181,14 @@ this mock-data screen hasn't been migrated yet:
   into one consistent data source.
 - The heart/Favorite button isn't available for live series yet — it's
   still backed by the local `AppContext` reducer, which isn't safe to
-  reuse for real Anilist ids (numeric id collisions with the mock
+  reuse for real MyAnimeList ids (numeric id collisions with the mock
   catalogue). Would need its own Supabase column, same pattern as
   `anime_ratings`.
+- Jikan is rate-limited (~60 requests/minute, shared across everyone
+  using this deployment, since calls go through our own serverless
+  function). Fine for light use; a small server-side cache in front of
+  `api/_lib/jikan.ts` would be the next step if that limit becomes an
+  issue under real traffic.
 
 There's also a `/server` folder and a handful of `*.stale*` files in
 this repo that are leftovers from earlier scaffolding and a filesystem

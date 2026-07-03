@@ -13,12 +13,19 @@
                                  each account (populated automatically
                                  on signup via a trigger).
      2. public.anime_tracker  — per-user tracking state for a single
-                                 Anilist series, resolved through
-                                 Consumet's META.Anilist provider.
+                                 series, keyed by its MyAnimeList id
+                                 (from the Jikan API).
      3. public.anime_ratings  — per-user Anchor Up/Down vote for a
                                  series, plus a function to read back
                                  the aggregate without exposing who
                                  voted which way.
+
+   Series are identified by MyAnimeList id (mal_id from Jikan), not an
+   Anilist id — LogPose's details/search moved to Jikan, a stable,
+   key-free official-data API, after Consumet's scrapers (used for the
+   old Anilist-based lookup) proved too unreliable (Cloudflare
+   timeouts, dead mirrors). Consumet is still used for the Watch
+   button, resolved separately and best-effort — see api/_lib/consumet.ts.
 
    All tables have Row Level Security enabled, so a signed-in user
    can only ever see/edit their own rows — enforced by Postgres
@@ -78,10 +85,10 @@ create trigger on_auth_user_created
 create table if not exists public.anime_tracker (
   id                bigint generated always as identity primary key,
   user_id           uuid not null references auth.users (id) on delete cascade,
-  -- Anilist series id, as returned by Consumet's META.Anilist provider.
-  anilist_id        integer not null,
+  -- MyAnimeList id, as returned by the Jikan API.
+  mal_id            integer not null,
 
-  -- Cached UI data so list/detail views don't need a Consumet round
+  -- Cached UI data so list/detail views don't need a Jikan round
   -- trip just to render a title + poster.
   title             text not null,
   image_url         text,
@@ -97,7 +104,7 @@ create table if not exists public.anime_tracker (
   updated_at        timestamptz not null default now(),
 
   -- A user cannot have two rows tracking the same series.
-  constraint uq_tracker_user_anime unique (user_id, anilist_id),
+  constraint uq_tracker_user_anime unique (user_id, mal_id),
 
   -- No "Watching" status — only these two values are legal.
   constraint ck_tracker_status check (status in ('Watched', 'Plan to Watch')),
@@ -169,22 +176,22 @@ create trigger trg_enforce_tracker_progress
 -- 3. anime_ratings
 -- ---------------------------------------------------------
 -- LogPose's own Anchor Up/Down community rating, independent of
--- whatever score Anilist reports. Each signed-in user gets exactly
--- one vote per series; clicking the same direction again removes it
--- (handled client-side by deleting the row).
+-- whatever score MyAnimeList reports. Each signed-in user gets
+-- exactly one vote per series; clicking the same direction again
+-- removes it (handled client-side by deleting the row).
 create table if not exists public.anime_ratings (
   id            bigint generated always as identity primary key,
   user_id       uuid not null references auth.users (id) on delete cascade,
-  anilist_id    integer not null,
+  mal_id        integer not null,
   rating        text not null,
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now(),
 
-  constraint uq_rating_user_anime unique (user_id, anilist_id),
+  constraint uq_rating_user_anime unique (user_id, mal_id),
   constraint ck_rating_value check (rating in ('up', 'down'))
 );
 
-create index if not exists ix_ratings_anilist_id on public.anime_ratings (anilist_id);
+create index if not exists ix_ratings_mal_id on public.anime_ratings (mal_id);
 
 alter table public.anime_ratings enable row level security;
 
@@ -227,11 +234,11 @@ create trigger trg_touch_rating_updated_at
   for each row execute function public.touch_rating_updated_at();
 
 -- Aggregate counts for a series, callable by any signed-in user via
--- supabase.rpc('anime_rating_summary', { p_anilist_id }). Runs as the
+-- supabase.rpc('anime_rating_summary', { p_mal_id }). Runs as the
 -- function owner (security definer), so it can count across every
 -- user's row while the table's own RLS still blocks anyone from
 -- reading someone else's individual vote directly.
-create or replace function public.anime_rating_summary(p_anilist_id integer)
+create or replace function public.anime_rating_summary(p_mal_id integer)
 returns table (up_count bigint, down_count bigint)
 language sql
 security definer
@@ -242,7 +249,7 @@ as $$
     count(*) filter (where rating = 'up')   as up_count,
     count(*) filter (where rating = 'down') as down_count
   from public.anime_ratings
-  where anilist_id = p_anilist_id;
+  where mal_id = p_mal_id;
 $$;
 
 grant execute on function public.anime_rating_summary(integer) to authenticated;
