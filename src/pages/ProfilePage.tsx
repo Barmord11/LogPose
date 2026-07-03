@@ -1,44 +1,48 @@
 /**
  * ProfilePage — The Captain's Cabin
  * ───────────────────────────────────
- * User dashboard with live-computed stats from global state.
+ * User dashboard with live-computed stats from global state, plus the
+ * real signed-in account (captain name + email) from Supabase Auth.
  * - Episodes Watched: sum of all individually tracked episodes
  * - Time at Sea: watch time derived from tracked episodes
- * Captain name is editable (Edit Profile) and persisted to localStorage.
+ * Captain name is editable and persisted to the `profiles` table.
  */
 
 import { useState } from 'react'
 import type { NavProps } from '../App'
 import { useProfileStats } from '../context/AppContext'
 import { formatWatchTime, EPISODE_MINUTES } from '../context/reducer'
-
-const NAME_KEY = 'logpose-profile-name'
-const DEFAULT_NAME = 'Grand Line Voyager'
-
-function loadName(): string {
-  try {
-    return localStorage.getItem(NAME_KEY) || DEFAULT_NAME
-  } catch {
-    return DEFAULT_NAME
-  }
-}
+import { useAuth } from '../context/AuthContext'
+import { supabase } from '../lib/supabaseClient'
 
 export default function ProfilePage({ navigate }: NavProps) {
   const stats = useProfileStats()
-  const [name, setName]       = useState(loadName)
+  const { user, profile, logout, refreshProfile } = useAuth()
   const [editing, setEditing] = useState(false)
   const [draft, setDraft]     = useState('')
+  const [saving, setSaving]   = useState(false)
+
+  const name = profile?.captainName ?? 'Navigator'
 
   const startEdit = () => {
     setDraft(name)
     setEditing(true)
   }
 
-  const saveEdit = () => {
-    const next = draft.trim() || DEFAULT_NAME
-    setName(next)
-    setEditing(false)
-    try { localStorage.setItem(NAME_KEY, next) } catch { /* storage full — skip */ }
+  const saveEdit = async () => {
+    const next = draft.trim()
+    if (!next || !user) {
+      setEditing(false)
+      return
+    }
+    setSaving(true)
+    try {
+      await supabase.from('profiles').update({ captain_name: next }).eq('id', user.id)
+      await refreshProfile()
+    } finally {
+      setSaving(false)
+      setEditing(false)
+    }
   }
 
   const actionItems = [
@@ -46,6 +50,7 @@ export default function ProfilePage({ navigate }: NavProps) {
     { icon: 'subscriptions', label: 'My Watched List',  sub: `${stats.seriesWatched} series`,        onClick: () => navigate('mylist') },
     { icon: 'bookmark',      label: 'Plan to Watch',    sub: `${stats.planCount} series queued`,     onClick: () => navigate('mylist') },
     { icon: 'favorite',      label: 'Favourites',       sub: `${stats.favoritesCount} series saved`, onClick: () => navigate('mylist') },
+    { icon: 'logout',        label: 'Sign Out',         sub: user?.email ?? '',                      onClick: () => { void logout() } },
   ]
 
   return (
@@ -132,7 +137,7 @@ export default function ProfilePage({ navigate }: NavProps) {
               maxLength={28}
               onChange={e => setDraft(e.target.value)}
               onKeyDown={e => {
-                if (e.key === 'Enter') saveEdit()
+                if (e.key === 'Enter') void saveEdit()
                 if (e.key === 'Escape') setEditing(false)
               }}
               aria-label="Captain name"
@@ -151,11 +156,12 @@ export default function ProfilePage({ navigate }: NavProps) {
               }}
             />
             <button
-              onClick={saveEdit}
+              onClick={() => void saveEdit()}
+              disabled={saving}
               className="btn-sunset"
               style={{ padding: '8px 14px', fontSize: '12px' }}
             >
-              Save
+              {saving ? 'Saving…' : 'Save'}
             </button>
             <button
               onClick={() => setEditing(false)}
@@ -174,7 +180,7 @@ export default function ProfilePage({ navigate }: NavProps) {
           Navigator · Level {stats.level}
         </p>
         <p style={{ fontSize: '13px', color: 'var(--on-surface-variant)', marginTop: '8px', lineHeight: 1.5 }}>
-          Charting unknown waters since the dawn of the Grand Line era.
+          {user?.email}
         </p>
       </div>
 

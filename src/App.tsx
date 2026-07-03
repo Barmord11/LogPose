@@ -8,15 +8,22 @@ import SearchPage      from './pages/SearchPage'
 import MyListPage      from './pages/MyListPage'
 import AnimeDetailPage from './pages/AnimeDetailPage'
 import ProfilePage     from './pages/ProfilePage'
+import SeriesPage      from './pages/SeriesPage'
+import LoginPage       from './pages/LoginPage'
+import RegisterPage    from './pages/RegisterPage'
+import { useAuth }     from './context/AuthContext'
 import './index.css'
 
-export type Page = 'home' | 'search' | 'mylist' | 'detail' | 'profile'
+export type Page = 'home' | 'search' | 'mylist' | 'detail' | 'profile' | 'series'
 
 export interface NavProps {
   navigate: (page: Page, animeId?: number) => void
 }
 
 function App() {
+  const { session, loading } = useAuth()
+  const [authView, setAuthView] = useState<'login' | 'register'>('login')
+
   const [activePage,      setActivePage]      = useState<Page>('home')
   const [selectedAnimeId, setSelectedAnimeId] = useState<number>(1)
   const [previousPage,    setPreviousPage]    = useState<Page>('home')
@@ -35,6 +42,23 @@ function App() {
   const handleGlobalSearch = (query: string) => {
     setSearchQuery(query)
     navigate('search')
+  }
+
+  // ── Auth gate ─────────────────────────────────────────────
+  // LogPose has real accounts (Supabase Auth). Nothing in the app is
+  // reachable until the visitor is signed in.
+  if (loading) {
+    return (
+      <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ fontFamily: 'var(--font)', fontWeight: 700, color: 'var(--primary)' }}>Charting the waters…</p>
+      </div>
+    )
+  }
+
+  if (!session) {
+    return authView === 'login'
+      ? <LoginPage onSwitchToRegister={() => setAuthView('register')} />
+      : <RegisterPage onSwitchToLogin={() => setAuthView('login')} />
   }
 
   return (
@@ -61,6 +85,13 @@ function App() {
               animeId={selectedAnimeId}
               navigate={navigate}
               backTo={previousPage === 'detail' ? 'home' : previousPage}
+            />
+          )}
+          {activePage === 'series'  && (
+            <SeriesPage
+              anilistId={selectedAnimeId}
+              navigate={navigate}
+              backTo={previousPage === 'series' ? 'search' : previousPage}
             />
           )}
         </div>
