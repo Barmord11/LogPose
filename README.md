@@ -2,9 +2,10 @@
 
 An anime tracker with a nautical theme. Create an account, search real
 anime via Anilist (through Consumet), track a series as **Watched** or
-**Plan to Watch**, and update your episode progress — then jump straight
-to AnimeKai to actually watch it. LogPose never hosts or embeds video;
-every "Watch" button is an outbound link opened in a new tab.
+**Plan to Watch**, update your episode progress, and cast your own
+Anchor Up/Down vote — then jump straight to AnimeKai to actually watch
+it. LogPose never hosts or embeds video; every "Watch" button is an
+outbound link opened in a new tab.
 
 ## Architecture
 
@@ -12,7 +13,7 @@ every "Watch" button is an outbound link opened in a new tab.
 - **Auth + database** — [Supabase](https://supabase.com): Postgres +
   built-in Auth (email/password). The frontend talks to Supabase
   directly via `@supabase/supabase-js`, secured by Row Level Security
-  (a signed-in user can only ever see/edit their own tracker rows).
+  (a signed-in user can only ever see/edit their own rows).
 - **Anime data** — [Consumet](https://github.com/consumet/consumets.wiki)
   (`@consumet/extensions`, Anilist provider), wrapped by two small
   Vercel serverless functions under `api/` — Consumet has to run
@@ -36,6 +37,17 @@ meta-provider, both from the same underlying call:
    no per-episode links, so this can only ever come from a partner site
    like AnimeKai — never from Anilist directly.
 
+### LogPose's own community rating
+
+The Anchor Up/Down rating on a series' details page is **not** Anilist's
+score — it's LogPose's own, stored in `public.anime_ratings` (one vote
+per signed-in user per series). The "Anilist Score" stat chip still
+shows Anilist's own average separately, for reference. A
+`security definer` Postgres function (`anime_rating_summary`) returns
+the aggregate up/down counts for a series without exposing which way
+any individual user voted — RLS on the table itself only ever lets a
+user read/change their own row.
+
 ## One-time setup
 
 1. **Create a Supabase project** at supabase.com.
@@ -47,6 +59,9 @@ meta-provider, both from the same underlying call:
      Security policies and a trigger that clamps `episodes_watched`
      into `[0, total_episodes]` and auto-flips `status` to `'Watched'`
      once it reaches the total
+   - `anime_ratings` (per-user Anchor Up/Down vote) plus the
+     `anime_rating_summary(anilist_id)` RPC function used to read back
+     aggregate counts
 3. **Copy your env vars** — `cp .env.example .env.local` and fill in
    `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` from
    Project Settings → API.
@@ -71,7 +86,7 @@ they run in production.
 
 - **No video hosting** — every episode's "Watch" action opens the
   external AnimeKai `url` Consumet returns, via `target="_blank"`. If
-  Consumet has no link for an episode, the button is disabled rather
+  Consumet has no link for an episode, the tile is disabled rather
   than linking nowhere.
 - **Restricted lists** — a tracked series can only be `'Watched'` or
   `'Plan to Watch'`. There is no "Watching" status anywhere in the
@@ -84,6 +99,10 @@ they run in production.
   real Consumet/Supabase data; opening it from Home or My List
   (`source="mock"`, the default) shows the built-in demo catalogue.
   Same layout either way.
+- **Own ratings, not imported ones** — the Anchor Up/Down score is
+  calculated from LogPose users' own votes, not scraped or copied from
+  Anilist. Each user gets exactly one vote per series; voting the same
+  direction again removes it.
 
 ## Structure
 
@@ -95,8 +114,9 @@ api/
   tests/                vitest coverage for the above (mocked Consumet)
 
 supabase/
-  schema.sql            profiles + anime_tracker, RLS policies, the
-                         progress-clamping/auto-complete trigger
+  schema.sql            profiles + anime_tracker + anime_ratings, RLS
+                         policies, the progress-clamping/auto-complete
+                         trigger, and the rating summary RPC function
 
 src/
   lib/supabaseClient.ts  createClient() from VITE_SUPABASE_* env vars
@@ -105,7 +125,8 @@ src/
     AppContext.tsx       legacy local state for the mock catalogue (below)
   services/
     animeApi.ts          fetch wrapper for the api/anime/* functions
-    tracker.ts            supabase-js CRUD for anime_tracker (RLS-scoped)
+    tracker.ts           supabase-js CRUD for anime_tracker (RLS-scoped)
+    ratings.ts           supabase-js CRUD + RPC for anime_ratings
   pages/
     LoginPage / RegisterPage   Supabase Auth UI
     AnimeDetailPage             the one details page — renders mock or
@@ -129,10 +150,11 @@ this mock-data screen hasn't been migrated yet:
 - Migrating Home/My List to query `anime_tracker` directly (dropping
   the mock catalogue and the local reducer entirely) would unify this
   into one consistent data source.
-- Rating (Anchor Up/Down) and Favorite aren't available for live
-  series yet — they're backed by the local `AppContext` reducer, which
-  isn't safe to reuse for real Anilist ids (numeric id collisions with
-  the mock catalogue). Would need their own Supabase columns.
+- The heart/Favorite button isn't available for live series yet — it's
+  still backed by the local `AppContext` reducer, which isn't safe to
+  reuse for real Anilist ids (numeric id collisions with the mock
+  catalogue). Would need its own Supabase column, same pattern as
+  `anime_ratings`.
 
 There's also a `/server` folder and a handful of `*.stale*` files in
 this repo that are leftovers from earlier scaffolding and a filesystem

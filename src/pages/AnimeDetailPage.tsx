@@ -10,23 +10,24 @@
  *     original design.
  *
  *   - source="live" (Search) — a real Anilist series. Two things come
- *     from Consumet here, and only two:
+ *     from Consumet, and only two:
  *       1. DETAILS — title, image, genres, synopsis, status, format,
  *          score, characters, episode count (real Anilist metadata).
  *       2. WATCH LINK — the Play button and each episode tile open an
  *          external AnimeKai link in a new tab. Anilist itself has no
  *          video, so this can only ever point at a partner site like
  *          AnimeKai — never at Anilist.
- *     List status (Watched / Plan to Watch) and the isolated episode
- *     counter are read from and written to Supabase, scoped to the
- *     signed-in user.
+ *     List status (Watched / Plan to Watch), the isolated episode
+ *     counter, and the Anchor Up/Down community rating are all
+ *     LogPose's own data, read from and written to Supabase (not
+ *     Anilist's score), scoped to the signed-in user.
  */
 
 import { useEffect, useState } from 'react'
 import type { NavProps, Page } from '../App'
 import { animes } from '../data/animes'
 import { useApp, useAnimeStatus } from '../context/AppContext'
-import AnchorRating from '../components/AnchorRating'
+import AnchorRating, { AnchorRatingView } from '../components/AnchorRating'
 import AddDropdown from '../components/AddDropdown'
 import PlayButton from '../components/PlayButton'
 import { fetchAnimeInfo, type AnimeInfo } from '../services/animeApi'
@@ -38,6 +39,13 @@ import {
   type TrackerRow,
   type TrackerStatus,
 } from '../services/tracker'
+import {
+  getMyRating,
+  setRating as submitRating,
+  clearRating,
+  getRatingSummary,
+  type RatingValue,
+} from '../services/ratings'
 
 type DetailTab = 'overview' | 'characters' | 'episodes'
 
@@ -411,6 +419,11 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
   const [progressBusy, setProgressBusy] = useState(false)
   const [activeTab, setActiveTab] = useState<DetailTab>('overview')
 
+  // LogPose's own community rating (Supabase), separate from Anilist's score.
+  const [myRating, setMyRating] = useState<RatingValue | null>(null)
+  const [ratingSummary, setRatingSummary] = useState<{ upCount: number; downCount: number } | null>(null)
+  const [ratingBusy, setRatingBusy] = useState(false)
+
   useEffect(() => {
     let cancelled = false
 
@@ -426,6 +439,14 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
       .then(row => { if (!cancelled) setTracker(row) })
       .catch(() => { /* not signed in / RLS denies — treat as untracked */ })
       .finally(() => { if (!cancelled) setLoadingTracker(false) })
+
+    getMyRating(anilistId)
+      .then(rating => { if (!cancelled) setMyRating(rating) })
+      .catch(() => { /* not signed in — treat as unvoted */ })
+
+    getRatingSummary(anilistId)
+      .then(summary => { if (!cancelled) setRatingSummary(summary) })
+      .catch(() => { /* summary is best-effort — leave it null on failure */ })
 
     return () => { cancelled = true }
   }, [anilistId])
@@ -474,6 +495,26 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
     }
   }
 
+  // Clicking the same direction again removes the vote — same UX as
+  // the mock catalogue's local AnchorRating.
+  async function handleSetRating(value: RatingValue) {
+    if (ratingBusy) return
+    const next = myRating === value ? null : value
+    setRatingBusy(true)
+    try {
+      if (next === null) {
+        await clearRating(anilistId)
+      } else {
+        await submitRating(anilistId, next)
+      }
+      setMyRating(next)
+      const summary = await getRatingSummary(anilistId)
+      setRatingSummary(summary)
+    } finally {
+      setRatingBusy(false)
+    }
+  }
+
   if (loadingAnime) {
     return <CenteredMessage>Charting this voyage…</CenteredMessage>
   }
@@ -491,6 +532,9 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
   const watchedCount = tracker?.episodesWatched ?? 0
   const progressPct = anime.totalEpisodes > 0 ? Math.round((watchedCount / anime.totalEpisodes) * 100) : 0
   const atMax = isTracked && watchedCount >= anime.totalEpisodes && anime.totalEpisodes > 0
+
+  const totalVotes = (ratingSummary?.upCount ?? 0) + (ratingSummary?.downCount ?? 0)
+  const percentPositive = totalVotes > 0 ? Math.round(((ratingSummary?.upCount ?? 0) / totalVotes) * 100) : null
 
   // Play button: always opens episode 1's AnimeKai link (or the first
   // episode with a link, if episode 1 itself has none). Never Anilist —
@@ -517,7 +561,7 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
       <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 16px 48px' }}>
         <div className="detail-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px', marginTop: '-140px', position: 'relative', zIndex: 20 }}>
 
-          {/* ── LEFT COLUMN: Poster + Watch + status + progress ── */}
+          {/* ── LEFT COLUMN: Poster + Watch + rating + status + progress ── */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '280px' }}>
             <div style={{ aspectRatio: '2/3', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,23,54,0.25)', border: '4px solid #fff', width: '100%', background: 'var(--surface-container)' }}>
               {anime.image && <img src={anime.image} alt={anime.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
@@ -546,6 +590,21 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
                 No watch link available
               </button>
             )}
+
+            {/* LogPose's own community rating — separate from Anilist's score. */}
+            <div className="glass-panel" style={{ borderRadius: '16px', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+              <div>
+                <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--on-surface-variant)', marginBottom: '4px' }}>
+                  Rate this voyage
+                </p>
+                <p style={{ fontSize: '11px', color: 'var(--outline)' }}>
+                  {totalVotes > 0
+                    ? `${percentPositive}% positive · ${totalVotes} vote${totalVotes === 1 ? '' : 's'}`
+                    : 'No ratings yet — be the first!'}
+                </p>
+              </div>
+              <AnchorRatingView rating={myRating} onSetRating={handleSetRating} size="md" />
+            </div>
 
             {/* Status control — RESTRICTED to Watched / Plan to Watch only */}
             <div className="glass-panel" style={{ borderRadius: '16px', padding: '12px' }}>
@@ -629,7 +688,7 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
-              <StatChip label="Score" value={anime.rating != null ? `★ ${(anime.rating / 10).toFixed(1)}` : '—'} accent />
+              <StatChip label="Anilist Score" value={anime.rating != null ? `★ ${(anime.rating / 10).toFixed(1)}` : '—'} accent />
               <StatChip label="Episodes" value={String(anime.totalEpisodes)} />
               <StatChip label="Status" value={anime.status ?? '—'} accent />
               <StatChip label="Format" value={anime.format ?? '—'} />
@@ -646,7 +705,8 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
                   {[
                     anime.format ? { icon: 'theaters', label: anime.format } : null,
                     { icon: 'schedule', label: `${anime.totalEpisodes} episodes` },
-                    anime.rating != null ? { icon: 'star', label: `${anime.rating}% score` } : null,
+                    anime.rating != null ? { icon: 'star', label: `${anime.rating}% Anilist score` } : null,
+                    totalVotes > 0 ? { icon: 'anchor', label: `${percentPositive}% positive on LogPose` } : null,
                   ].filter((item): item is { icon: string; label: string } => item !== null).map(item => (
                     <div
                       key={item.label}

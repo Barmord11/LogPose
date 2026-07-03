@@ -5,12 +5,23 @@
  * Anchor UP  = approve, glows green when active.
  * Anchor DOWN = disapprove, glows red when active.
  * Clicking the same direction again toggles it off.
+ *
+ * `AnchorRatingView` is the presentational piece, controlled entirely
+ * by props — it doesn't care where `rating` comes from or how
+ * `onSetRating` persists it. `AnchorRating` (default export) is a thin
+ * wrapper around it for the mock catalogue (Home/My List), backed by
+ * the local AppContext reducer. The live details page (Search) uses
+ * `AnchorRatingView` directly, backed by Supabase (src/services/ratings.ts)
+ * instead — real Anilist ids aren't safe to key into the local reducer.
  */
 
 import { useApp, useAnimeStatus } from '../context/AppContext'
 
-interface AnchorRatingProps {
-  animeId: number
+export type Rating = 'up' | 'down' | null
+
+interface AnchorRatingViewProps {
+  rating: Rating
+  onSetRating: (rating: 'up' | 'down') => void
   size?: 'sm' | 'md' | 'lg'
   color?: 'white' | 'dark'
 }
@@ -21,20 +32,14 @@ const ICON_SIZES = { sm: '18px', md: '22px', lg: '26px' }
 // in the shared design system (navy/orange/teal only).
 const ANCHOR_UP_COLOR = '#1b8a4a'
 
-export default function AnchorRating({
-  animeId,
+export function AnchorRatingView({
+  rating,
+  onSetRating,
   size = 'md',
   color = 'dark',
-}: AnchorRatingProps) {
-  const { dispatch } = useApp()
-  const { rating } = useAnimeStatus(animeId)
-
+}: AnchorRatingViewProps) {
   const iconSize = ICON_SIZES[size]
   const baseColor = color === 'white' ? 'rgba(255,255,255,0.8)' : 'var(--on-surface-variant)'
-
-  const toggle = (r: 'up' | 'down') => {
-    dispatch({ type: 'SET_RATING', id: animeId, rating: r })
-  }
 
   return (
     <div
@@ -44,7 +49,7 @@ export default function AnchorRating({
       {/* ── Anchor Up (Like) ── */}
       <button
         title="Anchor Up — this voyage sets sail!"
-        onClick={() => toggle('up')}
+        onClick={() => onSetRating('up')}
         style={{
           width:  size === 'sm' ? '28px' : '36px',
           height: size === 'sm' ? '28px' : '36px',
@@ -82,7 +87,7 @@ export default function AnchorRating({
       {/* ── Anchor Down (Dislike) — flipped ── */}
       <button
         title="Anchor Down — this ship stays docked."
-        onClick={() => toggle('down')}
+        onClick={() => onSetRating('down')}
         style={{
           width:  size === 'sm' ? '28px' : '36px',
           height: size === 'sm' ? '28px' : '36px',
@@ -120,4 +125,22 @@ export default function AnchorRating({
       </button>
     </div>
   )
+}
+
+interface AnchorRatingProps {
+  animeId: number
+  size?: 'sm' | 'md' | 'lg'
+  color?: 'white' | 'dark'
+}
+
+/** Mock-catalogue wrapper — reads/writes the local AppContext reducer, same as before. */
+export default function AnchorRating({ animeId, size = 'md', color = 'dark' }: AnchorRatingProps) {
+  const { dispatch } = useApp()
+  const { rating } = useAnimeStatus(animeId)
+
+  const toggle = (r: 'up' | 'down') => {
+    dispatch({ type: 'SET_RATING', id: animeId, rating: r })
+  }
+
+  return <AnchorRatingView rating={rating} onSetRating={toggle} size={size} color={color} />
 }

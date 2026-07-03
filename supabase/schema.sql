@@ -9,14 +9,18 @@
    Supabase Auth (the built-in `auth.users` table) — we never store
    passwords ourselves. This script only adds:
 
-     1. public.profiles      — the "Captain's Log" display name for
-                                each account (populated automatically
-                                on signup via a trigger).
-     2. public.anime_tracker — per-user tracking state for a single
-                                Anilist series, resolved through
-                                Consumet's META.Anilist provider.
+     1. public.profiles       — the "Captain's Log" display name for
+                                 each account (populated automatically
+                                 on signup via a trigger).
+     2. public.anime_tracker  — per-user tracking state for a single
+                                 Anilist series, resolved through
+                                 Consumet's META.Anilist provider.
+     3. public.anime_ratings  — per-user Anchor Up/Down vote for a
+                                 series, plus a function to read back
+                                 the aggregate without exposing who
+                                 voted which way.
 
-   Both tables have Row Level Security enabled, so a signed-in user
+   All tables have Row Level Security enabled, so a signed-in user
    can only ever see/edit their own rows — enforced by Postgres
    itself, not application code.
    ============================================================ */
@@ -160,3 +164,85 @@ drop trigger if exists trg_enforce_tracker_progress on public.anime_tracker;
 create trigger trg_enforce_tracker_progress
   before insert or update on public.anime_tracker
   for each row execute function public.enforce_tracker_progress();
+
+-- ---------------------------------------------------------
+-- 3. anime_ratings
+-- ---------------------------------------------------------
+-- LogPose's own Anchor Up/Down community rating, independent of
+-- whatever score Anilist reports. Each signed-in user gets exactly
+-- one vote per series; clicking the same direction again removes it
+-- (handled client-side by deleting the row).
+create table if not exists public.anime_ratings (
+  id            bigint generated always as identity primary key,
+  user_id       uuid not null references auth.users (id) on delete cascade,
+  anilist_id    integer not null,
+  rating        text not null,
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now(),
+
+  constraint uq_rating_user_anime unique (user_id, anilist_id),
+  constraint ck_rating_value check (rating in ('up', 'down'))
+);
+
+create index if not exists ix_ratings_anilist_id on public.anime_ratings (anilist_id);
+
+alter table public.anime_ratings enable row level security;
+
+-- A user can only see/change their OWN vote — nobody can browse who
+-- voted which way on a given series through the table directly.
+drop policy if exists "ratings_select_own" on public.anime_ratings;
+create policy "ratings_select_own"
+  on public.anime_ratings for select
+  using (auth.uid() = user_id);
+
+drop policy if exists "ratings_insert_own" on public.anime_ratings;
+create policy "ratings_insert_own"
+  on public.anime_ratings for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists "ratings_update_own" on public.anime_ratings;
+create policy "ratings_update_own"
+  on public.anime_ratings for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop policy if exists "ratings_delete_own" on public.anime_ratings;
+create policy "ratings_delete_own"
+  on public.anime_ratings for delete
+  using (auth.uid() = user_id);
+
+create or replace function public.touch_rating_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at := now();
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_touch_rating_updated_at on public.anime_ratings;
+create trigger trg_touch_rating_updated_at
+  before update on public.anime_ratings
+  for each row execute function public.touch_rating_updated_at();
+
+-- Aggregate counts for a series, callable by any signed-in user via
+-- supabase.rpc('anime_rating_summary', { p_anilist_id }). Runs as the
+-- function owner (security definer), so it can count across every
+-- user's row while the table's own RLS still blocks anyone from
+-- reading someone else's individual vote directly.
+create or replace function public.anime_rating_summary(p_anilist_id integer)
+returns table (up_count bigint, down_count bigint)
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select
+    count(*) filter (where rating = 'up')   as up_count,
+    count(*) filter (where rating = 'down') as down_count
+  from public.anime_ratings
+  where anilist_id = p_anilist_id;
+$$;
+
+grant execute on function public.anime_rating_summary(integer) to authenticated;
