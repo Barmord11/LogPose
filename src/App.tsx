@@ -15,7 +15,7 @@ import './index.css'
 
 export type Page = 'home' | 'search' | 'mylist' | 'detail' | 'profile'
 
-/** Where a selected anime id came from: the demo catalogue, or a real Anilist id (from Search). */
+/** Where a selected anime id came from: the demo catalogue, or a real MyAnimeList id (from Search). */
 export type AnimeSource = 'mock' | 'live'
 
 export interface NavProps {
@@ -23,7 +23,7 @@ export interface NavProps {
 }
 
 function App() {
-  const { session, loading } = useAuth()
+  const { session, loading, initError } = useAuth()
   const [authView, setAuthView] = useState<'login' | 'register'>('login')
 
   const [activePage,      setActivePage]      = useState<Page>('home')
@@ -57,6 +57,27 @@ function App() {
     return (
       <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <p style={{ fontFamily: 'var(--font)', fontWeight: 700, color: 'var(--primary)' }}>Charting the waters…</p>
+      </div>
+    )
+  }
+
+  // The initial Supabase session check failed outright (unreachable
+  // project, bad credentials, etc.) — show this instead of silently
+  // falling through to the login screen, which would look identical
+  // to "just not signed in yet" and hide the real problem.
+  if (initError) {
+    return (
+      <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '24px', gap: '12px' }}>
+        <p style={{ fontFamily: 'var(--font)', fontWeight: 700, color: 'var(--error)', fontSize: '18px' }}>
+          Couldn't reach Supabase
+        </p>
+        <p style={{ maxWidth: '480px', color: 'var(--on-surface-variant)', fontSize: '14px' }}>
+          {initError}
+        </p>
+        <p style={{ maxWidth: '480px', color: 'var(--outline)', fontSize: '12px' }}>
+          Check that your Supabase project is active (free-tier projects pause after inactivity)
+          and that .env.local has the right VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY, then reload.
+        </p>
       </div>
     )
   }

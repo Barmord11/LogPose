@@ -28,6 +28,12 @@ interface AuthContextValue {
   profile: Profile | null
   /** True until the initial session check (and profile fetch) resolves. */
   loading: boolean
+  /**
+   * Set if the initial session check itself failed (e.g. can't reach
+   * Supabase at all) — distinct from "not signed in". The UI shows
+   * this instead of hanging on the loading screen forever.
+   */
+  initError: string | null
   register: (email: string, password: string, captainName: string) => Promise<{ needsEmailConfirmation: boolean }>
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
@@ -40,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [initError, setInitError] = useState<string | null>(null)
 
   async function loadProfile(userId: string) {
     const { data, error } = await supabase
@@ -56,12 +63,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true
 
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!mounted) return
-      setSession(data.session)
-      if (data.session) await loadProfile(data.session.user.id)
-      setLoading(false)
-    })
+    // IMPORTANT: this must always resolve `loading` to false, even if
+    // Supabase is unreachable — otherwise the app hangs on the
+    // "Charting the waters" screen forever with no way to tell why.
+    supabase.auth.getSession()
+      .then(async ({ data, error }) => {
+        if (!mounted) return
+        if (error) throw error
+        setSession(data.session)
+        if (data.session) await loadProfile(data.session.user.id)
+      })
+      .catch((err: unknown) => {
+        if (!mounted) return
+        console.error('Failed to load the initial Supabase session:', err)
+        setInitError(
+          err instanceof Error
+            ? err.message
+            : 'Could not reach Supabase. Check your VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY and that the project is active.',
+        )
+      })
+      .finally(() => {
+        if (mounted) setLoading(false)
+      })
 
     const { data: subscription } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
       if (!mounted) return
@@ -112,6 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: session?.user ?? null,
         profile,
         loading,
+        initError,
         register,
         login,
         logout,
