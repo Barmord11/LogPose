@@ -3,8 +3,8 @@
 An anime tracker with a nautical theme. Create an account, search real
 anime via Anilist (through Consumet), track a series as **Watched** or
 **Plan to Watch**, and update your episode progress — then jump straight
-to an external site to actually watch it. LogPose never hosts or embeds
-video; every "Watch" button is an outbound link opened in a new tab.
+to AnimeKai to actually watch it. LogPose never hosts or embeds video;
+every "Watch" button is an outbound link opened in a new tab.
 
 ## Architecture
 
@@ -20,6 +20,21 @@ video; every "Watch" button is an outbound link opened in a new tab.
 - **Hosting** — [Vercel](https://vercel.com): one `vercel deploy` ships
   the static frontend and the `api/` functions together. There is no
   separate backend server to run or keep alive.
+
+### Two Consumet jobs, kept conceptually separate
+
+`api/_lib/consumet.ts` does exactly two things with Consumet's Anilist
+meta-provider, both from the same underlying call:
+
+1. **Details** — real Anilist metadata (title, image, genres, synopsis,
+   status, format, score, characters, episode count). This is what the
+   details page shows.
+2. **Watch link** — a per-episode external URL on **AnimeKai**, the
+   site Consumet's Anilist meta-provider resolves streaming sources
+   through (Consumet's default is HiAnime if no provider is passed;
+   LogPose passes AnimeKai explicitly). Anilist itself has no video and
+   no per-episode links, so this can only ever come from a partner site
+   like AnimeKai — never from Anilist directly.
 
 ## One-time setup
 
@@ -42,12 +57,12 @@ video; every "Watch" button is an outbound link opened in a new tab.
 ```bash
 npm run dev      # start the Vite dev server (frontend only)
 npm run build    # typecheck + production build
-npm test         # vitest — 68 tests across api/, src/services, src/pages
+npm test         # vitest — tests across api/, src/services, src/pages
 npm run lint     # oxlint
 ```
 
 For local development that also exercises the `api/` serverless
-functions (so live Anilist search and the series page actually work),
+functions (so live Anilist search and the details page actually work),
 run `npx vercel dev` instead of `npm run dev` — it serves the frontend
 and the `/api/anime/*` functions together on one port, the same way
 they run in production.
@@ -55,22 +70,26 @@ they run in production.
 ## Business rules
 
 - **No video hosting** — every episode's "Watch" action opens the
-  external `url` Consumet returns, via `target="_blank"`. If Consumet
-  has no link for an episode, the button is disabled rather than
-  linking nowhere.
+  external AnimeKai `url` Consumet returns, via `target="_blank"`. If
+  Consumet has no link for an episode, the button is disabled rather
+  than linking nowhere.
 - **Restricted lists** — a tracked series can only be `'Watched'` or
   `'Plan to Watch'`. There is no "Watching" status anywhere in the
   schema, the API, or the UI.
 - **Isolated progress tracking** — the `episodes_watched` +/- counter
-  exists only on the individual series page (`SeriesPage`); no other
-  screen edits it.
+  on the details page is the only place that value is edited. My List
+  and Home never touch it.
+- **One details page** — there is exactly one details screen
+  (`AnimeDetailPage`). Opening it from Search (`source="live"`) fetches
+  real Consumet/Supabase data; opening it from Home or My List
+  (`source="mock"`, the default) shows the built-in demo catalogue.
+  Same layout either way.
 
 ## Structure
 
 ```
 api/
-  _lib/consumet.ts     Consumet wrapper: strips the payload to id/title/
-                        image/totalEpisodes/episodes[] (each with its url)
+  _lib/consumet.ts     Consumet wrapper — see "Two Consumet jobs" above
   anime/[id].ts         GET /api/anime/:id
   anime/search.ts       GET /api/anime/search?q=...
   tests/                vitest coverage for the above (mocked Consumet)
@@ -86,34 +105,36 @@ src/
     AppContext.tsx       legacy local state for the mock catalogue (below)
   services/
     animeApi.ts          fetch wrapper for the api/anime/* functions
-    tracker.ts           supabase-js CRUD for anime_tracker (RLS-scoped)
+    tracker.ts            supabase-js CRUD for anime_tracker (RLS-scoped)
   pages/
     LoginPage / RegisterPage   Supabase Auth UI
-    SeriesPage                 the real, Consumet+Supabase-backed series
-                                page — Step 3 of the original spec
-    SearchPage                 2+ character queries hit live Anilist search;
+    AnimeDetailPage             the one details page — renders mock or
+                                live data depending on the `source` prop
+                                (see "One details page" above)
+    SearchPage                  2+ character queries hit live Anilist search;
                                 empty query still shows the mock catalogue
-    HomePage / MyListPage / ProfilePage / AnimeDetailPage
+    HomePage / MyListPage / ProfilePage
                                 original mock-data screens (see below)
 ```
 
 ## Known follow-ups
 
-The original request scoped live data to the series page plus search;
-these mock-data screens haven't been migrated yet:
+The original request scoped live data to the details page plus search;
+this mock-data screen hasn't been migrated yet:
 
 - **HomePage** and **MyListPage** still read from the hardcoded
   `src/data/animes.ts` catalogue and the old `AppContext`/`localStorage`
   reducer, not from `anime_tracker`. A series added to your list from
-  the live Search → SeriesPage flow won't currently show up in My List.
-- **AnimeDetailPage** (mock-data detail view, reached from Home) is
-  separate from **SeriesPage** (live, reached from Search). They're
-  intentionally two different components right now.
+  the live Search → details flow won't currently show up in My List.
 - Migrating Home/My List to query `anime_tracker` directly (dropping
   the mock catalogue and the local reducer entirely) would unify this
   into one consistent data source.
+- Rating (Anchor Up/Down) and Favorite aren't available for live
+  series yet — they're backed by the local `AppContext` reducer, which
+  isn't safe to reuse for real Anilist ids (numeric id collisions with
+  the mock catalogue). Would need their own Supabase columns.
 
-There's also a `/server` folder and a handful of `*.stale` files in
+There's also a `/server` folder and a handful of `*.stale*` files in
 this repo that are leftovers from earlier scaffolding and a filesystem
 quirk in the build environment — both are gitignored and safe to
 delete by hand; they were never part of the shipped app.

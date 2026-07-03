@@ -21,7 +21,19 @@ beforeEach(() => {
 
 describe('GET /api/anime/:id', () => {
   it('returns 200 with the stripped anime payload', async () => {
-    const payload = { id: '21', title: 'One Piece', image: null, totalEpisodes: 1000, episodes: [] }
+    const payload = {
+      id: '21',
+      title: 'One Piece',
+      image: null,
+      genres: ['Action'],
+      description: null,
+      status: 'ONGOING',
+      format: 'TV',
+      rating: 88,
+      characters: [],
+      totalEpisodes: 1000,
+      episodes: [],
+    }
     vi.mocked(fetchAnimeInfo).mockResolvedValue(payload)
 
     const req = { method: 'GET', query: { id: '21' } } as unknown as VercelRequest

@@ -11,14 +11,31 @@ export interface AnimeEpisode {
   number: number
   title: string | null
   image: string | null
-  /** External watch link. LogPose never hosts video — always opened via target="_blank". */
+  /** External watch link (AnimeKai). LogPose never hosts video — always opened via target="_blank". */
   url: string | null
+}
+
+export interface AnimeCharacter {
+  id: string
+  name: string
+  role: string | null
+  image: string | null
 }
 
 export interface AnimeInfo {
   id: string
   title: string
   image: string | null
+  genres: string[]
+  /** Plain-text synopsis (HTML already stripped server-side). */
+  description: string | null
+  /** Anilist media status, e.g. "ONGOING", "COMPLETED", "NOT_YET_AIRED". */
+  status: string | null
+  /** Anilist format, e.g. "TV", "MOVIE", "OVA". */
+  format: string | null
+  /** Anilist average score, 0-100, or null if not yet rated. */
+  rating: number | null
+  characters: AnimeCharacter[]
   totalEpisodes: number
   episodes: AnimeEpisode[]
 }
@@ -40,7 +57,7 @@ async function parseJsonOrThrow(res: Response) {
   return body
 }
 
-/** GET /api/anime/:id — full series info + episode list with outbound watch links. */
+/** GET /api/anime/:id — full series details + episode list with outbound AnimeKai watch links. */
 export async function fetchAnimeInfo(anilistId: string | number): Promise<AnimeInfo> {
   const res = await fetch(`${BASE_URL}/api/anime/${encodeURIComponent(String(anilistId))}`)
   return parseJsonOrThrow(res) as Promise<AnimeInfo>

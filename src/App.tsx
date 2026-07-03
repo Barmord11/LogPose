@@ -8,16 +8,18 @@ import SearchPage      from './pages/SearchPage'
 import MyListPage      from './pages/MyListPage'
 import AnimeDetailPage from './pages/AnimeDetailPage'
 import ProfilePage     from './pages/ProfilePage'
-import SeriesPage      from './pages/SeriesPage'
 import LoginPage       from './pages/LoginPage'
 import RegisterPage    from './pages/RegisterPage'
 import { useAuth }     from './context/AuthContext'
 import './index.css'
 
-export type Page = 'home' | 'search' | 'mylist' | 'detail' | 'profile' | 'series'
+export type Page = 'home' | 'search' | 'mylist' | 'detail' | 'profile'
+
+/** Where a selected anime id came from: the demo catalogue, or a real Anilist id (from Search). */
+export type AnimeSource = 'mock' | 'live'
 
 export interface NavProps {
-  navigate: (page: Page, animeId?: number) => void
+  navigate: (page: Page, animeId?: number, source?: AnimeSource) => void
 }
 
 function App() {
@@ -26,11 +28,15 @@ function App() {
 
   const [activePage,      setActivePage]      = useState<Page>('home')
   const [selectedAnimeId, setSelectedAnimeId] = useState<number>(1)
+  const [selectedSource,  setSelectedSource]  = useState<AnimeSource>('mock')
   const [previousPage,    setPreviousPage]    = useState<Page>('home')
   const [searchQuery,     setSearchQuery]     = useState('')
 
-  const navigate = (page: Page, animeId?: number) => {
-    if (animeId !== undefined) setSelectedAnimeId(animeId)
+  const navigate = (page: Page, animeId?: number, source: AnimeSource = 'mock') => {
+    if (animeId !== undefined) {
+      setSelectedAnimeId(animeId)
+      setSelectedSource(source)
+    }
     setActivePage(current => {
       if (current !== page) setPreviousPage(current)
       return page
@@ -83,15 +89,9 @@ function App() {
           {activePage === 'detail'  && (
             <AnimeDetailPage
               animeId={selectedAnimeId}
+              source={selectedSource}
               navigate={navigate}
-              backTo={previousPage === 'detail' ? 'home' : previousPage}
-            />
-          )}
-          {activePage === 'series'  && (
-            <SeriesPage
-              anilistId={selectedAnimeId}
-              navigate={navigate}
-              backTo={previousPage === 'series' ? 'search' : previousPage}
+              backTo={previousPage === 'detail' ? (selectedSource === 'live' ? 'search' : 'home') : previousPage}
             />
           )}
         </div>

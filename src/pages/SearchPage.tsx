@@ -5,7 +5,9 @@
  *
  * Typing a query (2+ chars) switches the results grid to a LIVE Anilist
  * search via Consumet (GET /api/anime/search), debounced. Clicking a
- * live result opens the real SeriesPage (/anime/:anilistId).
+ * live result opens the same details page as everything else
+ * (AnimeDetailPage), just with source="live" so it fetches the real
+ * Anilist id instead of reading the mock catalogue.
  *
  * With an empty query, the page falls back to the original mock
  * catalogue browsing experience (genre bento + filter chips) — that
@@ -389,11 +391,11 @@ export default function SearchPage({ navigate, initialQuery = '' }: SearchPagePr
   )
 }
 
-/* ── Live Anilist result card → opens the real SeriesPage ── */
+/* ── Live Anilist result card → opens the real details page ── */
 function LiveSearchCard({ result, navigate }: { result: AnimeSearchResult; navigate: NavProps['navigate'] }) {
   const anilistIdNum = Number(result.id)
   return (
-    <div className="search-card" onClick={() => navigate('series', anilistIdNum)}>
+    <div className="search-card" onClick={() => navigate('detail', anilistIdNum, 'live')}>
       <div className="search-card__img-wrap">
         {result.image ? (
           <img src={result.image} alt={result.title} />

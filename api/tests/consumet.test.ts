@@ -27,18 +27,25 @@ beforeEach(() => {
 })
 
 describe('fetchAnimeInfo', () => {
-  it('strips the payload to id/title/image/totalEpisodes/episodes with outbound urls', async () => {
+  it('strips the payload to the details fields plus episodes with outbound urls', async () => {
     mockAnilistInstance.fetchAnimeInfo.mockResolvedValue({
       id: 21,
       title: { romaji: 'One Piece', english: 'One Piece' },
       image: 'https://img/one-piece.jpg',
+      genres: ['Action', 'Adventure', 'Fantasy'],
+      description: 'Luffy sets sail.<br><br>He wants to be the <i>Pirate King</i> &amp; find One Piece.',
+      status: 'ONGOING',
+      type: 'TV',
+      rating: 88,
+      characters: [
+        { id: 1, role: 'MAIN', name: { full: 'Monkey D. Luffy' }, image: 'https://img/luffy.jpg' },
+      ],
       totalEpisodes: 1000,
       episodes: [
         { id: 'ep-1', number: 1, title: 'Romance Dawn', image: 'https://img/ep1.jpg', url: 'https://watch.example/ep1' },
       ],
       relations: [{ huge: 'payload' }],
       studios: ['Toei Animation'],
-      characters: [{ id: 1, name: 'Luffy' }],
     })
 
     const result = await fetchAnimeInfo('21')
@@ -47,6 +54,14 @@ describe('fetchAnimeInfo', () => {
       id: '21',
       title: 'One Piece',
       image: 'https://img/one-piece.jpg',
+      genres: ['Action', 'Adventure', 'Fantasy'],
+      description: 'Luffy sets sail.\n\nHe wants to be the Pirate King & find One Piece.',
+      status: 'ONGOING',
+      format: 'TV',
+      rating: 88,
+      characters: [
+        { id: '1', name: 'Monkey D. Luffy', role: 'MAIN', image: 'https://img/luffy.jpg' },
+      ],
       totalEpisodes: 1000,
       episodes: [
         { id: 'ep-1', number: 1, title: 'Romance Dawn', image: 'https://img/ep1.jpg', url: 'https://watch.example/ep1' },
@@ -54,13 +69,45 @@ describe('fetchAnimeInfo', () => {
     })
     expect(result).not.toHaveProperty('relations')
     expect(result).not.toHaveProperty('studios')
-    expect(result).not.toHaveProperty('characters')
   })
 
   it('falls back to romaji when english title is missing', async () => {
     mockAnilistInstance.fetchAnimeInfo.mockResolvedValue({ id: 5, title: { romaji: 'Foo' }, episodes: [] })
     const result = await fetchAnimeInfo('5')
     expect(result.title).toBe('Foo')
+  })
+
+  it('defaults genres/description/status/format/rating/characters when the provider omits them', async () => {
+    mockAnilistInstance.fetchAnimeInfo.mockResolvedValue({ id: 1, title: 'X', episodes: [] })
+    const result = await fetchAnimeInfo('1')
+    expect(result.genres).toEqual([])
+    expect(result.description).toBeNull()
+    expect(result.status).toBeNull()
+    expect(result.format).toBeNull()
+    expect(result.rating).toBeNull()
+    expect(result.characters).toEqual([])
+  })
+
+  it('falls back to first/last name and an index-based id when a character has no full name or id', async () => {
+    mockAnilistInstance.fetchAnimeInfo.mockResolvedValue({
+      id: 1,
+      title: 'X',
+      episodes: [],
+      characters: [{ role: 'SUPPORTING', name: { first: 'Jane', last: 'Doe' }, image: null }],
+    })
+    const result = await fetchAnimeInfo('1')
+    expect(result.characters).toEqual([{ id: 'char-0', name: 'Jane Doe', role: 'SUPPORTING', image: null }])
+  })
+
+  it('caps characters to the first 12', async () => {
+    mockAnilistInstance.fetchAnimeInfo.mockResolvedValue({
+      id: 1,
+      title: 'X',
+      episodes: [],
+      characters: Array.from({ length: 20 }, (_, i) => ({ id: i, name: { full: `Char ${i}` } })),
+    })
+    const result = await fetchAnimeInfo('1')
+    expect(result.characters).toHaveLength(12)
   })
 
   it('passes each episode url through untouched - LogPose never hosts video', async () => {
