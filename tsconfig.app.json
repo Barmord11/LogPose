@@ -16,6 +16,14 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
+    /* @supabase/supabase-js@2.110.0 ships a broken "import" export
+       condition (references dist/index.d.mts, which isn't actually
+       published — only its .map is). Point straight at the .d.cts
+       declarations, which are complete and always present. */
+    "paths": {
+      "@supabase/supabase-js": ["./node_modules/@supabase/supabase-js/dist/index.d.cts"]
+    },
+
     /* Linting */
     "noUnusedLocals": true,
     "noUnusedParameters": true,
