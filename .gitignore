@@ -22,3 +22,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Abandoned standalone Express/SQL Server scaffold — superseded by the
+# Supabase + Vercel serverless architecture (see api/ and supabase/).
+# Left on disk because it couldn't be removed from this environment;
+# safe to delete by hand.
+/server
+
+# Vercel
+.vercel
