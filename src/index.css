@@ -509,6 +509,11 @@ input, textarea { font-family: inherit; }
   background:
     radial-gradient(circle at 0% 0%,   rgba(214,227,255,0.45) 0px, transparent 50%),
     radial-gradient(circle at 100% 100%, rgba(102,247,255,0.12) 0px, transparent 50%);
+  padding-top: 32px;
+}
+
+@media (min-width: 768px) {
+  .search-hero { padding-top: 48px; }
 }
 
 .search-bar-wrap {
@@ -526,6 +531,23 @@ input, textarea { font-family: inherit; }
 .search-bar-wrap:focus-within {
   box-shadow: 0 0 0 3px rgba(254,106,52,0.18), 0 8px 40px rgba(0,23,54,0.12);
   transform: scale(1.01);
+}
+
+/* Submit button inside the search bar — sized down on very narrow
+   phones so it can't crowd/squeeze the input next to it. */
+.search-bar-wrap__submit {
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding: 10px 24px;
+  font-size: 13px;
+  border-radius: var(--r-full);
+}
+
+@media (max-width: 400px) {
+  .search-bar-wrap__submit {
+    padding: 10px 16px;
+    font-size: 12px;
+  }
 }
 
 /* ── 26. GENRE CARD ──────────────────────────────────────── */
@@ -554,6 +576,27 @@ input, textarea { font-family: inherit; }
   margin-top: 8px;
 }
 .genre-card:hover .genre-card__underline { width: 48px; }
+
+/* Content overlay (badge/title/description) — padding lives here
+   (not inline) so it can be reduced on narrow phones without an
+   !important fight against an inline style. */
+.genre-card__content {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+@media (max-width: 767px) {
+  /* Fixed 240px was tall enough to clip a wide card's description
+     text on a narrow 2-col mobile grid — let it size to content
+     instead, with a floor so non-wide cards still look substantial. */
+  .genre-card { height: auto; min-height: 180px; }
+  .genre-card__content { padding: 16px; }
+}
 
 /* ── 27. SEARCH RESULT CARD ──────────────────────────────── */
 .search-card {
@@ -595,6 +638,14 @@ input, textarea { font-family: inherit; }
   padding: 12px;
 }
 .search-card:hover .search-card__overlay { opacity: 1; }
+
+@media (max-width: 767px) {
+  /* There's no :hover on touch devices - without this, the Play,
+     rating, and add-to-list controls inside this overlay are
+     completely unreachable on phones. Keep them tappable instead. */
+  .search-card__overlay { opacity: 1; }
+}
+
 .search-card__body {
   padding: 12px 14px;
   background: rgba(255,255,255,0.8);

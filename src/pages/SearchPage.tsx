@@ -151,7 +151,7 @@ export default function SearchPage({ navigate, initialQuery = '' }: SearchPagePr
               value={query}
               onChange={e => setQuery(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') scrollToResults() }}
-              placeholder="Search real anime titles (live Anilist search)..."
+              placeholder="Search real anime titles (live MyAnimeList search)..."
               style={{
                 flex: 1,
                 background: 'transparent',
@@ -165,9 +165,8 @@ export default function SearchPage({ navigate, initialQuery = '' }: SearchPagePr
               }}
             />
             <button
-              className="btn-sunset"
+              className="btn-sunset search-bar-wrap__submit"
               onClick={scrollToResults}
-              style={{ padding: '10px 24px', fontSize: '13px', borderRadius: 'var(--r-full)' }}
             >
               EXPLORE
             </button>
@@ -242,7 +241,7 @@ export default function SearchPage({ navigate, initialQuery = '' }: SearchPagePr
                     {/* Colour overlay */}
                     <div style={{ position: 'absolute', inset: 0, background: overlay, zIndex: 1 }} />
                     {/* Content */}
-                    <div style={{ position: 'absolute', inset: 0, zIndex: 2, padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+                    <div className="genre-card__content">
                       <span
                         style={{
                           ...bs,

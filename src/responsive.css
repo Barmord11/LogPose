@@ -246,8 +246,15 @@
 }
 
 /* ── DETAIL PAGE GRID ─────────────────────────────────────── */
+/* display/gap/margin-top used to be set inline in AnimeDetailPage.tsx,
+   which meant the inline style always won regardless of viewport and
+   this ≥768px override could never actually apply - moved fully into
+   this class so the breakpoint below works as intended. */
 .detail-grid {
+  display: grid;
   grid-template-columns: 1fr;
+  gap: 24px;
+  margin-top: -60px;
 }
 
 @media (min-width: 768px) {
@@ -255,6 +262,30 @@
     grid-template-columns: 280px 1fr;
     margin-top: -180px;
   }
+}
+
+/* ── DETAIL PAGE STAT CHIPS (Rank/Score/Episodes/Status etc.) ── */
+.stat-chip-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+/* ── DETAIL PAGE LEFT COLUMN (poster + actions) ──────────────
+   Full-width on mobile, matching the single-column .detail-grid
+   above; the ≥768px grid track already constrains this to exactly
+   280px, so no explicit max-width is needed there either, but it's
+   set anyway as a safety net in case this column is ever used
+   outside of .detail-grid. */
+.detail-left-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .detail-left-col { max-width: 280px; }
 }
 
 /* ── MYLIST LAYOUT: main column + favorites side panel ────── */

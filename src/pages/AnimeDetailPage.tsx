@@ -218,12 +218,12 @@ function MockDetail({ animeId, navigate, backTo }: { animeId: number; navigate: 
       {/* ══ MAIN CONTENT ═══════════════════════════════════════ */}
       <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 16px 48px' }}>
         <div
-          style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px', marginTop: '-140px', position: 'relative', zIndex: 20 }}
+          style={{ position: 'relative', zIndex: 20 }}
           className="detail-grid"
         >
 
           {/* ── LEFT COLUMN: Poster + Actions ── */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '280px' }}>
+          <div className="detail-left-col">
             <div style={{ aspectRatio: '2/3', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,23,54,0.25)', border: '4px solid #fff', width: '100%' }}>
               <img src={anime.cover} alt={anime.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
@@ -287,7 +287,7 @@ function MockDetail({ animeId, navigate, backTo }: { animeId: number; navigate: 
               )}
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+            <div className="stat-chip-grid">
               <StatChip label="Rank" value={`#${anime.rank}`} />
               <StatChip label="Score" value={`★ ${anime.score}`} accent />
               <StatChip label="Episodes" value={String(anime.episodes)} />
@@ -328,7 +328,7 @@ function MockDetail({ animeId, navigate, backTo }: { animeId: number; navigate: 
                 ) : (
                   <div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '8px' }} className="no-scrollbar">
                     {anime.characters.map(char => (
-                      <div key={char.id} className="char-card" style={{ width: '100px' }}>
+                      <div key={char.id} className="char-card">
                         <div className="char-card__avatar">
                           <img src={char.image} alt={char.name} />
                         </div>
@@ -561,10 +561,10 @@ function LiveDetail({ malId, navigate, backTo }: { malId: number; navigate: NavP
 
       {/* ══ MAIN CONTENT ═══════════════════════════════════════ */}
       <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 16px 48px' }}>
-        <div className="detail-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px', marginTop: '-140px', position: 'relative', zIndex: 20 }}>
+        <div className="detail-grid" style={{ position: 'relative', zIndex: 20 }}>
 
           {/* ── LEFT COLUMN: Poster + Watch + rating + status + progress ── */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '280px' }}>
+          <div className="detail-left-col">
             <div style={{ aspectRatio: '2/3', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,23,54,0.25)', border: '4px solid #fff', width: '100%', background: 'var(--surface-container)' }}>
               {anime.image && <img src={anime.image} alt={anime.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
             </div>
@@ -689,7 +689,7 @@ function LiveDetail({ malId, navigate, backTo }: { malId: number; navigate: NavP
               </h1>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+            <div className="stat-chip-grid">
               <StatChip label="MAL Score" value={anime.score != null ? `★ ${anime.score.toFixed(1)}` : '—'} accent />
               <StatChip label="Episodes" value={String(anime.totalEpisodes)} />
               <StatChip label="Status" value={anime.status ?? '—'} accent />
@@ -731,7 +731,7 @@ function LiveDetail({ malId, navigate, backTo }: { malId: number; navigate: NavP
                 ) : (
                   <div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '8px' }} className="no-scrollbar">
                     {anime.characters.map(char => (
-                      <div key={char.id} className="char-card" style={{ width: '100px' }}>
+                      <div key={char.id} className="char-card">
                         <div className="char-card__avatar">
                           {char.image && <img src={char.image} alt={char.name} />}
                         </div>
