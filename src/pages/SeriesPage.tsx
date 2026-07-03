@@ -272,27 +272,47 @@ export default function SeriesPage({ anilistId, navigate, backTo = 'search' }: S
                         )}
                       </div>
 
-                      {/* NO VIDEO HOSTING: outbound link only, opened in a new tab */}
-                      <a
-                        href={ep.url ?? undefined}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-disabled={!ep.url}
-                        onClick={e => { if (!ep.url) e.preventDefault() }}
-                        className="btn-sunset"
-                        style={{
-                          padding: '8px 16px',
-                          borderRadius: '9999px',
-                          fontSize: '12px',
-                          fontWeight: 700,
-                          flexShrink: 0,
-                          opacity: ep.url ? 1 : 0.4,
-                          cursor: ep.url ? 'pointer' : 'not-allowed',
-                          textDecoration: 'none',
-                        }}
-                      >
-                        Watch
-                      </a>
+                      {/* NO VIDEO HOSTING: outbound link only, opened in a new tab. */}
+                      {ep.url ? (
+                        <a
+                          href={ep.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn-sunset"
+                          style={{
+                            padding: '8px 16px',
+                            borderRadius: '9999px',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            flexShrink: 0,
+                            textDecoration: 'none',
+                          }}
+                        >
+                          Watch
+                        </a>
+                      ) : (
+                        // No watch link without an href isn't a real link
+                        // (screen readers / keyboard nav would skip it) —
+                        // render an explicitly disabled button instead.
+                        <button
+                          type="button"
+                          disabled
+                          aria-disabled="true"
+                          className="btn-sunset"
+                          style={{
+                            padding: '8px 16px',
+                            borderRadius: '9999px',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            flexShrink: 0,
+                            opacity: 0.4,
+                            cursor: 'not-allowed',
+                            border: 'none',
+                          }}
+                        >
+                          Watch
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
