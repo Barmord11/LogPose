@@ -39,7 +39,7 @@ dist-ssr
 # build environment that blocked deleting them outright (rename-then-
 # recreate was used to work around a stale-cache bug). Safe to delete
 # by hand — the current, correct version has no .stale suffix.
-*.stale
+*.stale*
 
 # Vercel
 .vercel

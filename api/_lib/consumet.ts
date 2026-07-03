@@ -1,4 +1,4 @@
-import { META } from '@consumet/extensions'
+import { META, ANIME } from '@consumet/extensions'
 
 /**
  * Server-side wrapper around Consumet's `@consumet/extensions` Anilist
@@ -6,8 +6,14 @@ import { META } from '@consumet/extensions'
  * browser — and strips Consumet's large payload down to exactly what
  * LogPose's UI needs.
  *
+ * The Anilist meta-provider combines two things: Anilist for metadata
+ * (title, image, episode count) and a separate underlying site for the
+ * actual per-episode watch links. We use AnimeKai for that — Consumet's
+ * default is HiAnime if you don't pass a provider explicitly.
+ *
  * Business rule: LogPose never hosts or proxies video. `episode.url` is
- * always an external link; the frontend only ever opens it in a new tab.
+ * always an external link (on AnimeKai); the frontend only ever opens
+ * it in a new tab.
  */
 
 export interface StrippedEpisode {
@@ -39,7 +45,7 @@ let provider: InstanceType<typeof META.Anilist> | null = null
 
 /** Lazily construct the provider so importing this module has no side effects (easier to test). */
 function getProvider() {
-  if (!provider) provider = new META.Anilist()
+  if (!provider) provider = new META.Anilist(new ANIME.AnimeKai())
   return provider
 }
 

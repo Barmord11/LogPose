@@ -9,9 +9,15 @@ const mockAnilistInstance = {
 vi.mock('@consumet/extensions', () => ({
   META: {
     // Must be a regular function (not an arrow fn) - consumet.ts calls
-    // `new META.Anilist()`, and arrow functions can't be constructors.
+    // `new META.Anilist(new ANIME.AnimeKai())`, and arrow functions
+    // can't be constructors.
     Anilist: vi.fn(function AnilistMock() {
       return mockAnilistInstance
+    }),
+  },
+  ANIME: {
+    AnimeKai: vi.fn(function AnimeKaiMock() {
+      return {}
     }),
   },
 }))
