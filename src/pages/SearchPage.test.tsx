@@ -29,6 +29,11 @@ beforeEach(() => {
   vi.mocked(tracker.getTrackerRow).mockResolvedValue(null)
   vi.mocked(ratings.getMyRating).mockResolvedValue(null)
   vi.mocked(favorites.isFavorite).mockResolvedValue(false)
+  // Default (no query, no genre) browsing view and the genre bento both
+  // fetch real AniList data on mount/selection - default to empty so
+  // mounting the page doesn't throw on an un-mocked promise.
+  vi.mocked(animeApi.fetchPopular).mockResolvedValue([])
+  vi.mocked(animeApi.fetchByGenre).mockResolvedValue([])
 })
 
 // The search box debounces for 500ms (see DEBOUNCE_MS in SearchPage.tsx)
@@ -78,4 +83,27 @@ it('lets a signed-in user add a live result straight to Plan to Watch from the c
     expect.objectContaining({ anilistId: 21, status: 'Plan to Watch' }),
   ))
   expect(container).toBeTruthy()
+})
+
+it('shows real AniList popular results by default (no query, no genre)', async () => {
+  const popular: AnimeSearchResult = { id: '99', title: 'Most Popular Show', image: null, releaseDate: 2024, totalEpisodes: 12 }
+  vi.mocked(animeApi.fetchPopular).mockResolvedValue([popular])
+
+  renderPage()
+
+  await waitFor(() => expect(screen.getByText('Most Popular Show')).toBeInTheDocument())
+  expect(screen.getByText('Most Popular — Live from AniList')).toBeInTheDocument()
+})
+
+it('queries AniList by genre when a genre bento card is clicked', async () => {
+  const genreHit: AnimeSearchResult = { id: '55', title: 'A Fantasy Voyage', image: null, releaseDate: 2022, totalEpisodes: 13 }
+  vi.mocked(animeApi.fetchByGenre).mockResolvedValue([genreHit])
+
+  renderPage()
+
+  const fantasyCard = await screen.findByText('Fantasy')
+  fantasyCard.closest('[role="button"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+
+  await waitFor(() => expect(animeApi.fetchByGenre).toHaveBeenCalledWith(['Fantasy']))
+  await waitFor(() => expect(screen.getByText('A Fantasy Voyage')).toBeInTheDocument())
 })

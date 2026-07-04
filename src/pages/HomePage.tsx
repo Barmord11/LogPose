@@ -8,21 +8,17 @@
 
 import { useEffect, useState } from 'react'
 import type { NavProps } from '../App'
-import { animes }         from '../data/animes'
-import { useApp, useProfileStats } from '../context/AppContext'
+import { useProfileStats } from '../context/AppContext'
 import { navigatorLevel } from '../context/reducer'
 import { useLiveStats }   from '../hooks/useLiveStats'
 import SectionHeader      from '../components/SectionHeader'
-import AddDropdown, { AddDropdownView } from '../components/AddDropdown'
-import PlayButton         from '../components/PlayButton'
-import AnchorRating, { AnchorRatingView } from '../components/AnchorRating'
+import { AddDropdownView } from '../components/AddDropdown'
+import { AnchorRatingView } from '../components/AnchorRating'
 import { useDragToAdd, DragDropZones } from '../components/DragToAdd'
 import { getTrackerList, getTrackerRow, upsertStatus, removeFromTracker, type TrackerRow, type TrackerStatus } from '../services/tracker'
-import { fetchTrending, type AnimeSearchResult } from '../services/animeApi'
+import { fetchTrending, fetchPopular, fetchAnimeInfo, type AnimeSearchResult, type AnimeInfo } from '../services/animeApi'
 import { getMyRating, setRating as submitRating, clearRating, type RatingValue } from '../services/ratings'
 import { isFavorite as fetchIsFavorite, toggleFavorite } from '../services/favorites'
-
-const FEATURED = animes[4] // Kōkai no Kiroku — most legendary
 
 export default function HomePage({ navigate }: NavProps) {
   // Mock catalogue's local stats + live (Supabase-backed) stats are
@@ -41,17 +37,29 @@ export default function HomePage({ navigate }: NavProps) {
   // section just doesn't render rather than breaking the page.
   const [continueWatching, setContinueWatching] = useState<TrackerRow[]>([])
   const [trending, setTrending] = useState<AnimeSearchResult[]>([])
+  // Real AniList data (replaces the old hardcoded mock catalogue for the
+  // hero + "Popular This Week" grid) — all-time most-popular series, not
+  // limited to currently-airing like `trending` above.
+  const [popular, setPopular] = useState<AnimeSearchResult[]>([])
+  const [popularLoading, setPopularLoading] = useState(true)
 
   useEffect(() => {
     let cancelled = false
 
     getTrackerList('Plan to Watch')
       .then(rows => { if (!cancelled) setContinueWatching(rows) })
-      .catch(() => { /* not signed in yet, or RLS denied */ })
+      .catch(err => console.error('getTrackerList failed', err))
 
     fetchTrending()
       .then(results => { if (!cancelled) setTrending(results) })
-      .catch(() => { /* trending is a nice-to-have — an AniList hiccup shouldn't break Home */ })
+      .catch(err => console.error('fetchTrending failed', err))
+
+    fetchPopular()
+      .then(results => { if (!cancelled) { setPopular(results); setPopularLoading(false) } })
+      .catch(err => {
+        console.error('fetchPopular failed', err)
+        if (!cancelled) setPopularLoading(false)
+      })
 
     return () => { cancelled = true }
   }, [])
@@ -59,79 +67,31 @@ export default function HomePage({ navigate }: NavProps) {
   return (
     <div style={{ minHeight: '100vh', paddingBottom: '32px' }}>
 
-      {/* ══ HERO ════════════════════════════════════════════════ */}
-      <section style={{ position: 'relative', width: '100%', height: '72vh', minHeight: '420px', overflow: 'hidden' }}>
-        <img
-          src={FEATURED.cover}
-          alt={FEATURED.title}
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }}
-        />
-        {/* Gradients */}
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,23,54,1) 0%, rgba(0,23,54,0.35) 50%, transparent 100%)' }} />
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(0,23,54,0.3), transparent 60%)' }} />
-
-        {/* Content */}
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            padding: '0 16px 40px',
-          }}
-        >
-          {/* Badge */}
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '4px 14px',
-              borderRadius: '9999px',
-              background: 'rgba(254,106,52,0.88)',
-              backdropFilter: 'blur(8px)',
-              marginBottom: '16px',
-            }}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: '14px', color: '#fff', fontVariationSettings: "'FILL' 1" }}>trending_up</span>
-            <span style={{ fontSize: '10px', fontWeight: 800, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.14em' }}>
-              Most Popular This Season
-            </span>
+      {/* ══ HERO (live AniList — all-time most popular #1) ═══════ */}
+      <section style={{ position: 'relative', width: '100%', height: '72vh', minHeight: '420px', overflow: 'hidden', background: 'var(--surface-container)' }}>
+        {popular[0] ? (
+          <LiveHero result={popular[0]} navigate={navigate} />
+        ) : popularLoading ? (
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'flex-end', padding: '0 16px 40px' }}>
+            <div style={{ width: '55%', maxWidth: '480px' }}>
+              <div style={{ height: '20px', width: '55%', borderRadius: '9999px', background: 'rgba(255,255,255,0.12)', marginBottom: '16px' }} />
+              <div style={{ height: '40px', width: '85%', borderRadius: '10px', background: 'rgba(255,255,255,0.12)', marginBottom: '12px' }} />
+              <div style={{ height: '14px', width: '95%', borderRadius: '8px', background: 'rgba(255,255,255,0.10)' }} />
+            </div>
           </div>
-
-          <h1
-            style={{
-              fontFamily: 'var(--font)',
-              fontSize: 'clamp(28px, 5vw, 58px)',
-              fontWeight: 800,
-              color: '#fff',
-              lineHeight: 1.05,
-              letterSpacing: '-0.03em',
-              marginBottom: '12px',
-              maxWidth: '640px',
-              textShadow: '0 2px 20px rgba(0,0,0,0.3)',
-            }}
-          >
-            {FEATURED.title}
-          </h1>
-
-          <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.72)', lineHeight: 1.6, marginBottom: '24px', maxWidth: '480px' }}>
-            {FEATURED.synopsis.slice(0, 140)}…
-          </p>
-
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
-            <PlayButton watchUrl={FEATURED.watchUrl} variant="primary" label="Watch Now" />
-            <button
-              onClick={() => navigate('detail', FEATURED.id)}
-              className="btn-glass"
-              style={{ padding: '13px 24px', fontSize: '14px', color: '#fff', borderColor: 'rgba(255,255,255,0.4)' }}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>info</span>
-              More Info
+        ) : (
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-end', padding: '0 16px 40px' }}>
+            <h1 style={{ fontFamily: 'var(--font)', fontSize: 'clamp(22px, 4vw, 36px)', fontWeight: 800, color: 'var(--primary)', marginBottom: '12px' }}>
+              Discover Your Next Voyage
+            </h1>
+            <p style={{ fontSize: '14px', color: 'var(--on-surface-variant)', marginBottom: '20px' }}>
+              Couldn't reach AniList right now — try Search instead.
+            </p>
+            <button onClick={() => navigate('search')} className="btn-sunset" style={{ padding: '13px 24px', fontSize: '14px', borderRadius: '9999px', border: 'none' }}>
+              Browse Search
             </button>
-            <AddDropdown animeId={FEATURED.id} variant="overlay" size="md" />
           </div>
-        </div>
+        )}
       </section>
 
       {/* ══ CONTINUE YOUR VOYAGE (live tracker, Plan to Watch) ═══ */}
@@ -184,9 +144,11 @@ export default function HomePage({ navigate }: NavProps) {
         </div>
 
         <div className="anime-grid">
-          {animes.map(anime => (
-            <PopularCard key={anime.id} anime={anime} navigate={navigate} />
-          ))}
+          {popular.length > 0
+            ? popular.map(result => <TrendingCard key={`popular-${result.id}`} result={result} navigate={navigate} />)
+            : popularLoading
+              ? Array.from({ length: 5 }).map((_, i) => <CardSkeleton key={i} />)
+              : <p style={{ fontSize: '13px', color: 'var(--on-surface-variant)' }}>Couldn't load popular anime right now — try again later.</p>}
         </div>
       </section>
 
@@ -214,38 +176,66 @@ export default function HomePage({ navigate }: NavProps) {
         <SectionHeader variant="border" title="Newly Released" style={{ marginBottom: '24px' }} />
 
         <div className="bento-grid">
-          {/* Main feature */}
-          <div
-            className="bento-main glass-card"
-            onClick={() => navigate('detail', animes[0].id)}
-            style={{
-              position: 'relative',
-              borderRadius: '24px',
-              overflow: 'hidden',
-              minHeight: '260px',
-              cursor: 'pointer',
-            }}
-          >
-            <img
-              src={animes[0].cover}
-              alt={animes[0].title}
-              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.04)' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)' }}
-            />
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,23,54,0.85), transparent 50%)' }} />
-            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '24px 28px' }}>
-              <span style={{ color: 'var(--secondary-container)', fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.2em' }}>
-                ✦ Director's Choice
-              </span>
-              <h3 style={{ fontFamily: 'var(--font)', fontSize: '24px', fontWeight: 800, color: '#fff', marginTop: '4px', marginBottom: '8px' }}>
-                {animes[0].title}
-              </h3>
-              <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.70)', maxWidth: '360px' }}>
-                {animes[0].synopsis.slice(0, 90)}…
-              </p>
-            </div>
-          </div>
+          {/* Main feature — a real AniList pick (2nd-most-popular, so it differs from the hero) */}
+          {(() => {
+            const feature = popular[1] ?? popular[0]
+            if (!feature) {
+              return (
+                <div
+                  className="bento-main glass-card"
+                  onClick={() => navigate('search')}
+                  style={{ position: 'relative', borderRadius: '24px', overflow: 'hidden', minHeight: '260px', cursor: 'pointer', display: 'flex', alignItems: 'flex-end', padding: '24px 28px' }}
+                >
+                  <div>
+                    <span style={{ color: 'var(--secondary-container)', fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.2em' }}>
+                      ✦ Director's Choice
+                    </span>
+                    <h3 style={{ fontFamily: 'var(--font)', fontSize: '24px', fontWeight: 800, color: 'var(--primary)', marginTop: '4px', marginBottom: '8px' }}>
+                      Explore the Fleet
+                    </h3>
+                    <p style={{ fontSize: '13px', color: 'var(--on-surface-variant)', maxWidth: '360px' }}>
+                      Browse trending and popular series from AniList.
+                    </p>
+                  </div>
+                </div>
+              )
+            }
+            return (
+              <div
+                className="bento-main glass-card"
+                onClick={() => navigate('detail', Number(feature.id), 'live')}
+                style={{
+                  position: 'relative',
+                  borderRadius: '24px',
+                  overflow: 'hidden',
+                  minHeight: '260px',
+                  cursor: 'pointer',
+                }}
+              >
+                {feature.image && (
+                  <img
+                    src={feature.image}
+                    alt={feature.title}
+                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.04)' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)' }}
+                  />
+                )}
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,23,54,0.85), transparent 50%)' }} />
+                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '24px 28px' }}>
+                  <span style={{ color: 'var(--secondary-container)', fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.2em' }}>
+                    ✦ Director's Choice
+                  </span>
+                  <h3 style={{ fontFamily: 'var(--font)', fontSize: '24px', fontWeight: 800, color: '#fff', marginTop: '4px', marginBottom: '8px' }}>
+                    {feature.title}
+                  </h3>
+                  <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.70)', maxWidth: '360px' }}>
+                    One of AniList's most popular picks right now{feature.totalEpisodes ? ` — ${feature.totalEpisodes} episodes` : ''}.
+                  </p>
+                </div>
+              </div>
+            )
+          })()}
 
           {/* New Dubs tile */}
           <div
@@ -515,41 +505,194 @@ function TrendingCard({ result, navigate }: { result: AnimeSearchResult; navigat
   )
 }
 
-/* ── Popular Card ── */
-function PopularCard({ anime, navigate }: { anime: typeof animes[0]; navigate: NavProps['navigate'] }) {
-  const { dispatch } = useApp()
+/* ── Card skeleton — loading placeholder for the Popular This Week grid ── */
+function CardSkeleton() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
+      <div style={{ aspectRatio: '3/4', borderRadius: '14px', marginBottom: '10px', background: 'var(--surface-container)' }} />
+      <div style={{ height: '12px', width: '80%', borderRadius: '6px', background: 'var(--surface-container)', marginBottom: '6px' }} />
+      <div style={{ height: '10px', width: '50%', borderRadius: '6px', background: 'var(--surface-container)' }} />
+    </div>
+  )
+}
 
-  const { dragging, offsetY, zone, bind } = useDragToAdd({
-    onPlan: () => dispatch({ type: 'ADD_TO_PLAN', id: anime.id }),
-    onWatched: () => dispatch({ type: 'ADD_TO_WATCHED', id: anime.id }),
-    onTap: () => navigate('detail', anime.id),
-  })
+/* ── Live Hero — real AniList series (all-time most popular #1).
+   Fetches full details (for synopsis + outbound watch link via Consumet)
+   plus the same tracker/rating/favorite state as TrendingCard, so the
+   hero's Add/Rate/Favorite controls are fully live. ── */
+function LiveHero({ result, navigate }: { result: AnimeSearchResult; navigate: NavProps['navigate'] }) {
+  const anilistId = Number(result.id)
+
+  const [info, setInfo] = useState<AnimeInfo | null>(null)
+  const [tracker, setTracker] = useState<TrackerRow | null>(null)
+  const [statusBusy, setStatusBusy] = useState(false)
+  const [rating, setRatingValue] = useState<RatingValue | null>(null)
+  const [favorite, setFavorite] = useState(false)
+  const [favoriteBusy, setFavoriteBusy] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    fetchAnimeInfo(anilistId).then(i => { if (!cancelled) setInfo(i) }).catch(err => console.error('hero fetchAnimeInfo failed', err))
+    getTrackerRow(anilistId).then(row => { if (!cancelled) setTracker(row) }).catch(err => console.error('getTrackerRow failed', err))
+    getMyRating(anilistId).then(r => { if (!cancelled) setRatingValue(r) }).catch(err => console.error('getMyRating failed', err))
+    fetchIsFavorite(anilistId).then(f => { if (!cancelled) setFavorite(f) }).catch(err => console.error('isFavorite failed', err))
+    return () => { cancelled = true }
+  }, [anilistId])
+
+  async function handleSetStatus(status: TrackerStatus) {
+    if (statusBusy) return
+    setStatusBusy(true)
+    try {
+      const row = await upsertStatus({ anilistId, status, title: result.title, imageUrl: result.image, totalEpisodes: result.totalEpisodes ?? 0 })
+      setTracker(row)
+    } catch (err) {
+      console.error('upsertStatus failed', err)
+    } finally {
+      setStatusBusy(false)
+    }
+  }
+
+  async function handleRemove() {
+    if (statusBusy) return
+    setStatusBusy(true)
+    try {
+      await removeFromTracker(anilistId)
+      setTracker(null)
+    } catch (err) {
+      console.error('removeFromTracker failed', err)
+    } finally {
+      setStatusBusy(false)
+    }
+  }
+
+  async function handleSetRating(value: RatingValue) {
+    const next = rating === value ? null : value
+    try {
+      if (next === null) await clearRating(anilistId)
+      else await submitRating(anilistId, next)
+      setRatingValue(next)
+    } catch (err) {
+      console.error('setRating/clearRating failed', err)
+    }
+  }
+
+  async function handleToggleFavorite() {
+    if (favoriteBusy) return
+    setFavoriteBusy(true)
+    try {
+      const next = await toggleFavorite(favorite, { anilistId, title: result.title, imageUrl: result.image })
+      setFavorite(next)
+    } catch (err) {
+      console.error('toggleFavorite failed', err)
+    } finally {
+      setFavoriteBusy(false)
+    }
+  }
+
+  // "Watch Now" opens episode 1's outbound AnimeKai link (best-effort, via
+  // Consumet) — same source LogPose uses everywhere else. LogPose never
+  // hosts episodes itself.
+  const playEpisode = info?.episodes.find(ep => ep.number === 1 && ep.url) ?? info?.episodes.find(ep => ep.url) ?? null
+  const heroImage = info?.bannerImage ?? info?.image ?? result.image
 
   return (
     <>
-      <div
-        style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column' }}
-      >
+      {heroImage && (
+        <img
+          src={heroImage}
+          alt={info?.title ?? result.title}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }}
+        />
+      )}
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,23,54,1) 0%, rgba(0,23,54,0.35) 50%, transparent 100%)' }} />
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(0,23,54,0.3), transparent 60%)' }} />
+
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '0 16px 40px' }}>
         <div
-          {...bind}
           style={{
-            position: 'relative',
-            aspectRatio: '3/4',
-            borderRadius: '14px',
-            overflow: 'hidden',
-            marginBottom: '10px',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
-            border: '1px solid rgba(255,255,255,0.4)',
-            background: 'var(--surface-container)',
-            ...(dragging ? { transform: `translateY(${offsetY}px)`, transition: 'none', zIndex: 5 } : null),
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '4px 14px',
+            borderRadius: '9999px',
+            background: 'rgba(254,106,52,0.88)',
+            backdropFilter: 'blur(8px)',
+            marginBottom: '16px',
           }}
-          className="anime-card__poster"
         >
-          <img src={anime.cover} alt={anime.title} className="anime-card__img" />
-          <div className="anime-card__overlay" onClick={e => e.stopPropagation()}>
-            {/* Top row: add */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <AddDropdown animeId={anime.id} variant="overlay" size="sm" />
-            </div>
-            {/* Bottom row: play + rating */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center' }}
+          <span className="material-symbols-outlined" style={{ fontSize: '14px', color: '#fff', fontVariationSettings: "'FILL' 1" }}>trending_up</span>
+          <span style={{ fontSize: '10px', fontWeight: 800, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.14em' }}>
+            Most Popular — Live from AniList
+          </span>
+        </div>
+
+        <h1
+          style={{
+            fontFamily: 'var(--font)',
+            fontSize: 'clamp(28px, 5vw, 58px)',
+            fontWeight: 800,
+            color: '#fff',
+            lineHeight: 1.05,
+            letterSpacing: '-0.03em',
+            marginBottom: '12px',
+            maxWidth: '640px',
+            textShadow: '0 2px 20px rgba(0,0,0,0.3)',
+          }}
+        >
+          {info?.title ?? result.title}
+        </h1>
+
+        {info?.description && (
+          <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.72)', lineHeight: 1.6, marginBottom: '24px', maxWidth: '480px' }}>
+            {info.description.slice(0, 140)}…
+          </p>
+        )}
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+          {playEpisode?.url ? (
+            <a
+              href={playEpisode.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-sunset active-glow"
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '14px 24px', fontSize: '14px', fontWeight: 700, letterSpacing: '0.03em', borderRadius: '9999px', textDecoration: 'none', color: '#fff' }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '22px', fontVariationSettings: "'FILL' 1" }}>play_arrow</span>
+              Watch Now
+            </a>
+          ) : null}
+          <button
+            onClick={() => navigate('detail', anilistId, 'live')}
+            className="btn-glass"
+            style={{ padding: '13px 24px', fontSize: '14px', color: '#fff', borderColor: 'rgba(255,255,255,0.4)' }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>info</span>
+            More Info
+          </button>
+          <AddDropdownView
+            inWatched={tracker?.status === 'Watched'}
+            inPlan={tracker?.status === 'Plan to Watch'}
+            onAddWatched={() => handleSetStatus('Watched')}
+            onAddPlan={() => handleSetStatus('Plan to Watch')}
+            onRemove={handleRemove}
+            variant="overlay"
+            size="md"
+            disabled={statusBusy}
+          />
+          <AnchorRatingView rating={rating} onSetRating={handleSetRating} size="md" color="white" />
+          <button
+            className={`heart-btn${favorite ? ' active' : ''}`}
+            title={favorite ? 'Unfavorite' : 'Favorite'}
+            onClick={handleToggleFavorite}
+            disabled={favoriteBusy}
+            style={{ color: '#fff', opacity: favoriteBusy ? 0.6 : 1 }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '22px', fontVariationSettings: favorite ? "'FILL' 1" : "'FILL' 0" }}>
+              favorite
+            </span>
+          </button>
+        </div>
+      </div>
+    </>
+  )
+}

@@ -1,28 +1,26 @@
 /**
  * SearchPage — Find Your Way
  * ──────────────────────────
- * Discovery hub: search bar hero → genre bento → filter chips → anime grid.
+ * Discovery hub: search bar hero → genre bento → results grid.
  *
  * Typing a query (2+ chars) switches the results grid to a LIVE AniList
- * search (GET /api/anime/search), debounced. Clicking a
- * live result opens the same details page as everything else
- * (AnimeDetailPage), just with source="live" so it fetches the real
- * AniList id instead of reading the mock catalogue.
- *
- * With an empty query, the page falls back to the original mock
- * catalogue browsing experience (genre bento + filter chips) — that
- * catalogue isn't wired to live data yet (see README "Known follow-ups").
+ * search (GET /api/anime/search), debounced. Clicking a genre bento
+ * card queries AniList for real series in that genre (GET
+ * /api/anime/genre). With no query and no genre selected, the grid
+ * shows AniList's all-time most popular series (GET /api/anime/popular)
+ * — real data, not the old hardcoded mock catalogue. Every result card
+ * (search, genre, or popular) opens the same details page
+ * (AnimeDetailPage) with source="live", and every card's Favorite /
+ * Anchor rating / Watched / Plan to Watch controls are real,
+ * Supabase-backed actions.
  */
 
 import { useEffect, useRef, useState } from 'react'
 import type { NavProps } from '../App'
-import { useApp } from '../context/AppContext'
-import { animes, genres, filterChips, recentSearches, type Genre } from '../data/animes'
-import { searchAnime, type AnimeSearchResult } from '../services/animeApi'
-import AddDropdown, { AddDropdownView } from '../components/AddDropdown'
-import AnchorRating, { AnchorRatingView } from '../components/AnchorRating'
-import PlayButton   from '../components/PlayButton'
-import StatusBadge  from '../components/StatusBadge'
+import { genres, recentSearches, type Genre } from '../data/animes'
+import { searchAnime, fetchPopular, fetchByGenre, type AnimeSearchResult } from '../services/animeApi'
+import { AddDropdownView } from '../components/AddDropdown'
+import { AnchorRatingView } from '../components/AnchorRating'
 import { useDragToAdd, DragDropZones } from '../components/DragToAdd'
 import { getTrackerRow, upsertStatus, removeFromTracker, type TrackerRow, type TrackerStatus } from '../services/tracker'
 import { getMyRating, setRating as submitRating, clearRating, type RatingValue } from '../services/ratings'
@@ -58,7 +56,6 @@ interface SearchPageProps extends NavProps {
 
 export default function SearchPage({ navigate, initialQuery = '' }: SearchPageProps) {
   const [query,       setQuery]       = useState(initialQuery)
-  const [activeChip,  setActiveChip]  = useState<string | null>(null)
   const [activeGenre, setActiveGenre] = useState<Genre | null>(null)
 
   const [liveResults, setLiveResults] = useState<AnimeSearchResult[]>([])
@@ -66,6 +63,19 @@ export default function SearchPage({ navigate, initialQuery = '' }: SearchPagePr
   const [liveError,   setLiveError]   = useState<string | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const abortRef = useRef<AbortController | null>(null)
+
+  // Real AniList data (replaces the old hardcoded mock catalogue) for
+  // the default (no query, no genre) browsing view.
+  const [popularResults, setPopularResults] = useState<AnimeSearchResult[]>([])
+  const [popularLoading, setPopularLoading] = useState(true)
+  const [popularError,   setPopularError]   = useState<string | null>(null)
+
+  // Real AniList data for the genre bento — clicking "Isekai" etc.
+  // queries AniList for series in that genre instead of filtering a
+  // small hardcoded catalogue.
+  const [genreResults, setGenreResults] = useState<AnimeSearchResult[]>([])
+  const [genreLoading, setGenreLoading] = useState(false)
+  const [genreError,   setGenreError]   = useState<string | null>(null)
 
   // Keep in sync when a new global search arrives
   useEffect(() => { setQuery(initialQuery) }, [initialQuery])
@@ -114,19 +124,59 @@ export default function SearchPage({ navigate, initialQuery = '' }: SearchPagePr
     }
   }, [trimmedQuery, isLiveSearch])
 
-  const chip = filterChips.find(c => c.label === activeChip)
+  // Real AniList "most popular" browsing data — fetched once on mount,
+  // shown whenever there's no active query or genre filter.
+  useEffect(() => {
+    let cancelled = false
+    fetchPopular()
+      .then(results => {
+        if (cancelled) return
+        setPopularResults(results)
+        setPopularLoading(false)
+      })
+      .catch(err => {
+        if (cancelled) return
+        console.error('fetchPopular failed', err)
+        setPopularError(err instanceof Error ? err.message : 'Failed to load popular anime.')
+        setPopularLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [])
 
-  // Mock-catalogue browsing (only used while the query is empty)
-  const filteredMock = animes.filter(a => {
-    const matchesChip  = !chip || chip.test(a)
-    const matchesGenre = !activeGenre || a.genres.some(g => activeGenre.matchTags.includes(g))
-    return matchesChip && matchesGenre
-  })
+  // Real AniList genre-filtered data — (re)fetched whenever a genre
+  // bento card is selected or cleared.
+  useEffect(() => {
+    if (!activeGenre) {
+      setGenreResults([])
+      setGenreError(null)
+      setGenreLoading(false)
+      return
+    }
+    let cancelled = false
+    setGenreLoading(true)
+    setGenreError(null)
+    fetchByGenre(activeGenre.anilistGenres)
+      .then(results => {
+        if (cancelled) return
+        setGenreResults(results)
+        setGenreLoading(false)
+      })
+      .catch(err => {
+        if (cancelled) return
+        console.error('fetchByGenre failed', err)
+        setGenreError(err instanceof Error ? err.message : 'Failed to load this genre.')
+        setGenreResults([])
+        setGenreLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [activeGenre])
 
-  const hasActiveFilter = trimmedQuery !== '' || activeChip !== null || activeGenre !== null
+  const hasActiveFilter = trimmedQuery !== '' || activeGenre !== null
 
   const scrollToResults = () => {
-    document.getElementById('search-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    // Optional chain on the method itself too, not just the element -
+    // jsdom (unit tests) doesn't implement scrollIntoView at all.
+    document.getElementById('search-results')?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
   }
 
   const pickGenre = (genre: Genre) => {
@@ -220,112 +270,89 @@ export default function SearchPage({ navigate, initialQuery = '' }: SearchPagePr
         </div>
       </section>
 
-      {/* ══ POPULAR GENRES BENTO (mock catalogue, empty query only) ══ */}
+      {/* ══ POPULAR GENRES BENTO (live AniList genre browsing, empty query only) ══ */}
       {!isLiveSearch && (
-        <>
-          <section style={{ padding: '0 16px', maxWidth: '1280px', margin: '0 auto 48px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '28px' }}>
-              <h2 style={{ fontFamily: 'var(--font)', fontSize: 'clamp(22px, 3vw, 30px)', fontWeight: 700, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span className="material-symbols-outlined" style={{ color: 'var(--secondary)', fontVariationSettings: "'FILL' 1", fontSize: '26px' }}>dashboard</span>
-                Popular Genres
-              </h2>
-              <div style={{ height: '3px', width: '64px', background: 'linear-gradient(135deg, #fe6a34, #ab3500)', borderRadius: '9999px' }} />
-            </div>
-
-            {/* Bento grid: 2-col mobile, 4-col on desktop */}
-            <div className="genre-grid-bento">
-              {genres.map(genre => {
-                const bs = BADGE_STYLES[genre.badgeVariant]
-                const overlay = GENRE_OVERLAYS[genre.id] ?? 'rgba(0,23,54,0.6)'
-                // Isekai and Slice of Life are wide
-                const isWide  = genre.id === 'isekai' || genre.id === 'slice-life'
-                const isActive = activeGenre?.id === genre.id
-                return (
-                  <div
-                    key={genre.id}
-                    className="genre-card"
-                    onClick={() => pickGenre(genre)}
-                    role="button"
-                    aria-pressed={isActive}
-                    style={{
-                      gridColumn: isWide ? 'span 2' : 'span 1',
-                      outline: isActive ? '3px solid var(--secondary-container)' : 'none',
-                      outlineOffset: '2px',
-                    }}
-                  >
-                    <div
-                      className="genre-card__bg"
-                      style={{ backgroundImage: `url(${genre.image})` }}
-                    />
-                    {/* Colour overlay */}
-                    <div style={{ position: 'absolute', inset: 0, background: overlay, zIndex: 1 }} />
-                    {/* Content */}
-                    <div className="genre-card__content">
-                      <span
-                        style={{
-                          ...bs,
-                          display: 'inline-block',
-                          padding: '4px 12px',
-                          borderRadius: '9999px',
-                          fontSize: '10px',
-                          fontWeight: 800,
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.14em',
-                          alignSelf: 'flex-start',
-                          marginBottom: '10px',
-                          backdropFilter: 'blur(8px)',
-                        }}
-                      >
-                        {isActive ? '✓ FILTERING' : genre.badge}
-                      </span>
-                      <h3
-                        style={{
-                          fontFamily: 'var(--font)',
-                          fontSize: isWide ? '28px' : '20px',
-                          fontWeight: 800,
-                          color: '#fff',
-                          textShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                        }}
-                      >
-                        {genre.label}
-                      </h3>
-                      {isWide && (
-                        <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.75)', marginTop: '6px', lineHeight: 1.4 }}>
-                          {genre.description}
-                        </p>
-                      )}
-                      <div
-                        className="genre-card__underline"
-                        style={{ background: genre.badgeVariant === 'light' ? 'var(--primary)' : '#fff' }}
-                      />
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </section>
-
-          {/* ══ FILTER CHIPS — "Narrow Your Compass" ════════════════ */}
-          <section style={{ padding: '0 16px', maxWidth: '1280px', margin: '0 auto 48px' }}>
-            <h2
-              className="section-header--border"
-              style={{ marginBottom: '20px', fontSize: '18px' }}
-            >
-              Narrow Your Compass
+        <section style={{ padding: '0 16px', maxWidth: '1280px', margin: '0 auto 48px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '28px' }}>
+            <h2 style={{ fontFamily: 'var(--font)', fontSize: 'clamp(22px, 3vw, 30px)', fontWeight: 700, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span className="material-symbols-outlined" style={{ color: 'var(--secondary)', fontVariationSettings: "'FILL' 1", fontSize: '26px' }}>dashboard</span>
+              Popular Genres
             </h2>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-              {filterChips.map(c => (
-                <button
-                  key={c.label}
-                  className={`filter-chip${activeChip === c.label ? ' active' : ''}`}
-                  onClick={() => setActiveChip(activeChip === c.label ? null : c.label)}
+            <div style={{ height: '3px', width: '64px', background: 'linear-gradient(135deg, #fe6a34, #ab3500)', borderRadius: '9999px' }} />
+          </div>
+
+          {/* Bento grid: 2-col mobile, 4-col on desktop */}
+          <div className="genre-grid-bento">
+            {genres.map(genre => {
+              const bs = BADGE_STYLES[genre.badgeVariant]
+              const overlay = GENRE_OVERLAYS[genre.id] ?? 'rgba(0,23,54,0.6)'
+              // Isekai and Slice of Life are wide
+              const isWide  = genre.id === 'isekai' || genre.id === 'slice-life'
+              const isActive = activeGenre?.id === genre.id
+              return (
+                <div
+                  key={genre.id}
+                  className="genre-card"
+                  onClick={() => pickGenre(genre)}
+                  role="button"
+                  aria-pressed={isActive}
+                  style={{
+                    gridColumn: isWide ? 'span 2' : 'span 1',
+                    outline: isActive ? '3px solid var(--secondary-container)' : 'none',
+                    outlineOffset: '2px',
+                  }}
                 >
-                  {c.label}
-                </button>
-              ))}
-            </div>
-          </section>
-        </>
+                  <div
+                    className="genre-card__bg"
+                    style={{ backgroundImage: `url(${genre.image})` }}
+                  />
+                  {/* Colour overlay */}
+                  <div style={{ position: 'absolute', inset: 0, background: overlay, zIndex: 1 }} />
+                  {/* Content */}
+                  <div className="genre-card__content">
+                    <span
+                      style={{
+                        ...bs,
+                        display: 'inline-block',
+                        padding: '4px 12px',
+                        borderRadius: '9999px',
+                        fontSize: '10px',
+                        fontWeight: 800,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.14em',
+                        alignSelf: 'flex-start',
+                        marginBottom: '10px',
+                        backdropFilter: 'blur(8px)',
+                      }}
+                    >
+                      {isActive ? '✓ FILTERING' : genre.badge}
+                    </span>
+                    <h3
+                      style={{
+                        fontFamily: 'var(--font)',
+                        fontSize: isWide ? '28px' : '20px',
+                        fontWeight: 800,
+                        color: '#fff',
+                        textShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                      }}
+                    >
+                      {genre.label}
+                    </h3>
+                    {isWide && (
+                      <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.75)', marginTop: '6px', lineHeight: 1.4 }}>
+                        {genre.description}
+                      </p>
+                    )}
+                    <div
+                      className="genre-card__underline"
+                      style={{ background: genre.badgeVariant === 'light' ? 'var(--primary)' : '#fff' }}
+                    />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </section>
       )}
 
       {/* ══ RESULTS GRID ═══════════════════════════════════════ */}
@@ -336,16 +363,16 @@ export default function SearchPage({ navigate, initialQuery = '' }: SearchPagePr
               ? `Results for "${trimmedQuery}"`
               : activeGenre
                 ? `${activeGenre.label} Voyages`
-                : activeChip ?? 'Trending This Season'}
+                : 'Most Popular — Live from AniList'}
           </h2>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             {hasActiveFilter && (
               <>
                 <span style={{ fontSize: '13px', color: 'var(--outline)', fontWeight: 600 }}>
-                  {isLiveSearch ? liveResults.length : filteredMock.length} found
+                  {isLiveSearch ? liveResults.length : activeGenre ? genreResults.length : popularResults.length} found
                 </span>
                 <button
-                  onClick={() => { setQuery(''); setActiveChip(null); setActiveGenre(null) }}
+                  onClick={() => { setQuery(''); setActiveGenre(null) }}
                   style={{
                     background: 'none',
                     border: 'none',
@@ -390,7 +417,38 @@ export default function SearchPage({ navigate, initialQuery = '' }: SearchPagePr
               ))}
             </div>
           )
-        ) : filteredMock.length === 0 ? (
+        ) : activeGenre ? (
+          genreLoading ? (
+            <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--on-surface-variant)' }}>
+              <p style={{ fontWeight: 600 }}>Charting {activeGenre.label} voyages…</p>
+            </div>
+          ) : genreError ? (
+            <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--error)' }}>
+              <p style={{ fontWeight: 600 }}>{genreError}</p>
+            </div>
+          ) : genreResults.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--on-surface-variant)' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '56px', opacity: 0.25, display: 'block', marginBottom: '12px' }}>
+                explore_off
+              </span>
+              <p style={{ fontWeight: 600 }}>No voyages found for {activeGenre.label}</p>
+            </div>
+          ) : (
+            <div className="anime-grid">
+              {genreResults.map(result => (
+                <LiveSearchCard key={result.id} result={result} navigate={navigate} />
+              ))}
+            </div>
+          )
+        ) : popularLoading ? (
+          <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--on-surface-variant)' }}>
+            <p style={{ fontWeight: 600 }}>Charting the most popular voyages…</p>
+          </div>
+        ) : popularError ? (
+          <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--error)' }}>
+            <p style={{ fontWeight: 600 }}>{popularError}</p>
+          </div>
+        ) : popularResults.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--on-surface-variant)' }}>
             <span className="material-symbols-outlined" style={{ fontSize: '56px', opacity: 0.25, display: 'block', marginBottom: '12px' }}>
               explore_off
@@ -399,8 +457,8 @@ export default function SearchPage({ navigate, initialQuery = '' }: SearchPagePr
           </div>
         ) : (
           <div className="anime-grid">
-            {filteredMock.map(anime => (
-              <SearchCard key={anime.id} anime={anime} navigate={navigate} />
+            {popularResults.map(result => (
+              <LiveSearchCard key={result.id} result={result} navigate={navigate} />
             ))}
           </div>
         )}
@@ -427,6 +485,8 @@ function EpisodeCountBadge({ count }: { count: number | null }) {
 }
 
 /* ── Live AniList result card → opens the real details page ──
+   Used for search results, genre-filtered results, and the default
+   "most popular" browsing view alike — all real AniList data.
    Favorite / Anchor rating / Watched / Plan to Watch are all real,
    Supabase-backed actions (same services LiveDetail uses), fetched
    once per card on mount. On touch devices the whole card can also be
@@ -576,46 +636,3 @@ function LiveSearchCard({ result, navigate }: { result: AnimeSearchResult; navig
     </>
   )
 }
-
-/* ── Mock catalogue card ── */
-function SearchCard({ anime, navigate }: { anime: typeof animes[0]; navigate: NavProps['navigate'] }) {
-  const { dispatch } = useApp()
-
-  const { dragging, offsetY, zone, bind } = useDragToAdd({
-    onPlan: () => dispatch({ type: 'ADD_TO_PLAN', id: anime.id }),
-    onWatched: () => dispatch({ type: 'ADD_TO_WATCHED', id: anime.id }),
-    onTap: () => navigate('detail', anime.id),
-  })
-
-  return (
-    <>
-      <div
-        className="search-card"
-        {...bind}
-        style={dragging ? { transform: `translateY(${offsetY}px)`, transition: 'none', position: 'relative', zIndex: 5 } : undefined}
-      >
-        <div className="search-card__img-wrap">
-          <img src={anime.cover} alt={anime.title} />
-
-          {/* Hover action overlay */}
-          <div className="search-card__overlay" onClick={e => e.stopPropagation()}>
-            {/* Play button — centred large */}
-            <PlayButton watchUrl={anime.watchUrl} variant="icon" />
-
-            {/* Bottom row: AnchorRating + AddDropdown */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <AnchorRating animeId={anime.id} size="sm" color="white" />
-              <AddDropdown  animeId={anime.id} variant="overlay" size="sm" />
-            </div>
-          </div>
-
-          <StatusBadge status={anime.status} />
-          <EpisodeCountBadge count={anime.episodes} />
-        </div>
-
-        <div className="search-card__body">
-          <h3 style={{ fontFamily: 'var(--font)', fontSize: '14px', fontWeight: 700, color: 'var(--primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '4px' }}>
-            {anime.title}
-          </h3>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.

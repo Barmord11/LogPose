@@ -34,16 +34,18 @@ export interface Genre {
   description: string
   /** Anime.genres tags this genre card maps to when used as a filter */
   matchTags: string[]
+  /** AniList's own (proper-case) genre names for this card — used to query real AniList data via genre_in, since AniList doesn't match the all-caps matchTags above. */
+  anilistGenres: string[]
 }
 
 /* ─── Genres ─────────────────────────────────────────────── */
 export const genres: Genre[] = [
-  { id: 'shonen',     label: 'Shonen',       badge: 'HIGH ENERGY',      badgeVariant: 'orange', image: '/images/genre-shonen.jpg',       description: 'Journey to distant horizons beyond imagination.', matchTags: ['ACTION', 'ADVENTURE'] },
-  { id: 'seinen',     label: 'Seinen',       badge: 'MATURE THEMES',    badgeVariant: 'navy',   image: '/images/genre-seinen.jpg',       description: 'Complex narratives for the experienced voyager.', matchTags: ['DRAMA', 'MECHA'] },
-  { id: 'isekai',     label: 'Isekai',       badge: 'NEW WORLDS',       badgeVariant: 'cyan',   image: '/images/genre-isekai.jpg',       description: 'Cross the horizon into worlds unknown.',           matchTags: ['FANTASY', 'SCI-FI'] },
-  { id: 'slice-life', label: 'Slice of Life',badge: 'PEACEFUL MOMENTS', badgeVariant: 'light',  image: '/images/genre-slice-of-life.jpg',description: 'The beauty in the everyday currents of life.',     matchTags: ['SLICE OF LIFE', 'ROMANCE'] },
-  { id: 'mystery',    label: 'Mystery',      badge: 'HIDDEN TRUTHS',    badgeVariant: 'navy',   image: '/images/genre-mystery.jpg',      description: 'Hidden truths lurk beneath the surface.',          matchTags: ['MYSTERY'] },
-  { id: 'fantasy',    label: 'Fantasy',      badge: 'EPIC SAGAS',       badgeVariant: 'orange', image: '/images/genre-fantasy.jpg',      description: 'Legendary battles and kingdoms of wonder.',        matchTags: ['FANTASY'] },
+  { id: 'shonen',     label: 'Shonen',       badge: 'HIGH ENERGY',      badgeVariant: 'orange', image: '/images/genre-shonen.jpg',       description: 'Journey to distant horizons beyond imagination.', matchTags: ['ACTION', 'ADVENTURE'], anilistGenres: ['Action', 'Adventure'] },
+  { id: 'seinen',     label: 'Seinen',       badge: 'MATURE THEMES',    badgeVariant: 'navy',   image: '/images/genre-seinen.jpg',       description: 'Complex narratives for the experienced voyager.', matchTags: ['DRAMA', 'MECHA'], anilistGenres: ['Drama', 'Mecha'] },
+  { id: 'isekai',     label: 'Isekai',       badge: 'NEW WORLDS',       badgeVariant: 'cyan',   image: '/images/genre-isekai.jpg',       description: 'Cross the horizon into worlds unknown.',           matchTags: ['FANTASY', 'SCI-FI'], anilistGenres: ['Fantasy', 'Sci-Fi'] },
+  { id: 'slice-life', label: 'Slice of Life',badge: 'PEACEFUL MOMENTS', badgeVariant: 'light',  image: '/images/genre-slice-of-life.jpg',description: 'The beauty in the everyday currents of life.',     matchTags: ['SLICE OF LIFE', 'ROMANCE'], anilistGenres: ['Slice of Life', 'Romance'] },
+  { id: 'mystery',    label: 'Mystery',      badge: 'HIDDEN TRUTHS',    badgeVariant: 'navy',   image: '/images/genre-mystery.jpg',      description: 'Hidden truths lurk beneath the surface.',          matchTags: ['MYSTERY'], anilistGenres: ['Mystery'] },
+  { id: 'fantasy',    label: 'Fantasy',      badge: 'EPIC SAGAS',       badgeVariant: 'orange', image: '/images/genre-fantasy.jpg',      description: 'Legendary battles and kingdoms of wonder.',        matchTags: ['FANTASY'], anilistGenres: ['Fantasy'] },
 ]
 
 /* ─── Animes ─────────────────────────────────────────────── */

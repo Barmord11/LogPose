@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { fetchAnimeInfo, searchAnime, fetchTrending, AnilistLookupError, __resetAnilistCacheForTests } from '../_lib/anilist.js'
+import { fetchAnimeInfo, searchAnime, fetchTrending, fetchPopular, searchByGenre, AnilistLookupError, __resetAnilistCacheForTests } from '../_lib/anilist.js'
 
 function jsonResponse(body: unknown, ok = true, status = 200) {
   return { ok, status, json: async () => body } as Response
@@ -169,6 +169,82 @@ describe('fetchTrending', () => {
   it('throws AnilistLookupError when the request fails', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(jsonResponse({}, false, 500)))
     await expect(fetchTrending()).rejects.toBeInstanceOf(AnilistLookupError)
+  })
+})
+
+describe('fetchPopular', () => {
+  it('strips the popular payload to card-sized data', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(jsonResponse({
+      data: {
+        Page: {
+          media: [{ id: 1, title: { romaji: 'Most Popular' }, coverImage: { extraLarge: 'img' }, startDate: { year: 2019 }, episodes: 100 }],
+        },
+      },
+    })))
+    const results = await fetchPopular(10)
+    expect(results).toEqual([{ id: '1', title: 'Most Popular', image: 'img', releaseDate: 2019, totalEpisodes: 100 }])
+  })
+
+  it('requests popularity-desc sort with no status filter (unlike fetchTrending, not airing-only)', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse({ data: { Page: { media: [] } } }))
+    vi.stubGlobal('fetch', fetchMock)
+    await fetchPopular(10)
+    const [, init] = fetchMock.mock.calls[0]
+    const body = JSON.parse(init.body)
+    expect(body.query).toContain('POPULARITY_DESC')
+    expect(body.query).not.toContain('status:')
+  })
+
+  it('requests the given perPage limit', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse({ data: { Page: { media: [] } } }))
+    vi.stubGlobal('fetch', fetchMock)
+    await fetchPopular(5)
+    const [, init] = fetchMock.mock.calls[0]
+    const body = JSON.parse(init.body)
+    expect(body.variables).toEqual({ perPage: 5 })
+  })
+
+  it('throws AnilistLookupError when the request fails', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(jsonResponse({}, false, 500)))
+    await expect(fetchPopular()).rejects.toBeInstanceOf(AnilistLookupError)
+  })
+})
+
+describe('searchByGenre', () => {
+  it('strips the genre-filtered payload to card-sized data', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(jsonResponse({
+      data: {
+        Page: {
+          media: [{ id: 7, title: { romaji: 'Fantasy Voyage' }, coverImage: { extraLarge: 'img' }, startDate: { year: 2021 }, episodes: 13 }],
+        },
+      },
+    })))
+    const results = await searchByGenre(['Fantasy'])
+    expect(results).toEqual([{ id: '7', title: 'Fantasy Voyage', image: 'img', releaseDate: 2021, totalEpisodes: 13 }])
+  })
+
+  it('passes the given genre names as the genre_in variable', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse({ data: { Page: { media: [] } } }))
+    vi.stubGlobal('fetch', fetchMock)
+    await searchByGenre(['Action', 'Adventure'], 20)
+    const [, init] = fetchMock.mock.calls[0]
+    const body = JSON.parse(init.body)
+    expect(body.variables).toEqual({ genres: ['Action', 'Adventure'], perPage: 20 })
+    expect(body.query).toContain('genre_in: $genres')
+  })
+
+  it('excludes adult content', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse({ data: { Page: { media: [] } } }))
+    vi.stubGlobal('fetch', fetchMock)
+    await searchByGenre(['Mystery'])
+    const [, init] = fetchMock.mock.calls[0]
+    const body = JSON.parse(init.body)
+    expect(body.query).toContain('isAdult: false')
+  })
+
+  it('throws AnilistLookupError when the request fails', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(jsonResponse({}, false, 500)))
+    await expect(searchByGenre(['Mystery'])).rejects.toBeInstanceOf(AnilistLookupError)
   })
 })
 

@@ -89,3 +89,17 @@ export async function fetchTrending(): Promise<AnimeSearchResult[]> {
   const body = await parseJsonOrThrow(res)
   return (body?.results ?? []) as AnimeSearchResult[]
 }
+
+/** GET /api/anime/popular — all-time most popular series (not airing-only), for Home's hero/"Popular This Week" grid and Search's default browsing view. */
+export async function fetchPopular(): Promise<AnimeSearchResult[]> {
+  const res = await fetch(`${BASE_URL}/api/anime/popular`)
+  const body = await parseJsonOrThrow(res)
+  return (body?.results ?? []) as AnimeSearchResult[]
+}
+
+/** GET /api/anime/genre?g=Action,Adventure — popularity-ranked series matching any of the given AniList genre names, for Search's genre bento. */
+export async function fetchByGenre(genreNames: string[]): Promise<AnimeSearchResult[]> {
+  const res = await fetch(`${BASE_URL}/api/anime/genre?g=${encodeURIComponent(genreNames.join(','))}`)
+  const body = await parseJsonOrThrow(res)
+  return (body?.results ?? []) as AnimeSearchResult[]
+}

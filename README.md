@@ -152,12 +152,15 @@ run in production.
 ```
 api/
   _lib/anilist.ts        AniList GraphQL wrapper — details, search,
-                          trending (see "Why two sources"), with a
-                          5-minute in-memory response cache
+                          trending, popular, and genre browsing (see
+                          "Why two sources"), with a 5-minute
+                          in-memory response cache
   _lib/consumet.ts        Consumet wrapper — watch links only, best-effort
   anime/[id].ts            GET /api/anime/:id — merges the two sources
   anime/search.ts          GET /api/anime/search?q=... — AniList only
   anime/trending.ts        GET /api/anime/trending — AniList trending list
+  anime/popular.ts         GET /api/anime/popular — AniList all-time popular
+  anime/genre.ts           GET /api/anime/genre?g=... — AniList by genre
   tests/                   vitest coverage for the above (mocked fetch/Consumet)
 
 supabase/
@@ -182,9 +185,10 @@ src/
     AnimeDetailPage             the one details page — renders mock or
                                 live data depending on the `source` prop
                                 (see "One details page" above)
-    SearchPage                  debounced (500ms) live AniList search
-                                for 2+ character queries; empty query
-                                still shows the mock catalogue
+    SearchPage                  debounced (500ms) live AniList search for
+                                2+ character queries; genre bento and the
+                                empty-query default view are both live
+                                AniList data too (popular.ts / genre.ts)
     HomePage / MyListPage / ProfilePage
                                 mock-data screens, now also rendering
                                 live/API-backed data (see "Live/mock
@@ -206,23 +210,39 @@ series added via Search:
   table (same RLS-scoped, one-row-per-user pattern as `anime_ratings`).
   The heart button on a live series' details page and My List's
   Favorites panel both read/write it.
-- **Home** shows two live sections when there's data for them: "Continue
-  Your Voyage" (your own in-progress live series, from `anime_tracker`)
-  and "Trending Now" (AniList's currently-airing trending list, via
-  `api/anime/trending.ts`). Both are additive and best-effort — if
-  either has nothing to show or the fetch fails, that section just
-  doesn't render, so the mock-driven Home page never breaks.
+- **Home's hero and "Popular This Week" grid are real AniList data**
+  (`api/anime/popular.ts` — all-time most popular, not airing-only),
+  replacing the old hardcoded mock catalogue there. The hero also
+  fetches full details (`fetchAnimeInfo`) for its synopsis and outbound
+  watch link. The "Director's Choice" bento tile uses the #2 popular
+  pick for the same reason — no fictional series presented as real data.
+  Home also shows two more live sections when there's data for them:
+  "Continue Your Voyage" (your own in-progress live series, from
+  `anime_tracker`) and "Trending Now" (AniList's currently-airing
+  trending list, via `api/anime/trending.ts`). All of these are
+  additive and best-effort — if any has nothing to show or its fetch
+  fails, that section just shows a friendly fallback instead of
+  breaking the page.
+- **Search's default (no query, no genre) view and its genre bento are
+  also real AniList data** (`api/anime/popular.ts` and
+  `api/anime/genre.ts` respectively — genre lookups use each genre
+  card's `anilistGenres` field in `src/data/animes.ts`, since AniList's
+  proper-case genre names don't match the mock catalogue's all-caps
+  `matchTags`). The old "Narrow Your Compass" filter chips (Top Rated,
+  Airing Now, etc.) were mock-catalogue-only predicates with no AniList
+  equivalent in the card-sized search-result shape, so they were
+  removed rather than left half-functional.
 - **Live search is debounced and self-correcting**: typing fires exactly
   one request per pause (500ms), and any in-flight request superseded by
   newer input is cancelled via `AbortController`, so a slow stale
   response can never overwrite fresher results.
 - **AniList responses are cached in-memory for 5 minutes** inside
-  `api/_lib/anilist.ts` (search, details, and trending all share this),
-  keyed by the exact query+variables pair, absorbing bursts like Home
-  calling trending and continue-watching back to back. This only helps
-  within a single warm serverless instance — a persistent cache (e.g.
-  Vercel KV) would be the next step if that's not enough under real
-  traffic.
+  `api/_lib/anilist.ts` (search, details, trending, popular, and genre
+  browsing all share this), keyed by the exact query+variables pair,
+  absorbing bursts like Home calling trending and continue-watching
+  back to back. This only helps within a single warm serverless
+  instance — a persistent cache (e.g. Vercel KV) would be the next step
+  if that's not enough under real traffic.
 - **Search and Home cards for live series carry the same actions as
   the mock catalogue**: favorite (heart), Anchor Up/Down, and
   Watched/Plan to Watch, all Supabase-backed (`services/tracker.ts`,
@@ -240,9 +260,11 @@ series added via Search:
   button; it's a bigger, easier target for phones. No-op on desktop —
   a plain click still just opens the details page.
 
-Genuinely still mock-only: the "Popular This Week" grid and "Newly
-Released" bento on Home, and the genre/filter browsing on Search's empty
-state, since those are demo content rather than user data.
+Genuinely still mock-only: the "New Dubs" promo tile on Home's "Newly
+Released" bento (pure decoration, not a data section) and the mock
+catalogue itself (`src/data/animes.ts`), which still powers the demo
+Watched/Plan-to-Watch experience on Home and My List alongside live
+tracked series.
 
 There's also a `/server` folder and a handful of `*.stale*` files in
 this repo that are leftovers from earlier scaffolding and a filesystem

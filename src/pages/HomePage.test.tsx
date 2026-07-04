@@ -7,7 +7,7 @@ import * as animeApi from '../services/animeApi'
 import * as ratings from '../services/ratings'
 import * as favorites from '../services/favorites'
 import type { TrackerRow } from '../services/tracker'
-import type { AnimeSearchResult } from '../services/animeApi'
+import type { AnimeSearchResult, AnimeInfo } from '../services/animeApi'
 
 vi.mock('../services/tracker')
 vi.mock('../services/animeApi')
@@ -27,6 +27,24 @@ function trackedRow(overrides: Partial<TrackerRow> = {}): TrackerRow {
   }
 }
 
+function animeInfo(overrides: Partial<AnimeInfo> = {}): AnimeInfo {
+  return {
+    id: '1',
+    title: 'Untitled',
+    image: null,
+    bannerImage: null,
+    genres: [],
+    description: null,
+    status: null,
+    format: null,
+    score: null,
+    characters: [],
+    totalEpisodes: 0,
+    episodes: [],
+    ...overrides,
+  }
+}
+
 function renderPage() {
   return render(
     <AppProvider>
@@ -40,9 +58,14 @@ beforeEach(() => {
   localStorage.clear()
   vi.mocked(tracker.getTrackerList).mockResolvedValue([])
   vi.mocked(animeApi.fetchTrending).mockResolvedValue([])
-  // TrendingCard fetches its own status/rating/favorite on mount — give
-  // every card a benign "signed out"-shaped default so mounting one
-  // doesn't throw on an un-mocked promise.
+  // Real AniList "popular" data now drives the hero + Popular This Week
+  // grid (replacing the old mock catalogue) - default to empty so
+  // mounting the page doesn't throw on an un-mocked promise.
+  vi.mocked(animeApi.fetchPopular).mockResolvedValue([])
+  vi.mocked(animeApi.fetchAnimeInfo).mockResolvedValue(animeInfo())
+  // TrendingCard/LiveHero fetch their own status/rating/favorite on
+  // mount - give every card a benign "signed out"-shaped default so
+  // mounting one doesn't throw on an un-mocked promise.
   vi.mocked(tracker.getTrackerRow).mockResolvedValue(null)
   vi.mocked(ratings.getMyRating).mockResolvedValue(null)
   vi.mocked(favorites.isFavorite).mockResolvedValue(false)
@@ -99,4 +122,37 @@ it('fetches tracker status, rating and favorite state for each trending card', a
 })
 
 it('does not break the page when the trending fetch fails', async () => {
-  vi.mocked(animeApi.fetchTrending).mockRe
+  vi.mocked(animeApi.fetchTrending).mockRejectedValue(new Error('AniList down'))
+
+  renderPage()
+
+  // The rest of the (mock) Home page still renders fine.
+  await waitFor(() => expect(screen.getByText('Popular This Week')).toBeInTheDocument())
+  expect(screen.queryByText('Trending Now')).not.toBeInTheDocument()
+})
+
+it('renders the hero and Popular This Week grid from real AniList popular data', async () => {
+  const popular: AnimeSearchResult[] = [
+    { id: '1', title: 'Most Popular Show', image: null, releaseDate: 2024, totalEpisodes: 12 },
+    { id: '2', title: 'Second Popular Show', image: null, releaseDate: 2023, totalEpisodes: 24 },
+  ]
+  vi.mocked(animeApi.fetchPopular).mockResolvedValue(popular)
+  vi.mocked(animeApi.fetchAnimeInfo).mockResolvedValue(animeInfo({ id: '1', title: 'Most Popular Show', episodes: [] }))
+
+  renderPage()
+
+  // The #1 popular result's title appears twice — once in the hero (via
+  // LiveHero's fetched info) and once as its own card in the grid below.
+  await waitFor(() => expect(screen.getAllByText('Most Popular Show').length).toBeGreaterThanOrEqual(2))
+  // The #2 result appears twice too — once in the Popular This Week grid
+  // and once in the "Director's Choice" bento tile (popular[1]).
+  expect(screen.getAllByText('Second Popular Show').length).toBeGreaterThanOrEqual(1)
+})
+
+it('falls back to a friendly message when the popular fetch fails, without crashing', async () => {
+  vi.mocked(animeApi.fetchPopular).mockRejectedValue(new Error('AniList down'))
+
+  renderPage()
+
+  await waitFor(() => expect(screen.getByText('Discover Your Next Voyage')).toBeInTheDocument())
+})

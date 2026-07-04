@@ -793,4 +793,23 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
                   </p>
                 ) : (
                   <div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '8px' }} className="no-scrollbar">
-                    {anime.characters
+                    {anime.characters.map(char => (
+                      <div key={char.id} className="char-card">
+                        <div className="char-card__avatar">
+                          {char.image && <img src={char.image} alt={char.name} />}
+                        </div>
+                        <p className="char-card__name">{char.name}</p>
+                        {char.role && <p className="char-card__role">{char.role}</p>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

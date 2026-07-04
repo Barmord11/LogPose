@@ -294,3 +294,69 @@ export async function fetchTrending(limit = 10): Promise<AnilistSearchResult[]> 
   const results = Array.isArray(body?.data?.Page?.media) ? body.data.Page.media : []
   return results.map(mapCardResult)
 }
+
+const POPULAR_QUERY = `
+  query ($perPage: Int) {
+    Page(page: 1, perPage: $perPage) {
+      media(type: ANIME, isAdult: false, sort: POPULARITY_DESC) {
+        id
+        title { english romaji }
+        coverImage { extraLarge }
+        episodes
+        startDate { year }
+      }
+    }
+  }
+`
+
+/**
+ * All-time most popular series (not limited to currently-airing, unlike
+ * fetchTrending) — feeds Home's hero + "Popular This Week" grid and
+ * Search's default (no query/genre/chip active) browsing view, so both
+ * show real AniList data instead of the hardcoded mock catalogue.
+ */
+export async function fetchPopular(limit = 10): Promise<AnilistSearchResult[]> {
+  let body: any
+  try {
+    body = await anilistQuery(POPULAR_QUERY, { perPage: limit })
+  } catch (err) {
+    if (err instanceof AnilistLookupError) throw err
+    throw new AnilistLookupError('AniList popular fetch failed', err)
+  }
+
+  const results = Array.isArray(body?.data?.Page?.media) ? body.data.Page.media : []
+  return results.map(mapCardResult)
+}
+
+const GENRE_QUERY = `
+  query ($genres: [String], $perPage: Int) {
+    Page(page: 1, perPage: $perPage) {
+      media(genre_in: $genres, type: ANIME, isAdult: false, sort: POPULARITY_DESC) {
+        id
+        title { english romaji }
+        coverImage { extraLarge }
+        episodes
+        startDate { year }
+      }
+    }
+  }
+`
+
+/**
+ * Popularity-ranked series matching any of the given AniList genres
+ * (OR semantics, via genre_in) — feeds Search's genre bento, so
+ * clicking "Isekai" etc. queries AniList for real matching series
+ * instead of filtering the small hardcoded mock catalogue.
+ */
+export async function searchByGenre(genreNames: string[], limit = 20): Promise<AnilistSearchResult[]> {
+  let body: any
+  try {
+    body = await anilistQuery(GENRE_QUERY, { genres: genreNames, perPage: limit })
+  } catch (err) {
+    if (err instanceof AnilistLookupError) throw err
+    throw new AnilistLookupError(`AniList genre search failed for [${genreNames.join(', ')}]`, err)
+  }
+
+  const results = Array.isArray(body?.data?.Page?.media) ? body.data.Page.media : []
+  return results.map(mapCardResult)
+}

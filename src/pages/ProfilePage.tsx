@@ -348,4 +348,26 @@ export default function ProfilePage({ navigate }: NavProps) {
 function StatCard({
   label, value, icon, gradient, accent, sub,
 }: {
-  label: string; value: string; icon: string; gradient: string; accent: string
+  label: string; value: string; icon: string; gradient: string; accent: string; sub?: string;
+}) {
+  return (
+    <div
+      className="profile-stat glass-card"
+      style={{ borderRadius: '18px', background: gradient, padding: '20px 16px' }}
+    >
+      <span
+        className="material-symbols-outlined"
+        style={{ fontSize: '28px', color: accent, fontVariationSettings: "'FILL' 1", marginBottom: '8px' }}
+      >
+        {icon}
+      </span>
+      <p className="profile-stat__value" style={{ color: 'var(--primary)', fontSize: '32px' }}>
+        {value}
+      </p>
+      <p className="profile-stat__label">{label}</p>
+      {sub && (
+        <p style={{ fontSize: '9px', color: 'var(--outline)', fontWeight: 600, marginTop: '2px' }}>{sub}</p>
+      )}
+    </div>
+  )
+}
