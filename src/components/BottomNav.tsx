@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import type { Page } from '../App'
-import { animes } from '../data/animes'
+import type { NavProps, Page } from '../App'
+import { fetchRandomAnime } from '../services/animeApi'
 
 interface BottomNavProps {
-  navigate: (page: Page, animeId?: number) => void
+  navigate: NavProps['navigate']
   activePage: Page
 }
 
@@ -20,14 +20,24 @@ const NAV_ITEMS = [
  */
 export default function BottomNav({ navigate, activePage }: BottomNavProps) {
   const [spin, setSpin] = useState(false)
+  const [loading, setLoading] = useState(false)
 
-  /** Compass = "chart a random course": opens a random anime's detail page.
-   *  (Home already has its own nav item — no duplicate feature.) */
-  const handleCompass = () => {
+  /** Compass = "chart a random course": picks a real series at random from
+   *  AniList (GET /api/anime/random) and opens its live details page - this
+   *  used to open a hardcoded mock series instead of a genuine surprise. */
+  const handleCompass = async () => {
+    if (loading) return
+    setLoading(true)
     setSpin(true)
-    setTimeout(() => setSpin(false), 700)
-    const random = animes[Math.floor(Math.random() * animes.length)]
-    navigate('detail', random.id)
+    try {
+      const result = await fetchRandomAnime()
+      navigate('detail', Number(result.id), 'live')
+    } catch (err) {
+      console.error('fetchRandomAnime failed', err)
+    } finally {
+      setLoading(false)
+      setTimeout(() => setSpin(false), 700)
+    }
   }
 
   return (
@@ -66,6 +76,7 @@ export default function BottomNav({ navigate, activePage }: BottomNavProps) {
       <div style={{ position: 'relative', top: '-24px', flexShrink: 0 }}>
         <button
           onClick={handleCompass}
+          disabled={loading}
           className="sunset-gradient ocean-glow compass-active"
           style={{
             width: '56px',
@@ -75,8 +86,9 @@ export default function BottomNav({ navigate, activePage }: BottomNavProps) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            cursor: 'pointer',
-            transition: 'transform 0.15s',
+            cursor: loading ? 'wait' : 'pointer',
+            opacity: loading ? 0.75 : 1,
+            transition: 'transform 0.15s, opacity 0.2s',
           }}
           onMouseDown={e => (e.currentTarget.style.transform = 'scale(0.9)')}
           onMouseUp={e => (e.currentTarget.style.transform = 'scale(1)')}

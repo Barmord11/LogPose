@@ -19,6 +19,13 @@
 import { useState, useRef, useEffect } from 'react'
 import { useApp, useAnimeStatus } from '../context/AppContext'
 
+// How long the green "added" confirmation pulse stays visible after
+// logging a series - long enough to register as deliberate feedback,
+// short enough that it doesn't linger and get confused with the
+// permanent "already added" state (which the checkmark icon already
+// conveys indefinitely via `isAdded`).
+const ADDED_FEEDBACK_MS = 1600
+
 export interface AddDropdownViewProps {
   inWatched: boolean
   inPlan: boolean
@@ -43,7 +50,9 @@ export function AddDropdownView({
   disabled = false,
 }: AddDropdownViewProps) {
   const [open, setOpen] = useState(false)
+  const [justAdded, setJustAdded] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const feedbackTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const isAdded = inWatched || inPlan
   const btnSize = size === 'sm' ? '28px' : '36px'
@@ -60,13 +69,28 @@ export function AddDropdownView({
     return () => document.removeEventListener('mousedown', onOutside)
   }, [])
 
+  // Clear the pending feedback timer on unmount so it doesn't fire
+  // setState on an unmounted card (e.g. a search result that scrolled
+  // out and got removed right after being tapped).
+  useEffect(() => () => {
+    if (feedbackTimeout.current) clearTimeout(feedbackTimeout.current)
+  }, [])
+
+  function flashAdded() {
+    setJustAdded(true)
+    if (feedbackTimeout.current) clearTimeout(feedbackTimeout.current)
+    feedbackTimeout.current = setTimeout(() => setJustAdded(false), ADDED_FEEDBACK_MS)
+  }
+
   function addToWatched() {
     onAddWatched()
     setOpen(false)
+    flashAdded()
   }
   function addToPlan() {
     onAddPlan()
     setOpen(false)
+    flashAdded()
   }
   function removeFromList() {
     onRemove()
@@ -79,11 +103,17 @@ export function AddDropdownView({
       style={{ position: 'relative', flexShrink: 0 }}
       onClick={e => e.stopPropagation()}
     >
-      {/* ── Trigger button ── */}
+      {/* ── Trigger button ──
+          The `added-pulse` class briefly rings the button green right
+          after logging a series - contained within the button's own
+          box (a ~10px ring), unlike the dropdown panel below, so it
+          stays visible even inside a poster wrapper with
+          overflow:hidden. */}
       <button
         title={isAdded ? 'Logged — click to change' : 'Log this voyage'}
         onClick={() => setOpen(o => !o)}
         disabled={disabled}
+        className={justAdded ? 'added-pulse' : undefined}
         style={{
           width: btnSize,
           height: btnSize,
@@ -126,12 +156,19 @@ export function AddDropdownView({
         </span>
       </button>
 
-      {/* ── Dropdown panel ── */}
+      {/* ── Dropdown panel ──
+          Opens BELOW the trigger (not above it) - the trigger sits at
+          the top edge of a poster/card whose wrapper has
+          overflow:hidden (for the rounded-corner image), so a panel
+          opening upward rendered entirely outside that box and was
+          invisible/clipped. Opening downward keeps it inside the
+          card's own bounds on every card variant (Home's TrendingCard,
+          Search's LiveSearchCard, and the hero). */}
       {open && (
         <div
           style={{
             position: 'absolute',
-            bottom: 'calc(100% + 10px)',
+            top: 'calc(100% + 10px)',
             right: 0,
             width: '176px',
             background: 'rgba(255,255,255,0.94)',
@@ -142,7 +179,7 @@ export function AddDropdownView({
             boxShadow: '0 12px 40px rgba(0,23,54,0.18)',
             padding: '8px',
             zIndex: 200,
-            animation: 'dropUp 0.2s cubic-bezier(0.34,1.56,0.64,1)',
+            animation: 'dropDown 0.2s cubic-bezier(0.34,1.56,0.64,1)',
           }}
         >
           <DropItem

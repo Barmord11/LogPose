@@ -436,29 +436,27 @@ function TrendingCard({ result, navigate }: { result: AnimeSearchResult; navigat
 
   return (
     <>
-      <div style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column' }}>
-        <div
-          {...bind}
-          style={{
-            position: 'relative',
-            aspectRatio: '3/4',
-            borderRadius: '14px',
-            overflow: 'hidden',
-            marginBottom: '10px',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
-            border: '1px solid rgba(255,255,255,0.4)',
-            background: 'var(--surface-container)',
-            ...(dragging ? { transform: `translateY(${offsetY}px)`, transition: 'none', zIndex: 5 } : null),
-          }}
-          className="anime-card__poster"
-        >
+      {/* Reuses SearchPage's .search-card classes (not the old bespoke
+         .anime-card__* ones) so Home's cards are pixel-identical in size
+         to Search's, and so the Add-to-list trigger sits mid-card
+         instead of pinned to the top edge - opening its dropdown no
+         longer risks the panel rendering outside the poster's
+         overflow:hidden bounds. */}
+      <div
+        className="search-card"
+        {...bind}
+        style={dragging ? { transform: `translateY(${offsetY}px)`, transition: 'none', position: 'relative', zIndex: 5 } : undefined}
+      >
+        <div className="search-card__img-wrap">
           {result.image ? (
-            <img src={result.image} alt={result.title} className="anime-card__img" />
+            <img src={result.image} alt={result.title} />
           ) : (
-            <div style={{ width: '100%', height: '100%' }} />
+            <div style={{ width: '100%', height: '100%', background: 'var(--surface-container)' }} />
           )}
-          <div className="anime-card__overlay" onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+
+          <div className="search-card__overlay" onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <AnchorRatingView rating={rating} onSetRating={handleSetRating} size="sm" color="white" />
               <AddDropdownView
                 inWatched={tracker?.status === 'Watched'}
                 inPlan={tracker?.status === 'Plan to Watch'}
@@ -469,9 +467,6 @@ function TrendingCard({ result, navigate }: { result: AnimeSearchResult; navigat
                 size="sm"
                 disabled={statusBusy}
               />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center' }}>
-              <AnchorRatingView rating={rating} onSetRating={handleSetRating} size="sm" color="white" />
               <button
                 className={`heart-btn${favorite ? ' active' : ''}`}
                 title={favorite ? 'Unfavorite' : 'Favorite'}
@@ -485,20 +480,25 @@ function TrendingCard({ result, navigate }: { result: AnimeSearchResult; navigat
               </button>
             </div>
           </div>
+
           <div style={{
             position: 'absolute', bottom: '8px', right: '8px', zIndex: 2,
+            display: 'flex', alignItems: 'center', gap: '3px',
             background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)',
             padding: '2px 7px', borderRadius: '4px', fontSize: '10px', fontWeight: 800, color: '#fff',
           }}>
+            <span className="material-symbols-outlined" style={{ fontSize: '11px' }}>schedule</span>
             {result.totalEpisodes ? `${result.totalEpisodes} ep` : 'TBA'}
           </div>
         </div>
-        <h3 onClick={bind.onClick} style={{ fontFamily: 'var(--font)', fontSize: '14px', fontWeight: 700, color: 'var(--primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '2px', cursor: 'pointer' }}>
-          {result.title}
-        </h3>
-        <p style={{ fontSize: '11px', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-          {result.totalEpisodes ? `${result.totalEpisodes} episodes` : 'Episodes TBA'}
-        </p>
+        <div className="search-card__body">
+          <h3 style={{ fontFamily: 'var(--font)', fontSize: '14px', fontWeight: 700, color: 'var(--primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '4px' }}>
+            {result.title}
+          </h3>
+          <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            {result.totalEpisodes ? `${result.totalEpisodes} episodes` : 'Episodes TBA'}
+          </span>
+        </div>
       </div>
       <DragDropZones dragging={dragging} zone={zone} />
     </>

@@ -360,3 +360,48 @@ export async function searchByGenre(genreNames: string[], limit = 20): Promise<A
   const results = Array.isArray(body?.data?.Page?.media) ? body.data.Page.media : []
   return results.map(mapCardResult)
 }
+
+const RANDOM_POOL_QUERY = `
+  query ($page: Int, $perPage: Int) {
+    Page(page: $page, perPage: $perPage) {
+      media(type: ANIME, isAdult: false, sort: POPULARITY_DESC) {
+        id
+        title { english romaji }
+        coverImage { extraLarge }
+        episodes
+        startDate { year }
+      }
+    }
+  }
+`
+
+/**
+ * Picks one series at random for the mobile "compass" surprise button
+ * (previously opened a hardcoded mock series — see BottomNav.tsx).
+ * Not a true uniform-random pick across all of AniList, which would
+ * surface obscure/mislabeled entries far too often to feel like a good
+ * surprise - instead pulls a random page (1-25) from the same
+ * POPULARITY_DESC pool fetchPopular draws from (top ~500 titles) and
+ * picks a random entry within that page, so every result is at least a
+ * real, reasonably well-known series with a live details page.
+ */
+export async function fetchRandomAnime(): Promise<AnilistSearchResult> {
+  const perPage = 20
+  const page = 1 + Math.floor(Math.random() * 25)
+
+  let body: any
+  try {
+    body = await anilistQuery(RANDOM_POOL_QUERY, { page, perPage })
+  } catch (err) {
+    if (err instanceof AnilistLookupError) throw err
+    throw new AnilistLookupError('AniList random-pick fetch failed', err)
+  }
+
+  const results = Array.isArray(body?.data?.Page?.media) ? body.data.Page.media : []
+  if (results.length === 0) {
+    throw new AnilistLookupError('AniList returned no results for the random pool')
+  }
+
+  const pick = results[Math.floor(Math.random() * results.length)]
+  return mapCardResult(pick)
+}

@@ -442,10 +442,23 @@ input, textarea { font-family: inherit; }
 .profile-stat__label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--on-surface-variant); text-align: center; line-height: 1.3; }
 
 /* ── 22. ANIMATIONS ───────────────────────────────────────── */
-@keyframes dropUp {
-  from { opacity: 0; transform: translateY(8px) scale(0.94); }
-  to   { opacity: 1; transform: translateY(0)   scale(1); }
+/* Dropdown panel entrance - opens downward from the trigger (see
+   AddDropdown.tsx), so it animates in from slightly above instead of
+   below. */
+@keyframes dropDown {
+  from { opacity: 0; transform: translateY(-8px) scale(0.94); }
+  to   { opacity: 1; transform: translateY(0)     scale(1); }
 }
+
+/* Brief green ring pulse on the (+) trigger right after a series is
+   logged - a ~10px ring stays within a card's overflow:hidden poster
+   wrapper, unlike a floating badge would. */
+@keyframes addedPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(27,138,74,0.55); }
+  70%  { box-shadow: 0 0 0 10px rgba(27,138,74,0); }
+  100% { box-shadow: 0 0 0 0 rgba(27,138,74,0); }
+}
+.added-pulse { animation: addedPulse 0.9s ease-out; }
 
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(12px); }
@@ -655,24 +668,4 @@ input, textarea { font-family: inherit; }
   opacity: 0;
   transition: opacity 0.3s;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 12px;
-}
-.search-card:hover .search-card__overlay { opacity: 1; }
-
-@media (max-width: 767px) {
-  /* There's no :hover on touch devices - without this, the Play,
-     rating, and add-to-list controls inside this overlay are
-     completely unreachable on phones. Keep them tappable instead. */
-  .search-card__overlay { opacity: 1; }
-}
-
-.search-card__body {
-  padding: 12px 14px;
-  background: rgba(255,255,255,0.8);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-}
+  flex-di

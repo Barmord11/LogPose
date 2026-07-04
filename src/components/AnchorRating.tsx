@@ -3,7 +3,7 @@
  * ─────────────────────────────────────
  * Replaces standard like/dislike with nautical Anchor Up / Anchor Down.
  * Anchor UP  = approve, glows green when active.
- * Anchor DOWN = disapprove, glows red when active.
+ * Anchor DOWN = disapprove, glows orange when active.
  * Clicking the same direction again toggles it off.
  *
  * `AnchorRatingView` is the presentational piece, controlled entirely
@@ -31,6 +31,10 @@ const ICON_SIZES = { sm: '18px', md: '22px', lg: '26px' }
 // Anchor Up "approve" accent — kept local since there's no green token
 // in the shared design system (navy/orange/teal only).
 const ANCHOR_UP_COLOR = '#1b8a4a'
+// Anchor Down "disapprove" accent — the app's own sunset-orange (used
+// throughout for the primary CTA gradient/badges), not var(--error)'s
+// red, per the up=green/down=orange feedback pairing.
+const ANCHOR_DOWN_COLOR = '#fe6a34'
 
 export function AnchorRatingView({
   rating,
@@ -93,16 +97,16 @@ export function AnchorRatingView({
           height: size === 'sm' ? '28px' : '36px',
           borderRadius: '9999px',
           border: rating === 'down'
-            ? '1px solid rgba(186,26,26,0.35)'
+            ? '1px solid rgba(254,106,52,0.35)'
             : '1px solid transparent',
           background: rating === 'down'
-            ? 'rgba(186,26,26,0.10)'
+            ? 'rgba(254,106,52,0.12)'
             : 'transparent',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           cursor: 'pointer',
-          color: rating === 'down' ? 'var(--error)' : baseColor,
+          color: rating === 'down' ? ANCHOR_DOWN_COLOR : baseColor,
           transition: 'all 0.2s cubic-bezier(0.34,1.56,0.64,1)',
           flexShrink: 0,
         }}

@@ -103,3 +103,10 @@ export async function fetchByGenre(genreNames: string[]): Promise<AnimeSearchRes
   const body = await parseJsonOrThrow(res)
   return (body?.results ?? []) as AnimeSearchResult[]
 }
+
+/** GET /api/anime/random — one series picked at random from AniList's popular pool, for the mobile compass "surprise me" button. */
+export async function fetchRandomAnime(): Promise<AnimeSearchResult> {
+  const res = await fetch(`${BASE_URL}/api/anime/random`)
+  const body = await parseJsonOrThrow(res)
+  return body.result as AnimeSearchResult
+}
