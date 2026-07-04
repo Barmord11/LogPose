@@ -374,9 +374,13 @@ function TrendingCard({ result, navigate }: { result: AnimeSearchResult; navigat
 
   useEffect(() => {
     let cancelled = false
-    getTrackerRow(anilistId).then(row => { if (!cancelled) setTracker(row) }).catch(() => { /* not signed in — treat as untracked */ })
-    getMyRating(anilistId).then(r => { if (!cancelled) setRatingValue(r) }).catch(() => { /* not signed in — treat as unvoted */ })
-    fetchIsFavorite(anilistId).then(f => { if (!cancelled) setFavorite(f) }).catch(() => { /* not signed in — treat as not favorited */ })
+    // Not-signed-in resolves normally (null/false) inside these services -
+    // it never reaches .catch(). Anything landing here is a real failure
+    // (RLS denial, network error, schema mismatch, etc.) - log it instead
+    // of silently pretending the series is untracked/unvoted/unfavorited.
+    getTrackerRow(anilistId).then(row => { if (!cancelled) setTracker(row) }).catch(err => console.error('getTrackerRow failed', err))
+    getMyRating(anilistId).then(r => { if (!cancelled) setRatingValue(r) }).catch(err => console.error('getMyRating failed', err))
+    fetchIsFavorite(anilistId).then(f => { if (!cancelled) setFavorite(f) }).catch(err => console.error('isFavorite failed', err))
     return () => { cancelled = true }
   }, [anilistId])
 
@@ -386,6 +390,8 @@ function TrendingCard({ result, navigate }: { result: AnimeSearchResult; navigat
     try {
       const row = await upsertStatus({ anilistId, status, title: result.title, imageUrl: result.image, totalEpisodes: result.totalEpisodes ?? 0 })
       setTracker(row)
+    } catch (err) {
+      console.error('upsertStatus failed', err)
     } finally {
       setStatusBusy(false)
     }
@@ -397,6 +403,8 @@ function TrendingCard({ result, navigate }: { result: AnimeSearchResult; navigat
     try {
       await removeFromTracker(anilistId)
       setTracker(null)
+    } catch (err) {
+      console.error('removeFromTracker failed', err)
     } finally {
       setStatusBusy(false)
     }
@@ -410,6 +418,8 @@ function TrendingCard({ result, navigate }: { result: AnimeSearchResult; navigat
       if (next === null) await clearRating(anilistId)
       else await submitRating(anilistId, next)
       setRatingValue(next)
+    } catch (err) {
+      console.error('setRating/clearRating failed', err)
     } finally {
       setRatingBusy(false)
     }
@@ -421,6 +431,8 @@ function TrendingCard({ result, navigate }: { result: AnimeSearchResult; navigat
     try {
       const next = await toggleFavorite(favorite, { anilistId, title: result.title, imageUrl: result.image })
       setFavorite(next)
+    } catch (err) {
+      console.error('toggleFavorite failed', err)
     } finally {
       setFavoriteBusy(false)
     }
@@ -540,19 +552,4 @@ function PopularCard({ anime, navigate }: { anime: typeof animes[0]; navigate: N
               <AddDropdown animeId={anime.id} variant="overlay" size="sm" />
             </div>
             {/* Bottom row: play + rating */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center' }}>
-              <PlayButton watchUrl={anime.watchUrl} variant="icon" />
-              <AnchorRating animeId={anime.id} size="sm" color="white" />
-            </div>
-          </div>
-          {/* Episode count badge */}
-          <div style={{
-            position: 'absolute', bottom: '8px', right: '8px',
-            background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)',
-            padding: '2px 7px', borderRadius: '4px', fontSize: '10px', fontWeight: 800, color: '#fff',
-          }}>
-            {anime.episodes} ep
-          </div>
-        </div>
-
-        <h
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center' }}

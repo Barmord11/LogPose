@@ -460,20 +460,24 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
     setLoadingTracker(true)
     getTrackerRow(anilistId)
       .then(row => { if (!cancelled) setTracker(row) })
-      .catch(() => { /* not signed in / RLS denies — treat as untracked */ })
+      .catch(err => console.error('getTrackerRow failed', err))
       .finally(() => { if (!cancelled) setLoadingTracker(false) })
 
+    // Not-signed-in resolves normally (null/false) inside these services -
+    // it never reaches .catch(). Anything landing here is a real failure
+    // (RLS denial, network error, schema mismatch, etc.) - log it instead
+    // of silently pretending the series is unvoted/not favorited.
     getMyRating(anilistId)
       .then(rating => { if (!cancelled) setMyRating(rating) })
-      .catch(() => { /* not signed in — treat as unvoted */ })
+      .catch(err => console.error('getMyRating failed', err))
 
     getRatingSummary(anilistId)
       .then(summary => { if (!cancelled) setRatingSummary(summary) })
-      .catch(() => { /* summary is best-effort — leave it null on failure */ })
+      .catch(err => console.error('getRatingSummary failed', err))
 
     fetchIsFavorite(anilistId)
       .then(fav => { if (!cancelled) setFavorite(fav) })
-      .catch(() => { /* not signed in — treat as not favorited */ })
+      .catch(err => console.error('isFavorite failed', err))
 
     return () => { cancelled = true }
   }, [anilistId])
@@ -490,6 +494,8 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
         totalEpisodes: anime.totalEpisodes,
       })
       setTracker(row)
+    } catch (err) {
+      console.error('upsertStatus failed', err)
     } finally {
       setStatusBusy(false)
     }
@@ -501,6 +507,8 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
     try {
       await removeFromTracker(anilistId)
       setTracker(null)
+    } catch (err) {
+      console.error('removeFromTracker failed', err)
     } finally {
       setStatusBusy(false)
     }
@@ -517,6 +525,8 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
     try {
       const row = await updateProgress(anilistId, clamped)
       setTracker(row)
+    } catch (err) {
+      console.error('updateProgress failed', err)
     } finally {
       setProgressBusy(false)
     }
@@ -537,6 +547,8 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
       setMyRating(next)
       const summary = await getRatingSummary(anilistId)
       setRatingSummary(summary)
+    } catch (err) {
+      console.error('setRating/clearRating failed', err)
     } finally {
       setRatingBusy(false)
     }
@@ -548,6 +560,8 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
     try {
       const next = await toggleFavorite(favorite, { anilistId, title: anime.title, imageUrl: anime.image })
       setFavorite(next)
+    } catch (err) {
+      console.error('toggleFavorite failed', err)
     } finally {
       setFavoriteBusy(false)
     }
@@ -779,23 +793,4 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
                   </p>
                 ) : (
                   <div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '8px' }} className="no-scrollbar">
-                    {anime.characters.map(char => (
-                      <div key={char.id} className="char-card">
-                        <div className="char-card__avatar">
-                          {char.image && <img src={char.image} alt={char.name} />}
-                        </div>
-                        <p className="char-card__name">{char.name}</p>
-                        {char.role && <p className="char-card__role">{char.role}</p>}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
+                    {anime.characters

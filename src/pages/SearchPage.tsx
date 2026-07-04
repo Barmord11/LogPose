@@ -444,9 +444,13 @@ function LiveSearchCard({ result, navigate }: { result: AnimeSearchResult; navig
 
   useEffect(() => {
     let cancelled = false
-    getTrackerRow(anilistId).then(row => { if (!cancelled) setTracker(row) }).catch(() => { /* not signed in — treat as untracked */ })
-    getMyRating(anilistId).then(r => { if (!cancelled) setRatingValue(r) }).catch(() => { /* not signed in — treat as unvoted */ })
-    fetchIsFavorite(anilistId).then(f => { if (!cancelled) setFavorite(f) }).catch(() => { /* not signed in — treat as not favorited */ })
+    // Not-signed-in resolves normally (null/false) inside these services -
+    // it never reaches .catch(). Anything landing here is a real failure
+    // (RLS denial, network error, schema mismatch, etc.) - log it instead
+    // of silently pretending the series is untracked/unvoted/unfavorited.
+    getTrackerRow(anilistId).then(row => { if (!cancelled) setTracker(row) }).catch(err => console.error('getTrackerRow failed', err))
+    getMyRating(anilistId).then(r => { if (!cancelled) setRatingValue(r) }).catch(err => console.error('getMyRating failed', err))
+    fetchIsFavorite(anilistId).then(f => { if (!cancelled) setFavorite(f) }).catch(err => console.error('isFavorite failed', err))
     return () => { cancelled = true }
   }, [anilistId])
 
@@ -456,6 +460,8 @@ function LiveSearchCard({ result, navigate }: { result: AnimeSearchResult; navig
     try {
       const row = await upsertStatus({ anilistId, status, title: result.title, imageUrl: result.image, totalEpisodes: result.totalEpisodes ?? 0 })
       setTracker(row)
+    } catch (err) {
+      console.error('upsertStatus failed', err)
     } finally {
       setStatusBusy(false)
     }
@@ -467,6 +473,8 @@ function LiveSearchCard({ result, navigate }: { result: AnimeSearchResult; navig
     try {
       await removeFromTracker(anilistId)
       setTracker(null)
+    } catch (err) {
+      console.error('removeFromTracker failed', err)
     } finally {
       setStatusBusy(false)
     }
@@ -480,6 +488,8 @@ function LiveSearchCard({ result, navigate }: { result: AnimeSearchResult; navig
       if (next === null) await clearRating(anilistId)
       else await submitRating(anilistId, next)
       setRatingValue(next)
+    } catch (err) {
+      console.error('setRating/clearRating failed', err)
     } finally {
       setRatingBusy(false)
     }
@@ -491,6 +501,8 @@ function LiveSearchCard({ result, navigate }: { result: AnimeSearchResult; navig
     try {
       const next = await toggleFavorite(favorite, { anilistId, title: result.title, imageUrl: result.image })
       setFavorite(next)
+    } catch (err) {
+      console.error('toggleFavorite failed', err)
     } finally {
       setFavoriteBusy(false)
     }
@@ -606,17 +618,4 @@ function SearchCard({ anime, navigate }: { anime: typeof animes[0]; navigate: Na
             {anime.title}
           </h3>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              {anime.genres.slice(0, 2).join(' • ')}
-            </span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-              <span className="material-symbols-outlined" style={{ fontSize: '12px', color: 'var(--secondary)', fontVariationSettings: "'FILL' 1" }}>star</span>
-              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--primary)' }}>{anime.score}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-      <DragDropZones dragging={dragging} zone={zone} />
-    </>
-  )
-}
+            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.
