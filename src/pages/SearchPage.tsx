@@ -1,48 +1,33 @@
 /**
  * SearchPage — Find Your Way
  * ──────────────────────────
- * Discovery hub: search bar hero → genre bento → results grid.
+ * Discovery hub: search bar hero → results grid.
  *
  * Typing a query (2+ chars) switches the results grid to a LIVE AniList
- * search (GET /api/anime/search), debounced. Clicking a genre bento
- * card queries AniList for real series in that genre (GET
- * /api/anime/genre). With no query and no genre selected, the grid
+ * search (GET /api/anime/search), debounced. With no query, the grid
  * shows AniList's all-time most popular series (GET /api/anime/popular)
- * — real data, not the old hardcoded mock catalogue. Every result card
- * (search, genre, or popular) opens the same details page
- * (AnimeDetailPage) with source="live", and every card's Favorite /
- * Anchor rating / Watched / Plan to Watch controls are real,
- * Supabase-backed actions.
+ * — real data, not a hardcoded mock catalogue. Every result card opens
+ * the same details page (AnimeDetailPage) with source="live", and every
+ * card's Favorite / Anchor rating / Watched / Plan to Watch controls
+ * are real, Supabase-backed actions.
+ *
+ * (The genre bento that used to sit here - static local tile art with a
+ * live fetchByGenre() query behind each click - was removed: it read as
+ * leftover mock content sitting above the live results. The genre
+ * endpoint itself (services/animeApi.ts fetchByGenre, api/anime/genre.ts)
+ * is untouched in case genre browsing gets a real entry point later.)
  */
 
 import { useEffect, useRef, useState } from 'react'
 import type { NavProps } from '../App'
-import { genres, recentSearches, type Genre } from '../data/animes'
-import { searchAnime, fetchPopular, fetchByGenre, type AnimeSearchResult } from '../services/animeApi'
+import { recentSearches } from '../data/animes'
+import { searchAnime, fetchPopular, type AnimeSearchResult } from '../services/animeApi'
 import { AddDropdownView } from '../components/AddDropdown'
 import { AnchorRatingView } from '../components/AnchorRating'
 import { useDragToAdd, DragDropZones } from '../components/DragToAdd'
 import { getTrackerRow, upsertStatus, removeFromTracker, type TrackerRow, type TrackerStatus } from '../services/tracker'
 import { getMyRating, setRating as submitRating, clearRating, type RatingValue } from '../services/ratings'
 import { isFavorite as fetchIsFavorite, toggleFavorite } from '../services/favorites'
-
-// ── Genre card badge colour map ──────────────────────────────
-const BADGE_STYLES: Record<string, { bg: string; color: string }> = {
-  orange: { bg: 'rgba(254,106,52,0.88)', color: '#fff' },
-  navy:   { bg: 'rgba(0,43,91,0.88)',    color: '#a9c7ff' },
-  cyan:   { bg: 'rgba(102,247,255,0.85)',color: '#002021' },
-  light:  { bg: 'rgba(255,255,255,0.90)',color: 'var(--primary)' },
-}
-
-// ── Overlay tints per genre ──────────────────────────────────
-const GENRE_OVERLAYS: Record<string, string> = {
-  shonen:     'linear-gradient(135deg, rgba(0,23,54,0.6) 0%, rgba(64,95,145,0.55) 100%)',
-  seinen:     'rgba(0,23,54,0.80)',
-  isekai:     'rgba(0,49,52,0.65)',
-  'slice-life':'rgba(247,249,251,0.35)',
-  mystery:    'rgba(25,28,30,0.78)',
-  fantasy:    'rgba(171,53,0,0.65)',
-}
 
 const MIN_QUERY_LENGTH = 2
 // Long enough that a normal typing cadence never fires a request per
@@ -55,8 +40,7 @@ interface SearchPageProps extends NavProps {
 }
 
 export default function SearchPage({ navigate, initialQuery = '' }: SearchPageProps) {
-  const [query,       setQuery]       = useState(initialQuery)
-  const [activeGenre, setActiveGenre] = useState<Genre | null>(null)
+  const [query, setQuery] = useState(initialQuery)
 
   const [liveResults, setLiveResults] = useState<AnimeSearchResult[]>([])
   const [liveLoading, setLiveLoading] = useState(false)
@@ -65,17 +49,10 @@ export default function SearchPage({ navigate, initialQuery = '' }: SearchPagePr
   const abortRef = useRef<AbortController | null>(null)
 
   // Real AniList data (replaces the old hardcoded mock catalogue) for
-  // the default (no query, no genre) browsing view.
+  // the default (no query) browsing view.
   const [popularResults, setPopularResults] = useState<AnimeSearchResult[]>([])
   const [popularLoading, setPopularLoading] = useState(true)
   const [popularError,   setPopularError]   = useState<string | null>(null)
-
-  // Real AniList data for the genre bento — clicking "Isekai" etc.
-  // queries AniList for series in that genre instead of filtering a
-  // small hardcoded catalogue.
-  const [genreResults, setGenreResults] = useState<AnimeSearchResult[]>([])
-  const [genreLoading, setGenreLoading] = useState(false)
-  const [genreError,   setGenreError]   = useState<string | null>(null)
 
   // Keep in sync when a new global search arrives
   useEffect(() => { setQuery(initialQuery) }, [initialQuery])
@@ -125,7 +102,7 @@ export default function SearchPage({ navigate, initialQuery = '' }: SearchPagePr
   }, [trimmedQuery, isLiveSearch])
 
   // Real AniList "most popular" browsing data — fetched once on mount,
-  // shown whenever there's no active query or genre filter.
+  // shown whenever there's no active query.
   useEffect(() => {
     let cancelled = false
     fetchPopular()
@@ -143,45 +120,12 @@ export default function SearchPage({ navigate, initialQuery = '' }: SearchPagePr
     return () => { cancelled = true }
   }, [])
 
-  // Real AniList genre-filtered data — (re)fetched whenever a genre
-  // bento card is selected or cleared.
-  useEffect(() => {
-    if (!activeGenre) {
-      setGenreResults([])
-      setGenreError(null)
-      setGenreLoading(false)
-      return
-    }
-    let cancelled = false
-    setGenreLoading(true)
-    setGenreError(null)
-    fetchByGenre(activeGenre.anilistGenres)
-      .then(results => {
-        if (cancelled) return
-        setGenreResults(results)
-        setGenreLoading(false)
-      })
-      .catch(err => {
-        if (cancelled) return
-        console.error('fetchByGenre failed', err)
-        setGenreError(err instanceof Error ? err.message : 'Failed to load this genre.')
-        setGenreResults([])
-        setGenreLoading(false)
-      })
-    return () => { cancelled = true }
-  }, [activeGenre])
-
-  const hasActiveFilter = trimmedQuery !== '' || activeGenre !== null
+  const hasActiveFilter = trimmedQuery !== ''
 
   const scrollToResults = () => {
     // Optional chain on the method itself too, not just the element -
     // jsdom (unit tests) doesn't implement scrollIntoView at all.
     document.getElementById('search-results')?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
-  }
-
-  const pickGenre = (genre: Genre) => {
-    setActiveGenre(current => (current?.id === genre.id ? null : genre))
-    scrollToResults()
   }
 
   return (
@@ -270,109 +214,20 @@ export default function SearchPage({ navigate, initialQuery = '' }: SearchPagePr
         </div>
       </section>
 
-      {/* ══ POPULAR GENRES BENTO (live AniList genre browsing, empty query only) ══ */}
-      {!isLiveSearch && (
-        <section style={{ padding: '0 16px', maxWidth: '1280px', margin: '0 auto 48px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '28px' }}>
-            <h2 style={{ fontFamily: 'var(--font)', fontSize: 'clamp(22px, 3vw, 30px)', fontWeight: 700, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span className="material-symbols-outlined" style={{ color: 'var(--secondary)', fontVariationSettings: "'FILL' 1", fontSize: '26px' }}>dashboard</span>
-              Popular Genres
-            </h2>
-            <div style={{ height: '3px', width: '64px', background: 'linear-gradient(135deg, #fe6a34, #ab3500)', borderRadius: '9999px' }} />
-          </div>
-
-          {/* Bento grid: 2-col mobile, 4-col on desktop */}
-          <div className="genre-grid-bento">
-            {genres.map(genre => {
-              const bs = BADGE_STYLES[genre.badgeVariant]
-              const overlay = GENRE_OVERLAYS[genre.id] ?? 'rgba(0,23,54,0.6)'
-              // Isekai and Slice of Life are wide
-              const isWide  = genre.id === 'isekai' || genre.id === 'slice-life'
-              const isActive = activeGenre?.id === genre.id
-              return (
-                <div
-                  key={genre.id}
-                  className="genre-card"
-                  onClick={() => pickGenre(genre)}
-                  role="button"
-                  aria-pressed={isActive}
-                  style={{
-                    gridColumn: isWide ? 'span 2' : 'span 1',
-                    outline: isActive ? '3px solid var(--secondary-container)' : 'none',
-                    outlineOffset: '2px',
-                  }}
-                >
-                  <div
-                    className="genre-card__bg"
-                    style={{ backgroundImage: `url(${genre.image})` }}
-                  />
-                  {/* Colour overlay */}
-                  <div style={{ position: 'absolute', inset: 0, background: overlay, zIndex: 1 }} />
-                  {/* Content */}
-                  <div className="genre-card__content">
-                    <span
-                      style={{
-                        ...bs,
-                        display: 'inline-block',
-                        padding: '4px 12px',
-                        borderRadius: '9999px',
-                        fontSize: '10px',
-                        fontWeight: 800,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.14em',
-                        alignSelf: 'flex-start',
-                        marginBottom: '10px',
-                        backdropFilter: 'blur(8px)',
-                      }}
-                    >
-                      {isActive ? '✓ FILTERING' : genre.badge}
-                    </span>
-                    <h3
-                      style={{
-                        fontFamily: 'var(--font)',
-                        fontSize: isWide ? '28px' : '20px',
-                        fontWeight: 800,
-                        color: '#fff',
-                        textShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                      }}
-                    >
-                      {genre.label}
-                    </h3>
-                    {isWide && (
-                      <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.75)', marginTop: '6px', lineHeight: 1.4 }}>
-                        {genre.description}
-                      </p>
-                    )}
-                    <div
-                      className="genre-card__underline"
-                      style={{ background: genre.badgeVariant === 'light' ? 'var(--primary)' : '#fff' }}
-                    />
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </section>
-      )}
-
       {/* ══ RESULTS GRID ═══════════════════════════════════════ */}
       <section id="search-results" style={{ padding: '0 16px', maxWidth: '1280px', margin: '0 auto', scrollMarginTop: '96px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '8px' }}>
           <h2 style={{ fontFamily: 'var(--font)', fontSize: 'clamp(20px, 2.5vw, 26px)', fontWeight: 700, color: 'var(--primary)' }}>
-            {isLiveSearch
-              ? `Results for "${trimmedQuery}"`
-              : activeGenre
-                ? `${activeGenre.label} Voyages`
-                : 'Most Popular — Live from AniList'}
+            {isLiveSearch ? `Results for "${trimmedQuery}"` : 'Most Popular — Live from AniList'}
           </h2>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             {hasActiveFilter && (
               <>
                 <span style={{ fontSize: '13px', color: 'var(--outline)', fontWeight: 600 }}>
-                  {isLiveSearch ? liveResults.length : activeGenre ? genreResults.length : popularResults.length} found
+                  {isLiveSearch ? liveResults.length : popularResults.length} found
                 </span>
                 <button
-                  onClick={() => { setQuery(''); setActiveGenre(null) }}
+                  onClick={() => setQuery('')}
                   style={{
                     background: 'none',
                     border: 'none',
@@ -413,29 +268,6 @@ export default function SearchPage({ navigate, initialQuery = '' }: SearchPagePr
           ) : (
             <div className="anime-grid">
               {liveResults.map(result => (
-                <LiveSearchCard key={result.id} result={result} navigate={navigate} />
-              ))}
-            </div>
-          )
-        ) : activeGenre ? (
-          genreLoading ? (
-            <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--on-surface-variant)' }}>
-              <p style={{ fontWeight: 600 }}>Charting {activeGenre.label} voyages…</p>
-            </div>
-          ) : genreError ? (
-            <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--error)' }}>
-              <p style={{ fontWeight: 600 }}>{genreError}</p>
-            </div>
-          ) : genreResults.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--on-surface-variant)' }}>
-              <span className="material-symbols-outlined" style={{ fontSize: '56px', opacity: 0.25, display: 'block', marginBottom: '12px' }}>
-                explore_off
-              </span>
-              <p style={{ fontWeight: 600 }}>No voyages found for {activeGenre.label}</p>
-            </div>
-          ) : (
-            <div className="anime-grid">
-              {genreResults.map(result => (
                 <LiveSearchCard key={result.id} result={result} navigate={navigate} />
               ))}
             </div>
@@ -485,13 +317,18 @@ function EpisodeCountBadge({ count }: { count: number | null }) {
 }
 
 /* ── Live AniList result card → opens the real details page ──
-   Used for search results, genre-filtered results, and the default
-   "most popular" browsing view alike — all real AniList data.
-   Favorite / Anchor rating / Watched / Plan to Watch are all real,
-   Supabase-backed actions (same services LiveDetail uses), fetched
-   once per card on mount. On touch devices the whole card can also be
-   dragged up/down onto the "Plan to Watch" / "Watched" zones instead
-   of tapping the small (+) button — see components/DragToAdd.tsx. */
+   Used for both search results and the default "most popular"
+   browsing view - all real AniList data. Favorite / Anchor rating /
+   Watched / Plan to Watch are all real, Supabase-backed actions,
+   fetched once per card on mount. The hover overlay is a vertical
+   action rail pinned to the card's top-right corner (Add-to-list on
+   top, then Anchor rating, then favorite) rather than a centered
+   horizontal row - this keeps the Add-to-list dropdown, which opens
+   downward from its trigger, safely inside the card's own
+   overflow:hidden bounds instead of getting clipped. On touch devices
+   the whole card can also be dragged up/down onto the "Plan to Watch" /
+   "Watched" zones instead of tapping the small (+) button — see
+   components/DragToAdd.tsx. */
 function LiveSearchCard({ result, navigate }: { result: AnimeSearchResult; navigate: NavProps['navigate'] }) {
   const anilistId = Number(result.id)
 
@@ -588,10 +425,9 @@ function LiveSearchCard({ result, navigate }: { result: AnimeSearchResult; navig
             <div style={{ width: '100%', height: '100%', background: 'var(--surface-container)' }} />
           )}
 
-          {/* Hover/tap action overlay */}
+          {/* Hover/tap action rail — vertical, pinned top-right (see .search-card__overlay) */}
           <div className="search-card__overlay" onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <AnchorRatingView rating={rating} onSetRating={handleSetRating} size="sm" color="white" />
+            <div className="search-card__action-rail">
               <AddDropdownView
                 inWatched={tracker?.status === 'Watched'}
                 inPlan={tracker?.status === 'Plan to Watch'}
@@ -602,6 +438,7 @@ function LiveSearchCard({ result, navigate }: { result: AnimeSearchResult; navig
                 size="sm"
                 disabled={statusBusy}
               />
+              <AnchorRatingView rating={rating} onSetRating={handleSetRating} size="sm" color="white" direction="column" />
               <button
                 className={`heart-btn${favorite ? ' active' : ''}`}
                 title={favorite ? 'Unfavorite' : 'Favorite'}

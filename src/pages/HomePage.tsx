@@ -438,10 +438,12 @@ function TrendingCard({ result, navigate }: { result: AnimeSearchResult; navigat
     <>
       {/* Reuses SearchPage's .search-card classes (not the old bespoke
          .anime-card__* ones) so Home's cards are pixel-identical in size
-         to Search's, and so the Add-to-list trigger sits mid-card
-         instead of pinned to the top edge - opening its dropdown no
-         longer risks the panel rendering outside the poster's
-         overflow:hidden bounds. */}
+         to Search's. The hover action rail is vertical, pinned to the
+         card's top-right corner (see .search-card__overlay /
+         .search-card__action-rail) instead of a centered horizontal
+         row, so the Add-to-list dropdown (which opens downward from
+         the top item in the rail) always has the rest of the card free
+         below it. */}
       <div
         className="search-card"
         {...bind}
@@ -454,9 +456,9 @@ function TrendingCard({ result, navigate }: { result: AnimeSearchResult; navigat
             <div style={{ width: '100%', height: '100%', background: 'var(--surface-container)' }} />
           )}
 
+          {/* Hover/tap action rail — vertical, pinned top-right (see .search-card__overlay) */}
           <div className="search-card__overlay" onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <AnchorRatingView rating={rating} onSetRating={handleSetRating} size="sm" color="white" />
+            <div className="search-card__action-rail">
               <AddDropdownView
                 inWatched={tracker?.status === 'Watched'}
                 inPlan={tracker?.status === 'Plan to Watch'}
@@ -467,6 +469,7 @@ function TrendingCard({ result, navigate }: { result: AnimeSearchResult; navigat
                 size="sm"
                 disabled={statusBusy}
               />
+              <AnchorRatingView rating={rating} onSetRating={handleSetRating} size="sm" color="white" direction="column" />
               <button
                 className={`heart-btn${favorite ? ' active' : ''}`}
                 title={favorite ? 'Unfavorite' : 'Favorite'}

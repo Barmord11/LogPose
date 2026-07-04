@@ -29,11 +29,10 @@ beforeEach(() => {
   vi.mocked(tracker.getTrackerRow).mockResolvedValue(null)
   vi.mocked(ratings.getMyRating).mockResolvedValue(null)
   vi.mocked(favorites.isFavorite).mockResolvedValue(false)
-  // Default (no query, no genre) browsing view and the genre bento both
-  // fetch real AniList data on mount/selection - default to empty so
-  // mounting the page doesn't throw on an un-mocked promise.
+  // Default (no query) browsing view fetches real AniList data on mount -
+  // default to empty so mounting the page doesn't throw on an
+  // un-mocked promise.
   vi.mocked(animeApi.fetchPopular).mockResolvedValue([])
-  vi.mocked(animeApi.fetchByGenre).mockResolvedValue([])
 })
 
 // The search box debounces for 500ms (see DEBOUNCE_MS in SearchPage.tsx)
@@ -85,7 +84,7 @@ it('lets a signed-in user add a live result straight to Plan to Watch from the c
   expect(container).toBeTruthy()
 })
 
-it('shows real AniList popular results by default (no query, no genre)', async () => {
+it('shows real AniList popular results by default (no query)', async () => {
   const popular: AnimeSearchResult = { id: '99', title: 'Most Popular Show', image: null, releaseDate: 2024, totalEpisodes: 12 }
   vi.mocked(animeApi.fetchPopular).mockResolvedValue([popular])
 
@@ -95,15 +94,8 @@ it('shows real AniList popular results by default (no query, no genre)', async (
   expect(screen.getByText('Most Popular — Live from AniList')).toBeInTheDocument()
 })
 
-it('queries AniList by genre when a genre bento card is clicked', async () => {
-  const genreHit: AnimeSearchResult = { id: '55', title: 'A Fantasy Voyage', image: null, releaseDate: 2022, totalEpisodes: 13 }
-  vi.mocked(animeApi.fetchByGenre).mockResolvedValue([genreHit])
-
+it('does not render the old genre bento - it was removed as leftover mock content above the live results', async () => {
   renderPage()
-
-  const fantasyCard = await screen.findByText('Fantasy')
-  fantasyCard.closest('[role="button"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-
-  await waitFor(() => expect(animeApi.fetchByGenre).toHaveBeenCalledWith(['Fantasy']))
-  await waitFor(() => expect(screen.getByText('A Fantasy Voyage')).toBeInTheDocument())
+  await waitFor(() => expect(screen.getByText('Most Popular — Live from AniList')).toBeInTheDocument())
+  expect(screen.queryByText('Popular Genres')).not.toBeInTheDocument()
 })

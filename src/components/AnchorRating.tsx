@@ -2,8 +2,8 @@
  * AnchorRating — The Voyager's Verdict
  * ─────────────────────────────────────
  * Replaces standard like/dislike with nautical Anchor Up / Anchor Down.
- * Anchor UP  = approve, glows green when active.
- * Anchor DOWN = disapprove, glows orange when active.
+ * Anchor UP   = like/approve, glows green when active.
+ * Anchor DOWN = dislike/disapprove, glows red when active.
  * Clicking the same direction again toggles it off.
  *
  * `AnchorRatingView` is the presentational piece, controlled entirely
@@ -24,30 +24,36 @@ interface AnchorRatingViewProps {
   onSetRating: (rating: 'up' | 'down') => void
   size?: 'sm' | 'md' | 'lg'
   color?: 'white' | 'dark'
+  /** 'row' (default) = side-by-side, for wide contexts like the hero/detail
+   *  page. 'column' = stacked, for the narrow vertical action rail on
+   *  grid cards (see .search-card__action-rail). */
+  direction?: 'row' | 'column'
 }
 
 const ICON_SIZES = { sm: '18px', md: '22px', lg: '26px' }
 
-// Anchor Up "approve" accent — kept local since there's no green token
-// in the shared design system (navy/orange/teal only).
+// Anchor Up "like/approve" accent — kept local since there's no green
+// token in the shared design system (navy/orange/teal only). Anchor
+// points up = a positive review, so it glows green.
 const ANCHOR_UP_COLOR = '#1b8a4a'
-// Anchor Down "disapprove" accent — the app's own sunset-orange (used
-// throughout for the primary CTA gradient/badges), not var(--error)'s
-// red, per the up=green/down=orange feedback pairing.
-const ANCHOR_DOWN_COLOR = '#fe6a34'
+// Anchor Down "dislike/disapprove" accent — anchor points down = a
+// negative review, so it glows red (var(--error)), mirroring Anchor Up's
+// green the same way a thumbs-down mirrors a thumbs-up.
+const ANCHOR_DOWN_COLOR = '#ba1a1a'
 
 export function AnchorRatingView({
   rating,
   onSetRating,
   size = 'md',
   color = 'dark',
+  direction = 'row',
 }: AnchorRatingViewProps) {
   const iconSize = ICON_SIZES[size]
   const baseColor = color === 'white' ? 'rgba(255,255,255,0.8)' : 'var(--on-surface-variant)'
 
   return (
     <div
-      style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+      style={{ display: 'flex', flexDirection: direction, alignItems: 'center', gap: '4px' }}
       onClick={e => e.stopPropagation()}
     >
       {/* ── Anchor Up (Like) ── */}
@@ -97,10 +103,10 @@ export function AnchorRatingView({
           height: size === 'sm' ? '28px' : '36px',
           borderRadius: '9999px',
           border: rating === 'down'
-            ? '1px solid rgba(254,106,52,0.35)'
+            ? '1px solid rgba(186,26,26,0.35)'
             : '1px solid transparent',
           background: rating === 'down'
-            ? 'rgba(254,106,52,0.12)'
+            ? 'rgba(186,26,26,0.10)'
             : 'transparent',
           display: 'flex',
           alignItems: 'center',
