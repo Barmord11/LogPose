@@ -297,6 +297,17 @@ create policy "favorites_insert_own"
   on public.anime_favorites for insert
   with check (auth.uid() = user_id);
 
+-- addFavorite() upserts on (user_id, mal_id) so a stale client (e.g. a
+-- second signed-in tab that hasn't refetched yet) hitting the ON
+-- CONFLICT DO UPDATE path doesn't get silently blocked by RLS. Without
+-- this, that upsert has select/insert/delete but no update policy —
+-- the ratings table already has all four for the same reason.
+drop policy if exists "favorites_update_own" on public.anime_favorites;
+create policy "favorites_update_own"
+  on public.anime_favorites for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
 drop policy if exists "favorites_delete_own" on public.anime_favorites;
 create policy "favorites_delete_own"
   on public.anime_favorites for delete
