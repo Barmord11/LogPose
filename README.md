@@ -207,6 +207,18 @@ MyAnimeList series added via Search:
   limit now that Home also calls it. This only helps within a single
   warm serverless instance — a persistent cache (e.g. Vercel KV) would
   be the next step if that's not enough under real traffic.
+- **Search and Home cards for live series carry the same actions as
+  the mock catalogue**: favorite (heart), Anchor Up/Down, and
+  Watched/Plan to Watch, all Supabase-backed (`services/tracker.ts`,
+  `services/ratings.ts`, `services/favorites.ts`) and fetched per-card
+  on mount. Each card also shows a total-episode-count badge.
+- **Drag-to-add on touch devices** (`components/DragToAdd.tsx`):
+  dragging a browsable card (Search's results, Home's Popular/Trending
+  grids) up or down reveals two colour-coded drop zones — teal "Plan
+  to Watch", orange "Watched" — releasing over one adds the series to
+  that list. This exists alongside, not instead of, the small (+)
+  button; it's a bigger, easier target for phones. No-op on desktop —
+  a plain click still just opens the details page.
 
 Genuinely still mock-only: the "Popular This Week" grid and "Newly
 Released" bento on Home, and the genre/filter browsing on Search's empty
