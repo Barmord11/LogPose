@@ -1,16 +1,16 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { JikanLookupError, fetchAnimeInfo } from '../_lib/jikan.js'
+import { AnilistLookupError, fetchAnimeInfo } from '../_lib/anilist.js'
 import { ConsumetLookupError, fetchWatchEpisodes } from '../_lib/consumet.js'
 
 /**
- * GET /api/anime/:id  (id = a MyAnimeList id)
+ * GET /api/anime/:id  (id = an AniList id)
  *
- * Returns Jikan's details for the series plus its AnimeKai episode
+ * Returns AniList's details for the series plus its AnimeKai episode
  * list, merged into one payload:
- * { id, title, image, genres, description, status, format, score,
- *   characters, totalEpisodes, episodes: [{ id, number, title, image, url }] }
+ * { id, title, image, bannerImage, genres, description, status, format,
+ *   score, characters, totalEpisodes, episodes: [{ id, number, title, image, url }] }
  *
- * The two sources are independent: Jikan (details) is required — if
+ * The two sources are independent: AniList (details) is required — if
  * it fails, this 404s/502s. Consumet (watch links) is best-effort —
  * if AnimeKai is down or the scraper fails, we still return the full
  * details with `episodes: []` rather than failing the whole request.
@@ -24,29 +24,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const rawId = req.query.id
-  const malId = Array.isArray(rawId) ? rawId[0] : rawId
+  const anilistId = Array.isArray(rawId) ? rawId[0] : rawId
 
-  if (!malId) {
+  if (!anilistId) {
     res.status(400).json({ error: 'Missing required "id" path parameter' })
     return
   }
 
   let anime
   try {
-    anime = await fetchAnimeInfo(malId)
+    anime = await fetchAnimeInfo(anilistId)
   } catch (err) {
-    if (err instanceof JikanLookupError) {
+    if (err instanceof AnilistLookupError) {
       res.status(404).json({ error: err.message })
       return
     }
     console.error(err)
-    res.status(502).json({ error: 'Failed to fetch anime info from Jikan' })
+    res.status(502).json({ error: 'Failed to fetch anime info from AniList' })
     return
   }
 
   let episodes: Awaited<ReturnType<typeof fetchWatchEpisodes>> = []
   try {
-    episodes = await fetchWatchEpisodes(malId)
+    episodes = await fetchWatchEpisodes(anilistId)
   } catch (err) {
     // Best-effort: AnimeKai/Consumet being down means no watch links
     // today, not a broken details page.

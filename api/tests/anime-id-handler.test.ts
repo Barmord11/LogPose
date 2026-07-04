@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import handler from '../anime/[id].js'
-import { fetchAnimeInfo, JikanLookupError } from '../_lib/jikan.js'
+import { fetchAnimeInfo, AnilistLookupError } from '../_lib/anilist.js'
 import { fetchWatchEpisodes, ConsumetLookupError } from '../_lib/consumet.js'
 
-vi.mock('../_lib/jikan.js', () => ({
+vi.mock('../_lib/anilist.js', () => ({
   fetchAnimeInfo: vi.fn(),
-  JikanLookupError: class JikanLookupError extends Error {},
+  AnilistLookupError: class AnilistLookupError extends Error {},
 }))
 
 vi.mock('../_lib/consumet.js', () => ({
@@ -25,6 +25,7 @@ const detailsPayload = {
   id: '21',
   title: 'One Piece',
   image: null,
+  bannerImage: null,
   genres: ['Action'],
   description: null,
   status: 'Currently Airing',
@@ -39,7 +40,7 @@ beforeEach(() => {
 })
 
 describe('GET /api/anime/:id', () => {
-  it('merges Jikan details with Consumet episodes into one payload', async () => {
+  it('merges AniList details with Consumet episodes into one payload', async () => {
     vi.mocked(fetchAnimeInfo).mockResolvedValue(detailsPayload)
     vi.mocked(fetchWatchEpisodes).mockResolvedValue([
       { id: 'e1', number: 1, title: null, image: null, url: 'https://watch.example/ep1' },
@@ -85,8 +86,8 @@ describe('GET /api/anime/:id', () => {
     expect(fetchAnimeInfo).not.toHaveBeenCalled()
   })
 
-  it('404s when the Jikan lookup fails with JikanLookupError', async () => {
-    vi.mocked(fetchAnimeInfo).mockRejectedValue(new JikanLookupError('not found'))
+  it('404s when the AniList lookup fails with AnilistLookupError', async () => {
+    vi.mocked(fetchAnimeInfo).mockRejectedValue(new AnilistLookupError('not found'))
     const req = { method: 'GET', query: { id: '999' } } as unknown as VercelRequest
     const res = mockRes()
     await handler(req, res)
@@ -94,7 +95,7 @@ describe('GET /api/anime/:id', () => {
     expect(fetchWatchEpisodes).not.toHaveBeenCalled()
   })
 
-  it('502s on an unexpected Jikan error', async () => {
+  it('502s on an unexpected AniList error', async () => {
     vi.mocked(fetchAnimeInfo).mockRejectedValue(new Error('boom'))
     const req = { method: 'GET', query: { id: '999' } } as unknown as VercelRequest
     const res = mockRes()

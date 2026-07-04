@@ -10,8 +10,8 @@ export type TrackerStatus = 'Watched' | 'Plan to Watch'
 
 export interface TrackerRow {
   id: number
-  /** MyAnimeList id (from the Jikan API). */
-  malId: number
+  /** AniList id (from the official AniList GraphQL API). */
+  anilistId: number
   title: string
   imageUrl: string | null
   totalEpisodes: number
@@ -21,7 +21,7 @@ export interface TrackerRow {
 
 interface TrackerDbRow {
   id: number
-  mal_id: number
+  anilist_id: number
   title: string
   image_url: string | null
   total_episodes: number
@@ -32,7 +32,7 @@ interface TrackerDbRow {
 function mapRow(row: TrackerDbRow): TrackerRow {
   return {
     id: row.id,
-    malId: row.mal_id,
+    anilistId: row.anilist_id,
     title: row.title,
     imageUrl: row.image_url,
     totalEpisodes: row.total_episodes,
@@ -42,11 +42,11 @@ function mapRow(row: TrackerDbRow): TrackerRow {
 }
 
 /** Fetches the signed-in user's tracker row for one series, or null if it isn't tracked yet. */
-export async function getTrackerRow(malId: number): Promise<TrackerRow | null> {
+export async function getTrackerRow(anilistId: number): Promise<TrackerRow | null> {
   const { data, error } = await supabase
     .from('anime_tracker')
     .select('*')
-    .eq('mal_id', malId)
+    .eq('anilist_id', anilistId)
     .maybeSingle()
 
   if (error) throw error
@@ -54,7 +54,7 @@ export async function getTrackerRow(malId: number): Promise<TrackerRow | null> {
 }
 
 export interface UpsertStatusInput {
-  malId: number
+  anilistId: number
   status: TrackerStatus
   title: string
   imageUrl: string | null
@@ -75,13 +75,13 @@ export async function upsertStatus(input: UpsertStatusInput): Promise<TrackerRow
     .upsert(
       {
         user_id: userData.user.id,
-        mal_id: input.malId,
+        anilist_id: input.anilistId,
         status: input.status,
         title: input.title,
         image_url: input.imageUrl,
         total_episodes: input.totalEpisodes,
       },
-      { onConflict: 'user_id,mal_id' },
+      { onConflict: 'user_id,anilist_id' },
     )
     .select()
     .single()
@@ -98,11 +98,11 @@ export async function upsertStatus(input: UpsertStatusInput): Promise<TrackerRow
  * rule. Client code (AnimeDetailPage) additionally clamps before
  * calling this, purely so the +/- buttons can disable immediately.
  */
-export async function updateProgress(malId: number, episodesWatched: number): Promise<TrackerRow> {
+export async function updateProgress(anilistId: number, episodesWatched: number): Promise<TrackerRow> {
   const { data, error } = await supabase
     .from('anime_tracker')
     .update({ episodes_watched: episodesWatched })
-    .eq('mal_id', malId)
+    .eq('anilist_id', anilistId)
     .select()
     .single()
 
@@ -111,8 +111,8 @@ export async function updateProgress(malId: number, episodesWatched: number): Pr
 }
 
 /** Removes a series from the signed-in user's tracker entirely. */
-export async function removeFromTracker(malId: number): Promise<void> {
-  const { error } = await supabase.from('anime_tracker').delete().eq('mal_id', malId)
+export async function removeFromTracker(anilistId: number): Promise<void> {
+  const { error } = await supabase.from('anime_tracker').delete().eq('anilist_id', anilistId)
   if (error) throw error
 }
 

@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import handler from '../anime/search.js'
-import { searchAnime, JikanLookupError } from '../_lib/jikan.js'
+import { searchAnime, AnilistLookupError } from '../_lib/anilist.js'
 
-vi.mock('../_lib/jikan.js', () => ({
+vi.mock('../_lib/anilist.js', () => ({
   searchAnime: vi.fn(),
-  JikanLookupError: class JikanLookupError extends Error {},
+  AnilistLookupError: class AnilistLookupError extends Error {},
 }))
 
 function mockRes() {
@@ -48,8 +48,8 @@ describe('GET /api/anime/search', () => {
     expect(searchAnime).not.toHaveBeenCalled()
   })
 
-  it('502s when the Jikan search fails', async () => {
-    vi.mocked(searchAnime).mockRejectedValue(new JikanLookupError('search failed'))
+  it('502s when the AniList search fails', async () => {
+    vi.mocked(searchAnime).mockRejectedValue(new AnilistLookupError('search failed'))
     const req = { method: 'GET', query: { q: 'foo' } } as unknown as VercelRequest
     const res = mockRes()
     await handler(req, res)

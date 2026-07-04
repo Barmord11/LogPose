@@ -42,8 +42,8 @@ export default function MyListPage({ navigate }: NavProps) {
     return () => { cancelled = true }
   }, [])
 
-  function handleLiveRemoved(malId: number) {
-    setLiveRows(rows => rows.filter(r => r.malId !== malId))
+  function handleLiveRemoved(anilistId: number) {
+    setLiveRows(rows => rows.filter(r => r.anilistId !== anilistId))
   }
 
   const ids = activeTab === 'watched' ? state.watchedList : state.planToWatchList
@@ -149,7 +149,7 @@ export default function MyListPage({ navigate }: NavProps) {
           ) : (
             <div style={{ display: 'grid', gap: '16px' }} className="mylist-responsive-grid">
               {liveList.map(row => (
-                <LiveMyListCard key={`live-${row.malId}`} row={row} navigate={navigate} onRemoved={handleLiveRemoved} />
+                <LiveMyListCard key={`live-${row.anilistId}`} row={row} navigate={navigate} onRemoved={handleLiveRemoved} />
               ))}
               {mockList.map(anime => (
                 <MyListCard key={anime.id} anime={anime} navigate={navigate} />
@@ -180,10 +180,10 @@ function FavoritesPanel({ navigate }: { navigate: NavProps['navigate'] }) {
     return () => { cancelled = true }
   }, [])
 
-  async function handleRemoveLiveFav(e: React.MouseEvent, malId: number) {
+  async function handleRemoveLiveFav(e: React.MouseEvent, anilistId: number) {
     e.stopPropagation()
-    await removeFavorite(malId)
-    setLiveFavs(rows => rows.filter(r => r.malId !== malId))
+    await removeFavorite(anilistId)
+    setLiveFavs(rows => rows.filter(r => r.anilistId !== anilistId))
   }
 
   const totalCount = favs.length + liveFavs.length
@@ -217,8 +217,8 @@ function FavoritesPanel({ navigate }: { navigate: NavProps['navigate'] }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           {liveFavs.map(fav => (
             <div
-              key={`live-${fav.malId}`}
-              onClick={() => navigate('detail', fav.malId, 'live')}
+              key={`live-${fav.anilistId}`}
+              onClick={() => navigate('detail', fav.anilistId, 'live')}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -245,13 +245,13 @@ function FavoritesPanel({ navigate }: { navigate: NavProps['navigate'] }) {
                   {fav.title}
                 </p>
                 <p style={{ fontSize: '10px', fontWeight: 700, color: 'var(--outline)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '2px' }}>
-                  MyAnimeList
+                  AniList
                 </p>
               </div>
               <button
                 className="heart-btn active"
                 title="Remove from favorites"
-                onClick={e => handleRemoveLiveFav(e, fav.malId)}
+                onClick={e => handleRemoveLiveFav(e, fav.anilistId)}
               >
                 <span className="material-symbols-outlined" style={{ fontSize: '18px', fontVariationSettings: "'FILL' 1" }}>
                   favorite
@@ -410,7 +410,7 @@ function MyListCard({ anime, navigate }: { anime: typeof animes[0]; navigate: Na
 }
 
 /* ── Live (API-backed) My List Card — reads straight from anime_tracker ── */
-function LiveMyListCard({ row, navigate, onRemoved }: { row: TrackerRow; navigate: NavProps['navigate']; onRemoved: (malId: number) => void }) {
+function LiveMyListCard({ row, navigate, onRemoved }: { row: TrackerRow; navigate: NavProps['navigate']; onRemoved: (anilistId: number) => void }) {
   const [busy, setBusy] = useState(false)
   const progress = row.totalEpisodes > 0 ? Math.round((row.episodesWatched / row.totalEpisodes) * 100) : 0
 
@@ -419,8 +419,8 @@ function LiveMyListCard({ row, navigate, onRemoved }: { row: TrackerRow; navigat
     if (busy) return
     setBusy(true)
     try {
-      await removeFromTracker(row.malId)
-      onRemoved(row.malId)
+      await removeFromTracker(row.anilistId)
+      onRemoved(row.anilistId)
     } finally {
       setBusy(false)
     }
@@ -431,7 +431,7 @@ function LiveMyListCard({ row, navigate, onRemoved }: { row: TrackerRow; navigat
       {/* Cover image — click → the live details page */}
       <div
         className="mylist-card__img-wrap"
-        onClick={() => navigate('detail', row.malId, 'live')}
+        onClick={() => navigate('detail', row.anilistId, 'live')}
         style={{ cursor: 'pointer' }}
       >
         {row.imageUrl ? (
@@ -447,7 +447,7 @@ function LiveMyListCard({ row, navigate, onRemoved }: { row: TrackerRow; navigat
             background: 'rgba(255,255,255,0.85)', color: 'var(--primary)', backdropFilter: 'blur(8px)', zIndex: 2,
           }}
         >
-          MAL
+          AL
         </div>
       </div>
 
@@ -456,7 +456,7 @@ function LiveMyListCard({ row, navigate, onRemoved }: { row: TrackerRow; navigat
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px', marginBottom: '6px' }}>
           <div style={{ minWidth: 0, flex: 1 }}>
             <h3
-              onClick={() => navigate('detail', row.malId, 'live')}
+              onClick={() => navigate('detail', row.anilistId, 'live')}
               style={{
                 fontFamily: 'var(--font)',
                 fontSize: '15px',

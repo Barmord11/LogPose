@@ -48,14 +48,14 @@ describe('getTrackerRow', () => {
   it('maps a db row (snake_case) to the TrackerRow shape (camelCase)', async () => {
     queryResult = {
       data: {
-        id: 1, mal_id: 21, title: 'One Piece', image_url: 'img.jpg',
+        id: 1, anilist_id: 21, title: 'One Piece', image_url: 'img.jpg',
         total_episodes: 1000, episodes_watched: 5, status: 'Plan to Watch',
       },
       error: null,
     }
     const row = await getTrackerRow(21)
     expect(row).toEqual({
-      id: 1, malId: 21, title: 'One Piece', imageUrl: 'img.jpg',
+      id: 1, anilistId: 21, title: 'One Piece', imageUrl: 'img.jpg',
       totalEpisodes: 1000, episodesWatched: 5, status: 'Plan to Watch',
     })
   })
@@ -70,17 +70,17 @@ describe('upsertStatus', () => {
   it('throws when nobody is signed in', async () => {
     mockAuthGetUser.mockResolvedValue({ data: { user: null }, error: null })
     await expect(
-      upsertStatus({ malId: 1, status: 'Watched', title: 'x', imageUrl: null, totalEpisodes: 1 }),
+      upsertStatus({ anilistId: 1, status: 'Watched', title: 'x', imageUrl: null, totalEpisodes: 1 }),
     ).rejects.toThrow('Not signed in')
   })
 
   it('upserts using the signed-in user id and only allows Watched/Plan to Watch', async () => {
     mockAuthGetUser.mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null })
     queryResult = {
-      data: { id: 1, mal_id: 1, title: 'x', image_url: null, total_episodes: 1, episodes_watched: 0, status: 'Watched' },
+      data: { id: 1, anilist_id: 1, title: 'x', image_url: null, total_episodes: 1, episodes_watched: 0, status: 'Watched' },
       error: null,
     }
-    const row = await upsertStatus({ malId: 1, status: 'Watched', title: 'x', imageUrl: null, totalEpisodes: 1 })
+    const row = await upsertStatus({ anilistId: 1, status: 'Watched', title: 'x', imageUrl: null, totalEpisodes: 1 })
     expect(row.status).toBe('Watched')
     // TypeScript's TrackerStatus union already forbids anything else at
     // compile time; this just documents the two legal values at runtime.
@@ -91,7 +91,7 @@ describe('upsertStatus', () => {
 describe('updateProgress', () => {
   it('updates episodes_watched and returns the mapped row', async () => {
     queryResult = {
-      data: { id: 1, mal_id: 1, title: 'x', image_url: null, total_episodes: 12, episodes_watched: 3, status: 'Plan to Watch' },
+      data: { id: 1, anilist_id: 1, title: 'x', image_url: null, total_episodes: 12, episodes_watched: 3, status: 'Plan to Watch' },
       error: null,
     }
     const row = await updateProgress(1, 3)
@@ -125,14 +125,14 @@ describe('getTrackerList', () => {
   it('maps every row to the TrackerRow shape', async () => {
     queryResult = {
       data: [
-        { id: 2, mal_id: 20, title: 'B', image_url: null, total_episodes: 24, episodes_watched: 24, status: 'Watched' },
-        { id: 1, mal_id: 10, title: 'A', image_url: 'a.jpg', total_episodes: 12, episodes_watched: 3, status: 'Plan to Watch' },
+        { id: 2, anilist_id: 20, title: 'B', image_url: null, total_episodes: 24, episodes_watched: 24, status: 'Watched' },
+        { id: 1, anilist_id: 10, title: 'A', image_url: 'a.jpg', total_episodes: 12, episodes_watched: 3, status: 'Plan to Watch' },
       ],
       error: null,
     }
     const rows = await getTrackerList()
     expect(rows).toHaveLength(2)
-    expect(rows[0]).toEqual({ id: 2, malId: 20, title: 'B', imageUrl: null, totalEpisodes: 24, episodesWatched: 24, status: 'Watched' })
+    expect(rows[0]).toEqual({ id: 2, anilistId: 20, title: 'B', imageUrl: null, totalEpisodes: 24, episodesWatched: 24, status: 'Watched' })
   })
 
   it('handles a null data payload as an empty list', async () => {

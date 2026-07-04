@@ -1,7 +1,8 @@
 /**
  * Thin fetch wrapper around the Vercel serverless functions in
  * /api/anime, which combine two independent sources server-side:
- *  - Jikan (MyAnimeList) for details + search — see api/_lib/jikan.ts
+ *  - AniList's official GraphQL API for details + search — see
+ *    api/_lib/anilist.ts
  *  - Consumet/AnimeKai for the (best-effort) per-episode watch link —
  *    see api/_lib/consumet.ts
  * Relative paths are same-origin both on Vercel and under `vercel dev`.
@@ -26,18 +27,20 @@ export interface AnimeCharacter {
 }
 
 export interface AnimeInfo {
-  /** MyAnimeList id (from Jikan). */
+  /** AniList id (from the official AniList GraphQL API). */
   id: string
   title: string
   image: string | null
+  /** Wide banner artwork, when AniList has one — falls back to `image` in the UI when null. */
+  bannerImage: string | null
   genres: string[]
   /** Plain-text synopsis. */
   description: string | null
-  /** MyAnimeList status, e.g. "Currently Airing", "Finished Airing". */
+  /** AniList status, e.g. "Currently Airing", "Finished Airing". */
   status: string | null
-  /** MyAnimeList format, e.g. "TV", "Movie", "OVA". */
+  /** AniList format, e.g. "TV", "Movie", "OVA". */
   format: string | null
-  /** MyAnimeList score, already on a 0-10 scale (not 0-100) — display as-is, don't divide. */
+  /** Normalized to a 0-10 scale (AniList's own averageScore is 0-100) — display as-is, don't divide. */
   score: number | null
   characters: AnimeCharacter[]
   totalEpisodes: number
@@ -62,14 +65,14 @@ async function parseJsonOrThrow(res: Response) {
   return body
 }
 
-/** GET /api/anime/:id — full series details (Jikan) + episode list with outbound AnimeKai watch links (Consumet, best-effort). */
-export async function fetchAnimeInfo(malId: string | number): Promise<AnimeInfo> {
-  const res = await fetch(`${BASE_URL}/api/anime/${encodeURIComponent(String(malId))}`)
+/** GET /api/anime/:id — full series details (AniList) + episode list with outbound AnimeKai watch links (Consumet, best-effort). */
+export async function fetchAnimeInfo(anilistId: string | number): Promise<AnimeInfo> {
+  const res = await fetch(`${BASE_URL}/api/anime/${encodeURIComponent(String(anilistId))}`)
   return parseJsonOrThrow(res) as Promise<AnimeInfo>
 }
 
 /**
- * GET /api/anime/search?q=... — MyAnimeList title search (via Jikan), card-sized results.
+ * GET /api/anime/search?q=... — AniList title search, card-sized results.
  * Accepts an optional AbortSignal so callers (e.g. the debounced search box)
  * can cancel a request that's been superseded by newer input, instead of
  * letting a slow, stale response overwrite fresher results.

@@ -59,7 +59,7 @@ describe('isFavorite', () => {
   })
 })
 
-const SAMPLE_INPUT = { malId: 21, title: 'One Piece', imageUrl: 'img.jpg' }
+const SAMPLE_INPUT = { anilistId: 21, title: 'One Piece', imageUrl: 'img.jpg' }
 
 describe('addFavorite', () => {
   it('throws when nobody is signed in', async () => {
@@ -112,14 +112,14 @@ describe('listFavorites', () => {
   it('maps rows to camelCase fields', async () => {
     queryResult = {
       data: [
-        { mal_id: 21, title: 'One Piece', image_url: 'a.jpg' },
-        { mal_id: 42, title: 'Naruto', image_url: null },
+        { anilist_id: 21, title: 'One Piece', image_url: 'a.jpg' },
+        { anilist_id: 42, title: 'Naruto', image_url: null },
       ],
       error: null,
     }
     expect(await listFavorites()).toEqual([
-      { malId: 21, title: 'One Piece', imageUrl: 'a.jpg' },
-      { malId: 42, title: 'Naruto', imageUrl: null },
+      { anilistId: 21, title: 'One Piece', imageUrl: 'a.jpg' },
+      { anilistId: 42, title: 'Naruto', imageUrl: null },
     ])
   })
 

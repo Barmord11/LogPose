@@ -13,7 +13,7 @@ vi.mock('../services/favorites')
 function trackedRow(overrides: Partial<TrackerRow> = {}): TrackerRow {
   return {
     id: 1,
-    malId: 21,
+    anilistId: 21,
     title: 'One Piece',
     imageUrl: null,
     totalEpisodes: 1000,
@@ -68,7 +68,7 @@ it('removes a live series from the list via the remove button', async () => {
 })
 
 it('shows live favorites in the Favorites panel', async () => {
-  const fav: FavoriteRow = { malId: 42, title: 'Naruto', imageUrl: null }
+  const fav: FavoriteRow = { anilistId: 42, title: 'Naruto', imageUrl: null }
   vi.mocked(favorites.listFavorites).mockResolvedValue([fav])
 
   renderPage()

@@ -40,7 +40,7 @@ export default function HomePage({ navigate }: NavProps) {
 
     fetchTrending()
       .then(results => { if (!cancelled) setTrending(results) })
-      .catch(() => { /* trending is a nice-to-have — Jikan hiccup shouldn't break Home */ })
+      .catch(() => { /* trending is a nice-to-have — an AniList hiccup shouldn't break Home */ })
 
     return () => { cancelled = true }
   }, [])
@@ -141,7 +141,7 @@ export default function HomePage({ navigate }: NavProps) {
           </div>
           <div className="anime-grid">
             {continueWatching.slice(0, 5).map(row => (
-              <ContinueCard key={row.malId} row={row} navigate={navigate} />
+              <ContinueCard key={row.anilistId} row={row} navigate={navigate} />
             ))}
           </div>
         </section>
@@ -179,7 +179,7 @@ export default function HomePage({ navigate }: NavProps) {
         </div>
       </section>
 
-      {/* ══ TRENDING NOW (live MyAnimeList top-airing) ═══════════ */}
+      {/* ══ TRENDING NOW (live AniList trending) ═══════════ */}
       {trending.length > 0 && (
         <section style={{ padding: '0 16px', maxWidth: '1280px', margin: '0 auto 48px' }}>
           <div style={{ marginBottom: '24px' }}>
@@ -187,7 +187,7 @@ export default function HomePage({ navigate }: NavProps) {
               Trending Now
             </h2>
             <p style={{ fontSize: '12px', color: 'var(--on-surface-variant)', marginTop: '4px' }}>
-              Live from MyAnimeList — currently airing, ranked by popularity
+              Live from AniList — currently airing, ranked by trending score
             </p>
           </div>
           <div className="anime-grid">
@@ -316,7 +316,7 @@ export default function HomePage({ navigate }: NavProps) {
 function ContinueCard({ row, navigate }: { row: TrackerRow; navigate: NavProps['navigate'] }) {
   const progress = row.totalEpisodes > 0 ? Math.round((row.episodesWatched / row.totalEpisodes) * 100) : 0
   return (
-    <div style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column' }} onClick={() => navigate('detail', row.malId, 'live')}>
+    <div style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column' }} onClick={() => navigate('detail', row.anilistId, 'live')}>
       <div
         style={{
           position: 'relative',
@@ -348,11 +348,11 @@ function ContinueCard({ row, navigate }: { row: TrackerRow; navigate: NavProps['
   )
 }
 
-/* ── Trending Now card — live Jikan top-airing result. Favorite,
+/* ── Trending Now card — live AniList trending result. Favorite,
    Anchor rating and Watched/Plan status are real Supabase-backed
    actions, same as LiveSearchCard, fetched once per card on mount. ── */
 function TrendingCard({ result, navigate }: { result: AnimeSearchResult; navigate: NavProps['navigate'] }) {
-  const malId = Number(result.id)
+  const anilistId = Number(result.id)
 
   const [tracker, setTracker] = useState<TrackerRow | null>(null)
   const [statusBusy, setStatusBusy] = useState(false)
@@ -363,17 +363,17 @@ function TrendingCard({ result, navigate }: { result: AnimeSearchResult; navigat
 
   useEffect(() => {
     let cancelled = false
-    getTrackerRow(malId).then(row => { if (!cancelled) setTracker(row) }).catch(() => { /* not signed in — treat as untracked */ })
-    getMyRating(malId).then(r => { if (!cancelled) setRatingValue(r) }).catch(() => { /* not signed in — treat as unvoted */ })
-    fetchIsFavorite(malId).then(f => { if (!cancelled) setFavorite(f) }).catch(() => { /* not signed in — treat as not favorited */ })
+    getTrackerRow(anilistId).then(row => { if (!cancelled) setTracker(row) }).catch(() => { /* not signed in — treat as untracked */ })
+    getMyRating(anilistId).then(r => { if (!cancelled) setRatingValue(r) }).catch(() => { /* not signed in — treat as unvoted */ })
+    fetchIsFavorite(anilistId).then(f => { if (!cancelled) setFavorite(f) }).catch(() => { /* not signed in — treat as not favorited */ })
     return () => { cancelled = true }
-  }, [malId])
+  }, [anilistId])
 
   async function handleSetStatus(status: TrackerStatus) {
     if (statusBusy) return
     setStatusBusy(true)
     try {
-      const row = await upsertStatus({ malId, status, title: result.title, imageUrl: result.image, totalEpisodes: result.totalEpisodes ?? 0 })
+      const row = await upsertStatus({ anilistId, status, title: result.title, imageUrl: result.image, totalEpisodes: result.totalEpisodes ?? 0 })
       setTracker(row)
     } finally {
       setStatusBusy(false)
@@ -384,7 +384,7 @@ function TrendingCard({ result, navigate }: { result: AnimeSearchResult; navigat
     if (statusBusy) return
     setStatusBusy(true)
     try {
-      await removeFromTracker(malId)
+      await removeFromTracker(anilistId)
       setTracker(null)
     } finally {
       setStatusBusy(false)
@@ -396,8 +396,8 @@ function TrendingCard({ result, navigate }: { result: AnimeSearchResult; navigat
     const next = rating === value ? null : value
     setRatingBusy(true)
     try {
-      if (next === null) await clearRating(malId)
-      else await submitRating(malId, next)
+      if (next === null) await clearRating(anilistId)
+      else await submitRating(anilistId, next)
       setRatingValue(next)
     } finally {
       setRatingBusy(false)
@@ -408,7 +408,7 @@ function TrendingCard({ result, navigate }: { result: AnimeSearchResult; navigat
     if (favoriteBusy) return
     setFavoriteBusy(true)
     try {
-      const next = await toggleFavorite(favorite, { malId, title: result.title, imageUrl: result.image })
+      const next = await toggleFavorite(favorite, { anilistId, title: result.title, imageUrl: result.image })
       setFavorite(next)
     } finally {
       setFavoriteBusy(false)
@@ -418,7 +418,7 @@ function TrendingCard({ result, navigate }: { result: AnimeSearchResult; navigat
   const { dragging, offsetY, zone, bind } = useDragToAdd({
     onPlan: () => handleSetStatus('Plan to Watch'),
     onWatched: () => handleSetStatus('Watched'),
-    onTap: () => navigate('detail', malId, 'live'),
+    onTap: () => navigate('detail', anilistId, 'live'),
   })
 
   return (

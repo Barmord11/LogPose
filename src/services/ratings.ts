@@ -3,8 +3,8 @@ import { supabase } from '../lib/supabaseClient'
 /**
  * LogPose's own Anchor Up/Down community rating — stored in our own
  * Supabase table (anime_ratings), independent of whatever score
- * MyAnimeList reports. One vote per signed-in user per series.
- * Series are identified by MyAnimeList id (from the Jikan API).
+ * AniList reports. One vote per signed-in user per series.
+ * Series are identified by AniList id (from the official AniList GraphQL API).
  */
 export type RatingValue = 'up' | 'down'
 
@@ -14,7 +14,7 @@ export interface RatingSummary {
 }
 
 /** The signed-in user's own vote for a series, or null if they haven't voted. */
-export async function getMyRating(malId: number): Promise<RatingValue | null> {
+export async function getMyRating(anilistId: number): Promise<RatingValue | null> {
   const { data: userData, error: userError } = await supabase.auth.getUser()
   if (userError) throw userError
   if (!userData.user) return null
@@ -22,7 +22,7 @@ export async function getMyRating(malId: number): Promise<RatingValue | null> {
   const { data, error } = await supabase
     .from('anime_ratings')
     .select('rating')
-    .eq('mal_id', malId)
+    .eq('anilist_id', anilistId)
     .eq('user_id', userData.user.id)
     .maybeSingle()
 
@@ -31,7 +31,7 @@ export async function getMyRating(malId: number): Promise<RatingValue | null> {
 }
 
 /** Sets (or changes) the signed-in user's vote for a series. */
-export async function setRating(malId: number, rating: RatingValue): Promise<void> {
+export async function setRating(anilistId: number, rating: RatingValue): Promise<void> {
   const { data: userData, error: userError } = await supabase.auth.getUser()
   if (userError) throw userError
   if (!userData.user) throw new Error('Not signed in')
@@ -39,16 +39,16 @@ export async function setRating(malId: number, rating: RatingValue): Promise<voi
   const { error } = await supabase
     .from('anime_ratings')
     .upsert(
-      { user_id: userData.user.id, mal_id: malId, rating },
-      { onConflict: 'user_id,mal_id' },
+      { user_id: userData.user.id, anilist_id: anilistId, rating },
+      { onConflict: 'user_id,anilist_id' },
     )
 
   if (error) throw error
 }
 
 /** Removes the signed-in user's vote for a series (clicking the same direction again). */
-export async function clearRating(malId: number): Promise<void> {
-  const { error } = await supabase.from('anime_ratings').delete().eq('mal_id', malId)
+export async function clearRating(anilistId: number): Promise<void> {
+  const { error } = await supabase.from('anime_ratings').delete().eq('anilist_id', anilistId)
   if (error) throw error
 }
 
@@ -57,8 +57,8 @@ export async function clearRating(malId: number): Promise<void> {
  * a security-definer RPC function so individual users' votes stay
  * private (RLS only lets each user select their own row directly).
  */
-export async function getRatingSummary(malId: number): Promise<RatingSummary> {
-  const { data, error } = await supabase.rpc('anime_rating_summary', { p_mal_id: malId })
+export async function getRatingSummary(anilistId: number): Promise<RatingSummary> {
+  const { data, error } = await supabase.rpc('anime_rating_summary', { p_anilist_id: anilistId })
   if (error) throw error
 
   const row = Array.isArray(data) ? data[0] : data

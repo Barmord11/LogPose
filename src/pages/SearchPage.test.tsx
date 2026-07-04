@@ -62,7 +62,7 @@ it('shows the total episode count badge on a live result, not a watch-progress c
 it('lets a signed-in user add a live result straight to Plan to Watch from the card', async () => {
   vi.mocked(animeApi.searchAnime).mockResolvedValue([ONE_PIECE])
   vi.mocked(tracker.upsertStatus).mockResolvedValue({
-    id: 1, malId: 21, title: 'One Piece', imageUrl: null, totalEpisodes: 1000, episodesWatched: 0, status: 'Plan to Watch',
+    id: 1, anilistId: 21, title: 'One Piece', imageUrl: null, totalEpisodes: 1000, episodesWatched: 0, status: 'Plan to Watch',
   })
 
   const { container } = renderPage('one piece')
@@ -75,7 +75,7 @@ it('lets a signed-in user add a live result straight to Plan to Watch from the c
   planItem.closest('button')?.click()
 
   await waitFor(() => expect(tracker.upsertStatus).toHaveBeenCalledWith(
-    expect.objectContaining({ malId: 21, status: 'Plan to Watch' }),
+    expect.objectContaining({ anilistId: 21, status: 'Plan to Watch' }),
   ))
   expect(container).toBeTruthy()
 })

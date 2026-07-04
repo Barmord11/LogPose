@@ -3,11 +3,11 @@
  * ──────────────────────────
  * Discovery hub: search bar hero → genre bento → filter chips → anime grid.
  *
- * Typing a query (2+ chars) switches the results grid to a LIVE Anilist
- * search via Consumet (GET /api/anime/search), debounced. Clicking a
+ * Typing a query (2+ chars) switches the results grid to a LIVE AniList
+ * search (GET /api/anime/search), debounced. Clicking a
  * live result opens the same details page as everything else
  * (AnimeDetailPage), just with source="live" so it fetches the real
- * Anilist id instead of reading the mock catalogue.
+ * AniList id instead of reading the mock catalogue.
  *
  * With an empty query, the page falls back to the original mock
  * catalogue browsing experience (genre bento + filter chips) — that
@@ -73,7 +73,7 @@ export default function SearchPage({ navigate, initialQuery = '' }: SearchPagePr
   const trimmedQuery = query.trim()
   const isLiveSearch = trimmedQuery.length >= MIN_QUERY_LENGTH
 
-  // Debounced live MyAnimeList search (via Jikan). Nothing is sent to the
+  // Debounced live AniList search. Nothing is sent to the
   // network until the user pauses typing for DEBOUNCE_MS — typing "one
   // piece" fires exactly one request, not one per letter. If a new
   // keystroke arrives before that fires, the pending timer AND any
@@ -170,7 +170,7 @@ export default function SearchPage({ navigate, initialQuery = '' }: SearchPagePr
               value={query}
               onChange={e => setQuery(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') scrollToResults() }}
-              placeholder="Search real anime titles (live MyAnimeList search)..."
+              placeholder="Search real anime titles (live AniList search)..."
               style={{
                 flex: 1,
                 background: 'transparent',
@@ -426,14 +426,14 @@ function EpisodeCountBadge({ count }: { count: number | null }) {
   )
 }
 
-/* ── Live MyAnimeList result card → opens the real details page ──
+/* ── Live AniList result card → opens the real details page ──
    Favorite / Anchor rating / Watched / Plan to Watch are all real,
    Supabase-backed actions (same services LiveDetail uses), fetched
    once per card on mount. On touch devices the whole card can also be
    dragged up/down onto the "Plan to Watch" / "Watched" zones instead
    of tapping the small (+) button — see components/DragToAdd.tsx. */
 function LiveSearchCard({ result, navigate }: { result: AnimeSearchResult; navigate: NavProps['navigate'] }) {
-  const malId = Number(result.id)
+  const anilistId = Number(result.id)
 
   const [tracker, setTracker] = useState<TrackerRow | null>(null)
   const [statusBusy, setStatusBusy] = useState(false)
@@ -444,17 +444,17 @@ function LiveSearchCard({ result, navigate }: { result: AnimeSearchResult; navig
 
   useEffect(() => {
     let cancelled = false
-    getTrackerRow(malId).then(row => { if (!cancelled) setTracker(row) }).catch(() => { /* not signed in — treat as untracked */ })
-    getMyRating(malId).then(r => { if (!cancelled) setRatingValue(r) }).catch(() => { /* not signed in — treat as unvoted */ })
-    fetchIsFavorite(malId).then(f => { if (!cancelled) setFavorite(f) }).catch(() => { /* not signed in — treat as not favorited */ })
+    getTrackerRow(anilistId).then(row => { if (!cancelled) setTracker(row) }).catch(() => { /* not signed in — treat as untracked */ })
+    getMyRating(anilistId).then(r => { if (!cancelled) setRatingValue(r) }).catch(() => { /* not signed in — treat as unvoted */ })
+    fetchIsFavorite(anilistId).then(f => { if (!cancelled) setFavorite(f) }).catch(() => { /* not signed in — treat as not favorited */ })
     return () => { cancelled = true }
-  }, [malId])
+  }, [anilistId])
 
   async function handleSetStatus(status: TrackerStatus) {
     if (statusBusy) return
     setStatusBusy(true)
     try {
-      const row = await upsertStatus({ malId, status, title: result.title, imageUrl: result.image, totalEpisodes: result.totalEpisodes ?? 0 })
+      const row = await upsertStatus({ anilistId, status, title: result.title, imageUrl: result.image, totalEpisodes: result.totalEpisodes ?? 0 })
       setTracker(row)
     } finally {
       setStatusBusy(false)
@@ -465,7 +465,7 @@ function LiveSearchCard({ result, navigate }: { result: AnimeSearchResult; navig
     if (statusBusy) return
     setStatusBusy(true)
     try {
-      await removeFromTracker(malId)
+      await removeFromTracker(anilistId)
       setTracker(null)
     } finally {
       setStatusBusy(false)
@@ -477,8 +477,8 @@ function LiveSearchCard({ result, navigate }: { result: AnimeSearchResult; navig
     const next = rating === value ? null : value
     setRatingBusy(true)
     try {
-      if (next === null) await clearRating(malId)
-      else await submitRating(malId, next)
+      if (next === null) await clearRating(anilistId)
+      else await submitRating(anilistId, next)
       setRatingValue(next)
     } finally {
       setRatingBusy(false)
@@ -489,7 +489,7 @@ function LiveSearchCard({ result, navigate }: { result: AnimeSearchResult; navig
     if (favoriteBusy) return
     setFavoriteBusy(true)
     try {
-      const next = await toggleFavorite(favorite, { malId, title: result.title, imageUrl: result.image })
+      const next = await toggleFavorite(favorite, { anilistId, title: result.title, imageUrl: result.image })
       setFavorite(next)
     } finally {
       setFavoriteBusy(false)
@@ -499,7 +499,7 @@ function LiveSearchCard({ result, navigate }: { result: AnimeSearchResult; navig
   const { dragging, offsetY, zone, bind } = useDragToAdd({
     onPlan: () => handleSetStatus('Plan to Watch'),
     onWatched: () => handleSetStatus('Watched'),
-    onTap: () => navigate('detail', malId, 'live'),
+    onTap: () => navigate('detail', anilistId, 'live'),
   })
 
   return (

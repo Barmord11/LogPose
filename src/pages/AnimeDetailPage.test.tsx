@@ -17,6 +17,7 @@ const mockAnime: AnimeInfo = {
   id: '21',
   title: 'One Piece',
   image: null,
+  bannerImage: null,
   genres: ['Action', 'Adventure'],
   description: 'A pirate goes on an adventure.',
   status: 'Currently Airing',
@@ -33,7 +34,7 @@ const mockAnime: AnimeInfo = {
 function trackedRow(overrides: Partial<TrackerRow> = {}): TrackerRow {
   return {
     id: 1,
-    malId: 21,
+    anilistId: 21,
     title: 'One Piece',
     imageUrl: null,
     totalEpisodes: 3,
@@ -67,7 +68,7 @@ it('shows a loading state, then the anime title once fetched', async () => {
   await waitFor(() => expect(screen.getByText('One Piece')).toBeInTheDocument())
 })
 
-it('shows the MyAnimeList score as-is (already 0-10, not divided)', async () => {
+it('shows the AniList score as-is (already 0-10, not divided)', async () => {
   await renderLive()
   expect(screen.getByText('★ 8.7')).toBeInTheDocument()
 })
@@ -168,13 +169,13 @@ it('lets a signed-in user favorite and unfavorite a live series', async () => {
 
   fireEvent.click(heartBtn)
   await waitFor(() =>
-    expect(favorites.toggleFavorite).toHaveBeenCalledWith(false, { malId: 21, title: 'One Piece', imageUrl: null }),
+    expect(favorites.toggleFavorite).toHaveBeenCalledWith(false, { anilistId: 21, title: 'One Piece', imageUrl: null }),
   )
   await waitFor(() => expect(screen.getByTitle('Unfavorite')).toBeInTheDocument())
 
   fireEvent.click(screen.getByTitle('Unfavorite'))
   await waitFor(() =>
-    expect(favorites.toggleFavorite).toHaveBeenLastCalledWith(true, { malId: 21, title: 'One Piece', imageUrl: null }),
+    expect(favorites.toggleFavorite).toHaveBeenLastCalledWith(true, { anilistId: 21, title: 'One Piece', imageUrl: null }),
   )
   await waitFor(() => expect(screen.getByTitle('Favorite')).toBeInTheDocument())
 })

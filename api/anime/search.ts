@@ -1,9 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { JikanLookupError, searchAnime } from '../_lib/jikan.js'
+import { AnilistLookupError, searchAnime } from '../_lib/anilist.js'
 
 /**
  * GET /api/anime/search?q=<title>
- * Returns Jikan (MyAnimeList) search results, stripped to card-sized data:
+ * Returns AniList search results, stripped to card-sized data:
  * [{ id, title, image, releaseDate, totalEpisodes }]
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -24,11 +24,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const results = await searchAnime(query.trim())
     res.status(200).json({ results })
   } catch (err) {
-    if (err instanceof JikanLookupError) {
+    if (err instanceof AnilistLookupError) {
       res.status(502).json({ error: err.message })
       return
     }
     console.error(err)
-    res.status(502).json({ error: 'Failed to search Jikan' })
+    res.status(502).json({ error: 'Failed to search AniList' })
   }
 }

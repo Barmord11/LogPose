@@ -13,30 +13,75 @@
                                  each account (populated automatically
                                  on signup via a trigger).
      2. public.anime_tracker  — per-user tracking state for a single
-                                 series, keyed by its MyAnimeList id
-                                 (from the Jikan API).
+                                 series, keyed by its AniList id.
      3. public.anime_ratings  — per-user Anchor Up/Down vote for a
                                  series, plus a function to read back
                                  the aggregate without exposing who
                                  voted which way.
      4. public.anime_favorites — per-user heart/favorite flag for a
-                                 series, keyed by mal_id — same shape
-                                 and RLS pattern as anime_ratings, since
-                                 the old heart button (AppContext's
-                                 local reducer) isn't safe to reuse for
-                                 real MyAnimeList ids.
+                                 series, keyed by anilist_id — same
+                                 shape and RLS pattern as anime_ratings.
 
-   Series are identified by MyAnimeList id (mal_id from Jikan), not an
-   Anilist id — LogPose's details/search moved to Jikan, a stable,
-   key-free official-data API, after Consumet's scrapers (used for the
-   old Anilist-based lookup) proved too unreliable (Cloudflare
-   timeouts, dead mirrors). Consumet is still used for the Watch
-   button, resolved separately and best-effort — see api/_lib/consumet.ts.
+   Series are identified everywhere by their AniList id (from the
+   official https://graphql.anilist.co API) — not a MyAnimeList id.
+   LogPose previously used Jikan (MyAnimeList) for details/search, but
+   its rate limit (~60 req/min *and* a ~3 req/sec burst cap) made
+   ordinary use trip 429s constantly; AniList's GraphQL API is
+   key-free, far more forgiving, and returns details + characters in
+   one round trip. Consumet's own AniList meta-provider is still used,
+   separately and best-effort, purely to resolve the Watch button's
+   external link — see api/_lib/consumet.ts.
+
+   MIGRATION NOTE (upgrading an existing installation from the Jikan
+   era): the block right below renames each table's `mal_id` column to
+   `anilist_id` in place. IMPORTANT — this renames the COLUMN, not the
+   VALUES in it. MyAnimeList ids and AniList ids are different
+   numbering systems for the same anime, so any rows created while the
+   app was on Jikan will, after this rename, have their id
+   misinterpreted as an AniList id and point at the wrong (or a
+   nonexistent) series. If this was only ever used for testing, the
+   simplest fix is to clear those tables out after migrating:
+
+     truncate public.anime_tracker, public.anime_ratings, public.anime_favorites;
+
+   If you have real user data you want to keep, you'll need to
+   look up each row's correct AniList id (e.g. by title) and UPDATE it
+   by hand instead of truncating.
 
    All tables have Row Level Security enabled, so a signed-in user
    can only ever see/edit their own rows — enforced by Postgres
    itself, not application code.
    ============================================================ */
+
+-- ---------------------------------------------------------
+-- 0. Migration: rename mal_id -> anilist_id on pre-existing tables
+-- ---------------------------------------------------------
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'anime_tracker' and column_name = 'mal_id'
+  ) then
+    alter table public.anime_tracker rename column mal_id to anilist_id;
+  end if;
+
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'anime_ratings' and column_name = 'mal_id'
+  ) then
+    alter table public.anime_ratings rename column mal_id to anilist_id;
+  end if;
+
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'anime_favorites' and column_name = 'mal_id'
+  ) then
+    alter table public.anime_favorites rename column mal_id to anilist_id;
+  end if;
+end $$;
+
+drop index if exists public.ix_ratings_mal_id;
+drop function if exists public.anime_rating_summary(integer);
 
 -- ---------------------------------------------------------
 -- 1. profiles
@@ -91,10 +136,10 @@ create trigger on_auth_user_created
 create table if not exists public.anime_tracker (
   id                bigint generated always as identity primary key,
   user_id           uuid not null references auth.users (id) on delete cascade,
-  -- MyAnimeList id, as returned by the Jikan API.
-  mal_id            integer not null,
+  -- AniList id, as returned by the official AniList GraphQL API.
+  anilist_id        integer not null,
 
-  -- Cached UI data so list/detail views don't need a Jikan round
+  -- Cached UI data so list/detail views don't need an AniList round
   -- trip just to render a title + poster.
   title             text not null,
   image_url         text,
@@ -110,7 +155,7 @@ create table if not exists public.anime_tracker (
   updated_at        timestamptz not null default now(),
 
   -- A user cannot have two rows tracking the same series.
-  constraint uq_tracker_user_anime unique (user_id, mal_id),
+  constraint uq_tracker_user_anime unique (user_id, anilist_id),
 
   -- No "Watching" status — only these two values are legal.
   constraint ck_tracker_status check (status in ('Watched', 'Plan to Watch')),
@@ -182,22 +227,22 @@ create trigger trg_enforce_tracker_progress
 -- 3. anime_ratings
 -- ---------------------------------------------------------
 -- LogPose's own Anchor Up/Down community rating, independent of
--- whatever score MyAnimeList reports. Each signed-in user gets
+-- whatever score AniList reports. Each signed-in user gets
 -- exactly one vote per series; clicking the same direction again
 -- removes it (handled client-side by deleting the row).
 create table if not exists public.anime_ratings (
   id            bigint generated always as identity primary key,
   user_id       uuid not null references auth.users (id) on delete cascade,
-  mal_id        integer not null,
+  anilist_id    integer not null,
   rating        text not null,
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now(),
 
-  constraint uq_rating_user_anime unique (user_id, mal_id),
+  constraint uq_rating_user_anime unique (user_id, anilist_id),
   constraint ck_rating_value check (rating in ('up', 'down'))
 );
 
-create index if not exists ix_ratings_mal_id on public.anime_ratings (mal_id);
+create index if not exists ix_ratings_anilist_id on public.anime_ratings (anilist_id);
 
 alter table public.anime_ratings enable row level security;
 
@@ -240,11 +285,11 @@ create trigger trg_touch_rating_updated_at
   for each row execute function public.touch_rating_updated_at();
 
 -- Aggregate counts for a series, callable by any signed-in user via
--- supabase.rpc('anime_rating_summary', { p_mal_id }). Runs as the
+-- supabase.rpc('anime_rating_summary', { p_anilist_id }). Runs as the
 -- function owner (security definer), so it can count across every
 -- user's row while the table's own RLS still blocks anyone from
 -- reading someone else's individual vote directly.
-create or replace function public.anime_rating_summary(p_mal_id integer)
+create or replace function public.anime_rating_summary(p_anilist_id integer)
 returns table (up_count bigint, down_count bigint)
 language sql
 security definer
@@ -255,7 +300,7 @@ as $$
     count(*) filter (where rating = 'up')   as up_count,
     count(*) filter (where rating = 'down') as down_count
   from public.anime_ratings
-  where mal_id = p_mal_id;
+  where anilist_id = p_anilist_id;
 $$;
 
 grant execute on function public.anime_rating_summary(integer) to authenticated;
@@ -270,17 +315,17 @@ grant execute on function public.anime_rating_summary(integer) to authenticated;
 create table if not exists public.anime_favorites (
   id            bigint generated always as identity primary key,
   user_id       uuid not null references auth.users (id) on delete cascade,
-  mal_id        integer not null,
+  anilist_id    integer not null,
 
   -- Cached UI data, same reasoning as anime_tracker: lets the
-  -- Favorites panel render a title + poster without an extra Jikan
+  -- Favorites panel render a title + poster without an extra AniList
   -- round trip per favorited series.
   title         text not null,
   image_url     text,
 
   created_at    timestamptz not null default now(),
 
-  constraint uq_favorite_user_anime unique (user_id, mal_id)
+  constraint uq_favorite_user_anime unique (user_id, anilist_id)
 );
 
 create index if not exists ix_favorites_user_id on public.anime_favorites (user_id);
@@ -297,11 +342,11 @@ create policy "favorites_insert_own"
   on public.anime_favorites for insert
   with check (auth.uid() = user_id);
 
--- addFavorite() upserts on (user_id, mal_id) so a stale client (e.g. a
--- second signed-in tab that hasn't refetched yet) hitting the ON
--- CONFLICT DO UPDATE path doesn't get silently blocked by RLS. Without
--- this, that upsert has select/insert/delete but no update policy —
--- the ratings table already has all four for the same reason.
+-- addFavorite() upserts on (user_id, anilist_id) so a stale client
+-- (e.g. a second signed-in tab that hasn't refetched yet) hitting the
+-- ON CONFLICT DO UPDATE path doesn't get silently blocked by RLS.
+-- Without this, that upsert has select/insert/delete but no update
+-- policy — the ratings table already has all four for the same reason.
 drop policy if exists "favorites_update_own" on public.anime_favorites;
 create policy "favorites_update_own"
   on public.anime_favorites for update

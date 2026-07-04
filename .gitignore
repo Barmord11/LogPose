@@ -40,6 +40,11 @@ dist-ssr
 # recreate was used to work around a stale-cache bug). Safe to delete
 # by hand — the current, correct version has no .stale suffix.
 *.stale*
+*.bak
+
+# Leftover lock/temp files from the same build-environment filesystem
+# quirk above (FUSE-style mount). Safe to delete by hand.
+.fuse_hidden*
 
 # Vercel
 .vercel

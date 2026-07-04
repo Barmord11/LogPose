@@ -17,7 +17,7 @@ vi.mock('../services/favorites')
 function trackedRow(overrides: Partial<TrackerRow> = {}): TrackerRow {
   return {
     id: 1,
-    malId: 21,
+    anilistId: 21,
     title: 'One Piece',
     imageUrl: null,
     totalEpisodes: 1000,
@@ -70,7 +70,7 @@ it('requests only Plan to Watch rows for Continue Your Voyage', async () => {
   await waitFor(() => expect(tracker.getTrackerList).toHaveBeenCalledWith('Plan to Watch'))
 })
 
-it('shows Trending Now when Jikan returns live trending results', async () => {
+it('shows Trending Now when AniList returns live trending results', async () => {
   const result: AnimeSearchResult = { id: '30', title: 'Bar', image: null, releaseDate: null, totalEpisodes: 24 }
   vi.mocked(animeApi.fetchTrending).mockResolvedValue([result])
 
@@ -95,7 +95,7 @@ it('fetches tracker status, rating and favorite state for each trending card', a
 })
 
 it('does not break the page when the trending fetch fails', async () => {
-  vi.mocked(animeApi.fetchTrending).mockRejectedValue(new Error('Jikan down'))
+  vi.mocked(animeApi.fetchTrending).mockRejectedValue(new Error('AniList down'))
 
   renderPage()
 
