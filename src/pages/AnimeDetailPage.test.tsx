@@ -49,10 +49,6 @@ async function renderLive() {
   await waitFor(() => expect(screen.getByText('One Piece')).toBeInTheDocument())
 }
 
-function openEpisodesTab() {
-  fireEvent.click(screen.getByRole('button', { name: /Episodes/i }))
-}
-
 beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(animeApi.fetchAnimeInfo).mockResolvedValue(mockAnime)
@@ -73,30 +69,25 @@ it('shows the AniList score as-is (already 0-10, not divided)', async () => {
   expect(screen.getByText('★ 8.7')).toBeInTheDocument()
 })
 
-it('renders an outbound watch link on the Episodes tab for episodes with a Consumet url', async () => {
+it('renders a single outbound Watch Now link to episode 1 (LogPose never lists or hosts individual episodes)', async () => {
   await renderLive()
-  openEpisodesTab()
 
-  const watchLink = screen.getByTitle('Watch episode 1 on AnimeKai')
-  expect(watchLink.tagName).toBe('A')
+  const watchLink = screen.getByText('Watch Now').closest('a')
   expect(watchLink).toHaveAttribute('href', 'https://watch.example/ep1')
   expect(watchLink).toHaveAttribute('target', '_blank')
   expect(watchLink).toHaveAttribute('rel', expect.stringContaining('noopener'))
-})
-
-it('shows a disabled tile (not a dead link) when Consumet has no url for that episode', async () => {
-  await renderLive()
-  openEpisodesTab()
-
-  const disabledTile = screen.getByTitle('Episode 2 — no watch link available')
-  expect(disabledTile.tagName).toBe('BUTTON')
-  expect(disabledTile).toBeDisabled()
 })
 
 it('shows "no watch link available" for the Play button when Consumet returns no episodes at all', async () => {
   vi.mocked(animeApi.fetchAnimeInfo).mockResolvedValue({ ...mockAnime, episodes: [] })
   await renderLive()
   expect(screen.getByText('No watch link available')).toBeInTheDocument()
+})
+
+it('shows the total episode count as its own stat, with no Episodes tab', async () => {
+  await renderLive()
+  expect(screen.getByText('3')).toBeInTheDocument() // Episodes stat chip
+  expect(screen.queryByRole('button', { name: /^Episodes/ })).not.toBeInTheDocument()
 })
 
 it('only offers Watched and Plan to Watch - there is no Watching status', async () => {

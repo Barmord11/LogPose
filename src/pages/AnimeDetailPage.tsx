@@ -14,11 +14,14 @@
  *       1. DETAILS — title, image, genres, synopsis, status, format,
  *          score, characters, episode count — from AniList's official
  *          GraphQL API — no key required, no crawl-based rate limit.
- *       2. WATCH LINK — the Play button and each episode tile open an
+ *       2. WATCH LINK — the "Watch Now" button opens episode 1's
  *          external AnimeKai link in a new tab, resolved via Consumet.
- *          This is best-effort: if AnimeKai/Consumet is down, the page
- *          still loads fine with no watch links, since that scraping
- *          step is kept separate from the (reliable) details fetch.
+ *          LogPose never hosts or lists individual episodes — total
+ *          episode count is shown as its own stat, separate from this
+ *          outbound link. Best-effort: if AnimeKai/Consumet is down,
+ *          the page still loads fine with no watch link, since that
+ *          scraping step is kept separate from the (reliable) details
+ *          fetch.
  *     List status (Watched / Plan to Watch), the isolated episode
  *     counter, and the Anchor Up/Down community rating are all
  *     LogPose's own data, read from and written to Supabase, scoped
@@ -115,17 +118,30 @@ function StatChip({ label, value, accent }: { label: string; value: string; acce
   )
 }
 
-function TabBar({ activeTab, setActiveTab, episodeCount }: { activeTab: DetailTab; setActiveTab: (t: DetailTab) => void; episodeCount: number }) {
+function TabBar({
+  activeTab,
+  setActiveTab,
+  episodeCount,
+  tabs = ['overview', 'characters', 'episodes'],
+}: {
+  activeTab: DetailTab
+  setActiveTab: (t: DetailTab) => void
+  episodeCount?: number
+  /** Which tabs to show, in order. Defaults to all three (the mock catalogue's
+   *  tap-to-mark-watched grid); live series omit 'episodes' entirely since
+   *  LogPose never hosts or lists individual episodes — see LiveDetail. */
+  tabs?: DetailTab[]
+}) {
   return (
     <div className="tab-bar" style={{ marginBottom: '0' }}>
-      {(['overview', 'characters', 'episodes'] as DetailTab[]).map(tab => (
+      {tabs.map(tab => (
         <button
           key={tab}
           className={`tab-bar__item${activeTab === tab ? ' active' : ''}`}
           onClick={() => setActiveTab(tab)}
           style={{ textTransform: 'capitalize' }}
         >
-          {tab === 'episodes' ? `Episodes (${episodeCount})` : tab.charAt(0).toUpperCase() + tab.slice(1)}
+          {tab === 'episodes' ? `Episodes (${episodeCount ?? 0})` : tab.charAt(0).toUpperCase() + tab.slice(1)}
         </button>
       ))}
     </div>
@@ -729,7 +745,7 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
               <StatChip label="Format" value={anime.format ?? '—'} />
             </div>
 
-            <TabBar activeTab={activeTab} setActiveTab={setActiveTab} episodeCount={anime.episodes.length} />
+            <TabBar activeTab={activeTab} setActiveTab={setActiveTab} tabs={['overview', 'characters']} />
 
             {activeTab === 'overview' && (
               <div className="page-enter">
@@ -777,48 +793,6 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
               </div>
             )}
 
-            {activeTab === 'episodes' && (
-              <div className="page-enter">
-                <p style={{ fontSize: '12px', color: 'var(--on-surface-variant)', marginBottom: '16px' }}>
-                  Tap an episode to watch it on AnimeKai — use the counter on the left to track your progress.
-                </p>
-                {anime.episodes.length === 0 ? (
-                  <p style={{ fontSize: '13px', color: 'var(--on-surface-variant)', fontStyle: 'italic' }}>
-                    No watch links available right now.
-                  </p>
-                ) : (
-                  <div className="ep-grid">
-                    {anime.episodes.map(ep => (
-                      ep.url ? (
-                        <a
-                          key={ep.id}
-                          href={ep.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="ep-tile"
-                          title={`Watch episode ${ep.number} on AnimeKai`}
-                          style={{ textDecoration: 'none', color: 'inherit' }}
-                        >
-                          <span style={{ fontSize: '13px', fontWeight: 800 }}>{ep.number}</span>
-                        </a>
-                      ) : (
-                        <button
-                          key={ep.id}
-                          type="button"
-                          disabled
-                          aria-disabled="true"
-                          className="ep-tile"
-                          title={`Episode ${ep.number} — no watch link available`}
-                          style={{ opacity: 0.4, cursor: 'not-allowed' }}
-                        >
-                          <span style={{ fontSize: '13px', fontWeight: 800 }}>{ep.number}</span>
-                        </button>
-                      )
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         </div>
       </div>
