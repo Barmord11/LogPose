@@ -69,19 +69,23 @@ it('shows the AniList score as-is (already 0-10, not divided)', async () => {
   expect(screen.getByText('★ 8.7')).toBeInTheDocument()
 })
 
-it('renders a single outbound Watch Now link to episode 1 (LogPose never lists or hosts individual episodes)', async () => {
+it('renders a single outbound Watch Now link to AnikotoTV\'s search filter, keyed off the series title', async () => {
   await renderLive()
 
   const watchLink = screen.getByText('Watch Now').closest('a')
-  expect(watchLink).toHaveAttribute('href', 'https://watch.example/ep1')
+  expect(watchLink).toHaveAttribute('href', 'https://anikototv.to/filter?keyword=One+Piece')
   expect(watchLink).toHaveAttribute('target', '_blank')
   expect(watchLink).toHaveAttribute('rel', expect.stringContaining('noopener'))
 })
 
-it('shows "no watch link available" for the Play button when Consumet returns no episodes at all', async () => {
+it('still links to AnikotoTV even when Consumet/AnimeKai returns no per-episode links at all', async () => {
+  // The Watch button no longer depends on the Consumet scrape succeeding -
+  // it's a title search on a third-party site, so it's available as soon
+  // as the AniList details fetch itself succeeds.
   vi.mocked(animeApi.fetchAnimeInfo).mockResolvedValue({ ...mockAnime, episodes: [] })
   await renderLive()
-  expect(screen.getByText('No watch link available')).toBeInTheDocument()
+  const watchLink = screen.getByText('Watch Now').closest('a')
+  expect(watchLink).toHaveAttribute('href', 'https://anikototv.to/filter?keyword=One+Piece')
 })
 
 it('shows the total episode count as its own stat, with no Episodes tab', async () => {
@@ -119,6 +123,21 @@ it('never lets the counter request go above totalEpisodes', async () => {
   await renderLive()
   expect(screen.getByRole('button', { name: /increment episodes watched/i })).toBeDisabled()
   expect(tracker.updateProgress).not.toHaveBeenCalled()
+})
+
+it('lets you type a specific episode number directly into the progress input, clamped to totalEpisodes', async () => {
+  vi.mocked(tracker.getTrackerRow).mockResolvedValue(trackedRow({ episodesWatched: 1 }))
+  vi.mocked(tracker.updateProgress).mockResolvedValue(trackedRow({ episodesWatched: 3, status: 'Watched' }))
+
+  await renderLive()
+  const input = screen.getByLabelText(/episodes watched/i)
+  expect(input).toHaveValue(1)
+
+  // Typing past totalEpisodes (3) still only ever requests the clamped value -
+  // handleProgressChange (shared with the +/- buttons) clamps client-side.
+  fireEvent.change(input, { target: { value: '99' } })
+
+  await waitFor(() => expect(tracker.updateProgress).toHaveBeenCalledWith(21, 3))
 })
 
 it('shows "no ratings yet" and lets a signed-in user cast an Anchor Up vote', async () => {

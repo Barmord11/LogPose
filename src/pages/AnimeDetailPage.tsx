@@ -14,14 +14,11 @@
  *       1. DETAILS — title, image, genres, synopsis, status, format,
  *          score, characters, episode count — from AniList's official
  *          GraphQL API — no key required, no crawl-based rate limit.
- *       2. WATCH LINK — the "Watch Now" button opens episode 1's
- *          external AnimeKai link in a new tab, resolved via Consumet.
- *          LogPose never hosts or lists individual episodes — total
- *          episode count is shown as its own stat, separate from this
- *          outbound link. Best-effort: if AnimeKai/Consumet is down,
- *          the page still loads fine with no watch link, since that
- *          scraping step is kept separate from the (reliable) details
- *          fetch.
+ *       2. WATCH LINK — the "Watch Now" button opens AnikotoTV's
+ *          search results for this series' title in a new tab (see
+ *          watchNowUrl in LiveDetail). LogPose never hosts or lists
+ *          individual episodes — total episode count is shown as its
+ *          own stat, separate from this outbound link.
  *     List status (Watched / Plan to Watch), the isolated episode
  *     counter, and the Anchor Up/Down community rating are all
  *     LogPose's own data, read from and written to Supabase, scoped
@@ -588,10 +585,15 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
   const totalVotes = (ratingSummary?.upCount ?? 0) + (ratingSummary?.downCount ?? 0)
   const percentPositive = totalVotes > 0 ? Math.round(((ratingSummary?.upCount ?? 0) / totalVotes) * 100) : null
 
-  // Play button: always opens episode 1's AnimeKai link (or the first
-  // episode with a link, if episode 1 itself has none). Best-effort —
-  // Consumet/AnimeKai being down just means no link today.
-  const playEpisode = anime.episodes.find(ep => ep.number === 1 && ep.url) ?? anime.episodes.find(ep => ep.url) ?? null
+  // Watch — searches AnikotoTV by the series title (English preferred,
+  // Romaji fallback - already resolved server-side into anime.title, see
+  // pickTitle() in api/_lib/anilist.ts) instead of the old per-episode
+  // Consumet/AnimeKai deep link. URLSearchParams handles encoding, so a
+  // title with spaces/symbols ("Attack on Titan", "Re:Zero") still
+  // produces a valid URL. Unlike the old link, this doesn't depend on a
+  // separate scrape succeeding - it's always available once the AniList
+  // details fetch itself succeeds.
+  const watchNowUrl = `https://anikototv.to/filter?${new URLSearchParams({ keyword: anime.title }).toString()}`
 
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(180deg, rgba(247,249,251,0.55) 0%, rgba(238,242,247,0.75) 100%)' }}>
@@ -619,29 +621,18 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
               {anime.image && <img src={anime.image} alt={anime.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
             </div>
 
-            {/* Watch — outbound link to AnimeKai (episode 1), never embedded, best-effort. */}
-            {playEpisode?.url ? (
-              <a
-                href={playEpisode.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-sunset active-glow"
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '14px 0', fontSize: '14px', fontWeight: 700, letterSpacing: '0.03em', borderRadius: '9999px', textDecoration: 'none', color: '#fff' }}
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: '22px', fontVariationSettings: "'FILL' 1" }}>play_arrow</span>
-                Watch Now
-              </a>
-            ) : (
-              <button
-                type="button"
-                disabled
-                aria-disabled="true"
-                className="btn-sunset"
-                style={{ padding: '14px 0', fontSize: '14px', fontWeight: 700, borderRadius: '9999px', opacity: 0.4, cursor: 'not-allowed', border: 'none' }}
-              >
-                No watch link available
-              </button>
-            )}
+            {/* Watch — outbound link to AnikotoTV's search results for this
+               series' title, opened in a new tab. Never embedded. */}
+            <a
+              href={watchNowUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-sunset active-glow"
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '14px 0', fontSize: '14px', fontWeight: 700, letterSpacing: '0.03em', borderRadius: '9999px', textDecoration: 'none', color: '#fff' }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '22px', fontVariationSettings: "'FILL' 1" }}>play_arrow</span>
+              Watch Now
+            </a>
 
             {/* LogPose's own community rating — separate from AniList's score. */}
             <div className="glass-panel" style={{ borderRadius: '16px', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
@@ -718,9 +709,38 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
               {isTracked ? (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginTop: '14px' }}>
                   <CounterButton icon="remove" disabled={progressBusy || watchedCount <= 0} onClick={() => handleProgressChange(watchedCount - 1)} />
-                  <span style={{ fontFamily: 'var(--font)', fontSize: '22px', fontWeight: 800, color: 'var(--primary)', minWidth: '32px', textAlign: 'center' }}>
-                    {watchedCount}
-                  </span>
+                  {/* Direct-entry input, for jumping straight to an episode
+                     number instead of clicking +/- repeatedly. Shares
+                     handleProgressChange with the buttons above, which
+                     clamps to [0, totalEpisodes] and fires the same
+                     updateProgress mutation either way. */}
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    aria-label="Episodes watched"
+                    min={0}
+                    max={anime.totalEpisodes > 0 ? anime.totalEpisodes : undefined}
+                    value={watchedCount}
+                    disabled={progressBusy}
+                    onChange={e => {
+                      const parsed = Number(e.target.value)
+                      if (Number.isNaN(parsed)) return
+                      handleProgressChange(parsed)
+                    }}
+                    style={{
+                      width: '56px',
+                      fontFamily: 'var(--font)',
+                      fontSize: '20px',
+                      fontWeight: 800,
+                      color: 'var(--primary)',
+                      textAlign: 'center',
+                      border: '1px solid var(--outline-variant)',
+                      borderRadius: '8px',
+                      padding: '4px 0',
+                      background: 'var(--surface-container-lowest)',
+                      opacity: progressBusy ? 0.6 : 1,
+                    }}
+                  />
                   <CounterButton icon="add" disabled={progressBusy || atMax} onClick={() => handleProgressChange(watchedCount + 1)} />
                 </div>
               ) : (
