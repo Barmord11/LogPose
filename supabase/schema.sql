@@ -193,9 +193,14 @@ create policy "tracker_delete_own"
 
 -- Enforced in the database so the rule holds no matter what writes the
 -- row: clamp episodes_watched into [0, total_episodes], bump
--- updated_at, and flip status to 'Watched' the moment the counter
--- reaches the total (the "isolated progress tracking" rule from the
--- SeriesPage spec).
+-- updated_at, and keep status and episodes_watched in sync in both
+-- directions —
+--   1. counter reaches the total  -> status flips to 'Watched'
+--   2. status is set to 'Watched' -> counter fills to the total
+-- (2) matters because the quick "Watched" action (search/home cards,
+-- the Your List buttons) sets status directly without touching the
+-- counter at all — without this, marking something Watched left the
+-- progress bar and the profile's episode tally stuck at 0.
 create or replace function public.enforce_tracker_progress()
 returns trigger
 language plpgsql
@@ -209,7 +214,9 @@ begin
     new.episodes_watched := new.total_episodes;
   end if;
 
-  if new.total_episodes > 0 and new.episodes_watched = new.total_episodes then
+  if new.status = 'Watched' then
+    new.episodes_watched := new.total_episodes;
+  elsif new.total_episodes > 0 and new.episodes_watched = new.total_episodes then
     new.status := 'Watched';
   end if;
 
@@ -346,14 +353,4 @@ create policy "favorites_insert_own"
 -- (e.g. a second signed-in tab that hasn't refetched yet) hitting the
 -- ON CONFLICT DO UPDATE path doesn't get silently blocked by RLS.
 -- Without this, that upsert has select/insert/delete but no update
--- policy — the ratings table already has all four for the same reason.
-drop policy if exists "favorites_update_own" on public.anime_favorites;
-create policy "favorites_update_own"
-  on public.anime_favorites for update
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
-
-drop policy if exists "favorites_delete_own" on public.anime_favorites;
-create policy "favorites_delete_own"
-  on public.anime_favorites for delete
-  using (auth.uid() = user_id);
+-- policy — the ratings table already has all four for the

@@ -46,6 +46,10 @@ beforeEach(() => {
   vi.mocked(tracker.getTrackerRow).mockResolvedValue(null)
   vi.mocked(ratings.getMyRating).mockResolvedValue(null)
   vi.mocked(favorites.isFavorite).mockResolvedValue(false)
+  // useLiveStats() fetches these on every render to fold live tracked/
+  // favorited series into the Captain's Log tile - default to "nothing
+  // live yet" so mounting the page doesn't throw on an un-mocked call.
+  vi.mocked(favorites.listFavorites).mockResolvedValue([])
 })
 
 it('does not show the live sections when there is nothing to show', async () => {
@@ -95,11 +99,4 @@ it('fetches tracker status, rating and favorite state for each trending card', a
 })
 
 it('does not break the page when the trending fetch fails', async () => {
-  vi.mocked(animeApi.fetchTrending).mockRejectedValue(new Error('AniList down'))
-
-  renderPage()
-
-  // The rest of the (mock) Home page still renders fine.
-  await waitFor(() => expect(screen.getByText('Popular This Week')).toBeInTheDocument())
-  expect(screen.queryByText('Trending Now')).not.toBeInTheDocument()
-})
+  vi.mocked(animeApi.fetchTrending).mockRe

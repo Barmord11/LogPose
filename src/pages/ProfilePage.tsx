@@ -11,12 +11,24 @@
 import { useState } from 'react'
 import type { NavProps } from '../App'
 import { useProfileStats } from '../context/AppContext'
-import { formatWatchTime, EPISODE_MINUTES } from '../context/reducer'
+import { formatWatchTime, EPISODE_MINUTES, navigatorLevel } from '../context/reducer'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
+import { useLiveStats } from '../hooks/useLiveStats'
 
 export default function ProfilePage({ navigate }: NavProps) {
-  const stats = useProfileStats()
+  // Mock catalogue's local stats + live (Supabase-backed) stats from
+  // series added via real Search results are additive - a series
+  // marked Watched from either source counts toward the same tallies.
+  const mockStats = useProfileStats()
+  const liveStats = useLiveStats()
+  const stats = {
+    seriesWatched:  mockStats.seriesWatched + liveStats.seriesWatched,
+    planCount:      mockStats.planCount + liveStats.planCount,
+    favoritesCount: mockStats.favoritesCount + liveStats.favoritesCount,
+    totalEpisodes:  mockStats.totalEpisodes + liveStats.totalEpisodes,
+    level:          navigatorLevel(mockStats.seriesWatched + liveStats.seriesWatched),
+  }
   const { user, profile, logout, refreshProfile } = useAuth()
   const [editing, setEditing] = useState(false)
   const [draft, setDraft]     = useState('')
@@ -336,26 +348,4 @@ export default function ProfilePage({ navigate }: NavProps) {
 function StatCard({
   label, value, icon, gradient, accent, sub,
 }: {
-  label: string; value: string; icon: string; gradient: string; accent: string; sub?: string;
-}) {
-  return (
-    <div
-      className="profile-stat glass-card"
-      style={{ borderRadius: '18px', background: gradient, padding: '20px 16px' }}
-    >
-      <span
-        className="material-symbols-outlined"
-        style={{ fontSize: '28px', color: accent, fontVariationSettings: "'FILL' 1", marginBottom: '8px' }}
-      >
-        {icon}
-      </span>
-      <p className="profile-stat__value" style={{ color: 'var(--primary)', fontSize: '32px' }}>
-        {value}
-      </p>
-      <p className="profile-stat__label">{label}</p>
-      {sub && (
-        <p style={{ fontSize: '9px', color: 'var(--outline)', fontWeight: 600, marginTop: '2px' }}>{sub}</p>
-      )}
-    </div>
-  )
-}
+  label: string; value: string; icon: string; gradient: string; accent: string

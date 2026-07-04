@@ -10,6 +10,8 @@ import { useEffect, useState } from 'react'
 import type { NavProps } from '../App'
 import { animes }         from '../data/animes'
 import { useApp, useProfileStats } from '../context/AppContext'
+import { navigatorLevel } from '../context/reducer'
+import { useLiveStats }   from '../hooks/useLiveStats'
 import SectionHeader      from '../components/SectionHeader'
 import AddDropdown, { AddDropdownView } from '../components/AddDropdown'
 import PlayButton         from '../components/PlayButton'
@@ -23,7 +25,16 @@ import { isFavorite as fetchIsFavorite, toggleFavorite } from '../services/favor
 const FEATURED = animes[4] // Kōkai no Kiroku — most legendary
 
 export default function HomePage({ navigate }: NavProps) {
-  const stats = useProfileStats()
+  // Mock catalogue's local stats + live (Supabase-backed) stats are
+  // additive - the Captain's Log tile below should count a series
+  // marked Watched from a real Search result exactly like a mock one.
+  const mockStats = useProfileStats()
+  const liveStats = useLiveStats()
+  const stats = {
+    totalEpisodes: mockStats.totalEpisodes + liveStats.totalEpisodes,
+    seriesWatched: mockStats.seriesWatched + liveStats.seriesWatched,
+    level: navigatorLevel(mockStats.seriesWatched + liveStats.seriesWatched),
+  }
 
   // Live (API-backed) sections — additive to the mock-catalogue design
   // below, and best-effort: if either fails or comes back empty, that
@@ -544,17 +555,4 @@ function PopularCard({ anime, navigate }: { anime: typeof animes[0]; navigate: N
           </div>
         </div>
 
-        <h3
-          onClick={bind.onClick}
-          style={{ fontFamily: 'var(--font)', fontSize: '14px', fontWeight: 700, color: 'var(--primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '2px', cursor: 'pointer' }}
-        >
-          {anime.title}
-        </h3>
-        <p style={{ fontSize: '11px', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-          {anime.genres.slice(0, 2).join(' • ')}
-        </p>
-      </div>
-      <DragDropZones dragging={dragging} zone={zone} />
-    </>
-  )
-}
+        <h
