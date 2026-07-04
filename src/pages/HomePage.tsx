@@ -6,6 +6,7 @@
  * Desktop: 4-5 col grid, 2-col bento with row-spanning feature tile
  */
 
+import { useEffect, useState } from 'react'
 import type { NavProps } from '../App'
 import { animes }         from '../data/animes'
 import { useProfileStats } from '../context/AppContext'
@@ -13,11 +14,34 @@ import SectionHeader      from '../components/SectionHeader'
 import AddDropdown        from '../components/AddDropdown'
 import PlayButton         from '../components/PlayButton'
 import AnchorRating       from '../components/AnchorRating'
+import { getTrackerList, type TrackerRow } from '../services/tracker'
+import { fetchTrending, type AnimeSearchResult } from '../services/animeApi'
 
 const FEATURED = animes[4] // Kōkai no Kiroku — most legendary
 
 export default function HomePage({ navigate }: NavProps) {
   const stats = useProfileStats()
+
+  // Live (API-backed) sections — additive to the mock-catalogue design
+  // below, and best-effort: if either fails or comes back empty, that
+  // section just doesn't render rather than breaking the page.
+  const [continueWatching, setContinueWatching] = useState<TrackerRow[]>([])
+  const [trending, setTrending] = useState<AnimeSearchResult[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+
+    getTrackerList('Plan to Watch')
+      .then(rows => { if (!cancelled) setContinueWatching(rows) })
+      .catch(() => { /* not signed in yet, or RLS denied */ })
+
+    fetchTrending()
+      .then(results => { if (!cancelled) setTrending(results) })
+      .catch(() => { /* trending is a nice-to-have — Jikan hiccup shouldn't break Home */ })
+
+    return () => { cancelled = true }
+  }, [])
+
   return (
     <div style={{ minHeight: '100vh', paddingBottom: '32px' }}>
 
@@ -96,12 +120,36 @@ export default function HomePage({ navigate }: NavProps) {
         </div>
       </section>
 
+      {/* ══ CONTINUE YOUR VOYAGE (live tracker, Plan to Watch) ═══ */}
+      {continueWatching.length > 0 && (
+        <section
+          style={{
+            padding: '0 16px',
+            maxWidth: '1280px',
+            margin: '-40px auto 32px',
+            position: 'relative',
+            zIndex: 20,
+          }}
+        >
+          <div style={{ marginBottom: '16px' }}>
+            <h2 style={{ fontFamily: 'var(--font)', fontSize: 'clamp(20px, 2.5vw, 26px)', fontWeight: 700, color: 'var(--primary)' }}>
+              Continue Your Voyage
+            </h2>
+          </div>
+          <div className="anime-grid">
+            {continueWatching.slice(0, 5).map(row => (
+              <ContinueCard key={row.malId} row={row} navigate={navigate} />
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* ══ POPULAR THIS WEEK ═══════════════════════════════════ */}
       <section
         style={{
           padding: '0 16px',
           maxWidth: '1280px',
-          margin: '-40px auto 48px',
+          margin: `${continueWatching.length > 0 ? '0' : '-40px'} auto 48px`,
           position: 'relative',
           zIndex: 20,
         }}
@@ -127,6 +175,25 @@ export default function HomePage({ navigate }: NavProps) {
           ))}
         </div>
       </section>
+
+      {/* ══ TRENDING NOW (live MyAnimeList top-airing) ═══════════ */}
+      {trending.length > 0 && (
+        <section style={{ padding: '0 16px', maxWidth: '1280px', margin: '0 auto 48px' }}>
+          <div style={{ marginBottom: '24px' }}>
+            <h2 style={{ fontFamily: 'var(--font)', fontSize: 'clamp(22px, 3vw, 32px)', fontWeight: 700, color: 'var(--primary)' }}>
+              Trending Now
+            </h2>
+            <p style={{ fontSize: '12px', color: 'var(--on-surface-variant)', marginTop: '4px' }}>
+              Live from MyAnimeList — currently airing, ranked by popularity
+            </p>
+          </div>
+          <div className="anime-grid">
+            {trending.slice(0, 10).map(result => (
+              <TrendingCard key={result.id} result={result} navigate={navigate} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ══ NEWLY RELEASED BENTO ════════════════════════════════ */}
       <section style={{ padding: '0 16px', maxWidth: '1280px', margin: '0 auto 32px' }}>
@@ -238,6 +305,74 @@ export default function HomePage({ navigate }: NavProps) {
           <a href="#">Contact Support</a>
         </div>
       </footer>
+    </div>
+  )
+}
+
+/* ── Continue Your Voyage card — live tracker row, Plan to Watch ── */
+function ContinueCard({ row, navigate }: { row: TrackerRow; navigate: NavProps['navigate'] }) {
+  const progress = row.totalEpisodes > 0 ? Math.round((row.episodesWatched / row.totalEpisodes) * 100) : 0
+  return (
+    <div style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column' }} onClick={() => navigate('detail', row.malId, 'live')}>
+      <div
+        style={{
+          position: 'relative',
+          aspectRatio: '3/4',
+          borderRadius: '14px',
+          overflow: 'hidden',
+          marginBottom: '10px',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
+          border: '1px solid rgba(255,255,255,0.4)',
+          background: 'var(--surface-container)',
+        }}
+      >
+        {row.imageUrl ? (
+          <img src={row.imageUrl} alt={row.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : (
+          <div style={{ width: '100%', height: '100%' }} />
+        )}
+        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '4px', background: 'rgba(0,0,0,0.2)' }}>
+          <div style={{ width: `${progress}%`, height: '100%', background: 'linear-gradient(135deg, #fe6a34, #ab3500)' }} />
+        </div>
+      </div>
+      <h3 style={{ fontFamily: 'var(--font)', fontSize: '14px', fontWeight: 700, color: 'var(--primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '2px' }}>
+        {row.title}
+      </h3>
+      <p style={{ fontSize: '11px', fontWeight: 700, color: 'var(--on-surface-variant)' }}>
+        {row.episodesWatched}/{row.totalEpisodes} eps
+      </p>
+    </div>
+  )
+}
+
+/* ── Trending Now card — live Jikan top-airing result ── */
+function TrendingCard({ result, navigate }: { result: AnimeSearchResult; navigate: NavProps['navigate'] }) {
+  return (
+    <div style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column' }} onClick={() => navigate('detail', Number(result.id), 'live')}>
+      <div
+        style={{
+          position: 'relative',
+          aspectRatio: '3/4',
+          borderRadius: '14px',
+          overflow: 'hidden',
+          marginBottom: '10px',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
+          border: '1px solid rgba(255,255,255,0.4)',
+          background: 'var(--surface-container)',
+        }}
+      >
+        {result.image ? (
+          <img src={result.image} alt={result.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : (
+          <div style={{ width: '100%', height: '100%' }} />
+        )}
+      </div>
+      <h3 style={{ fontFamily: 'var(--font)', fontSize: '14px', fontWeight: 700, color: 'var(--primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '2px' }}>
+        {result.title}
+      </h3>
+      <p style={{ fontSize: '11px', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+        {result.totalEpisodes ? `${result.totalEpisodes} episodes` : 'Episodes TBA'}
+      </p>
     </div>
   )
 }

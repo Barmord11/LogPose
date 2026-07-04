@@ -14,6 +14,35 @@
 
 const JIKAN_BASE = 'https://api.jikan.moe/v4'
 
+// Jikan enforces a shared ~60 req/min rate limit across everyone using
+// this deployment (see README "Known follow-ups"). A short in-memory
+// cache absorbs bursts - repeated searches/trending look-ups within the
+// TTL are served without hitting Jikan again. This only helps within a
+// single warm serverless instance (it resets on cold start), but that's
+// still a meaningful reduction for popular queries/trending, which is
+// the traffic most likely to spike now that Home also calls this.
+const CACHE_TTL_MS = 5 * 60 * 1000
+const responseCache = new Map<string, { expires: number; value: any }>()
+
+function getCached(path: string): any | undefined {
+  const entry = responseCache.get(path)
+  if (!entry) return undefined
+  if (entry.expires < Date.now()) {
+    responseCache.delete(path)
+    return undefined
+  }
+  return entry.value
+}
+
+function setCached(path: string, value: any): void {
+  responseCache.set(path, { expires: Date.now() + CACHE_TTL_MS, value })
+}
+
+/** Test-only escape hatch — clears the in-memory cache so tests reusing the same query/id don't leak stale responses across cases. Not used in production code. */
+export function __resetJikanCacheForTests(): void {
+  responseCache.clear()
+}
+
 export interface JikanCharacter {
   id: string
   name: string
@@ -51,6 +80,9 @@ export class JikanLookupError extends Error {
 }
 
 async function jikanFetch(path: string): Promise<any> {
+  const cached = getCached(path)
+  if (cached !== undefined) return cached
+
   let res: Response
   try {
     res = await fetch(`${JIKAN_BASE}${path}`)
@@ -60,7 +92,9 @@ async function jikanFetch(path: string): Promise<any> {
   if (!res.ok) {
     throw new JikanLookupError(`Jikan returned ${res.status} for ${path}`)
   }
-  return res.json()
+  const body = await res.json()
+  setCached(path, body)
+  return body
 }
 
 function pickTitle(data: any): string {
@@ -126,6 +160,31 @@ export async function searchAnime(query: string): Promise<JikanSearchResult[]> {
   } catch (err) {
     if (err instanceof JikanLookupError) throw err
     throw new JikanLookupError(`Jikan search failed for query "${query}"`, err)
+  }
+
+  const results = Array.isArray(body?.data) ? body.data : []
+
+  return results.map((r: any) => ({
+    id: String(r.mal_id),
+    title: pickTitle(r),
+    image: r.images?.jpg?.large_image_url ?? r.images?.jpg?.image_url ?? null,
+    releaseDate: r.year ?? r.aired?.prop?.from?.year ?? null,
+    totalEpisodes: typeof r.episodes === 'number' ? r.episodes : null,
+  }))
+}
+
+/**
+ * Currently-airing series ranked by popularity — feeds the Home page's
+ * "Trending Now" section. Same card-sized shape as searchAnime, so the
+ * frontend can reuse one result type for both.
+ */
+export async function fetchTrending(limit = 10): Promise<JikanSearchResult[]> {
+  let body: any
+  try {
+    body = await jikanFetch(`/top/anime?filter=airing&limit=${encodeURIComponent(String(limit))}`)
+  } catch (err) {
+    if (err instanceof JikanLookupError) throw err
+    throw new JikanLookupError('Jikan trending fetch failed', err)
   }
 
   const results = Array.isArray(body?.data) ? body.data : []

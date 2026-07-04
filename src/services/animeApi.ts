@@ -79,3 +79,10 @@ export async function searchAnime(query: string, signal?: AbortSignal): Promise<
   const body = await parseJsonOrThrow(res)
   return (body?.results ?? []) as AnimeSearchResult[]
 }
+
+/** GET /api/anime/trending — currently-airing series ranked by popularity, for Home's "Trending Now" section. */
+export async function fetchTrending(): Promise<AnimeSearchResult[]> {
+  const res = await fetch(`${BASE_URL}/api/anime/trending`)
+  const body = await parseJsonOrThrow(res)
+  return (body?.results ?? []) as AnimeSearchResult[]
+}

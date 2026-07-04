@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { fetchAnimeInfo, searchAnime, JikanLookupError } from '../_lib/jikan.js'
+import { fetchAnimeInfo, searchAnime, fetchTrending, JikanLookupError, __resetJikanCacheForTests } from '../_lib/jikan.js'
 
 function jsonResponse(body: unknown, ok = true, status = 200) {
   return { ok, status, json: async () => body } as Response
@@ -7,6 +7,10 @@ function jsonResponse(body: unknown, ok = true, status = 200) {
 
 beforeEach(() => {
   vi.restoreAllMocks()
+  // Jikan responses are cached in-memory for a few minutes (see jikan.ts) -
+  // reset between tests so two cases hitting the same path/query don't
+  // see each other's stubbed response.
+  __resetJikanCacheForTests()
 })
 
 afterEach(() => {
@@ -135,5 +139,53 @@ describe('searchAnime', () => {
   it('throws JikanLookupError when the request fails', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(jsonResponse({}, false, 500)))
     await expect(searchAnime('x')).rejects.toBeInstanceOf(JikanLookupError)
+  })
+})
+
+describe('fetchTrending', () => {
+  it('strips the top-airing payload to card-sized data', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(jsonResponse({
+      data: [{ mal_id: 30, title: 'Bar', images: { jpg: { large_image_url: 'img' } }, year: 2024, episodes: 24 }],
+    })))
+    const results = await fetchTrending(10)
+    expect(results).toEqual([{ id: '30', title: 'Bar', image: 'img', releaseDate: 2024, totalEpisodes: 24 }])
+  })
+
+  it('requests the given limit and the airing filter', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse({ data: [] }))
+    vi.stubGlobal('fetch', fetchMock)
+    await fetchTrending(5)
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('filter=airing&limit=5'))
+  })
+
+  it('throws JikanLookupError when the request fails', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(jsonResponse({}, false, 500)))
+    await expect(fetchTrending()).rejects.toBeInstanceOf(JikanLookupError)
+  })
+})
+
+describe('response caching', () => {
+  it('serves a repeated call to the same path from cache instead of calling fetch again', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse({ data: [{ mal_id: 1, title: 'Cached' }] }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const first = await searchAnime('same-query')
+    const second = await searchAnime('same-query')
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(second).toEqual(first)
+  })
+
+  it('does not leak a cached response across different queries', async () => {
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(jsonResponse({ data: [{ mal_id: 1, title: 'A' }] }))
+      .mockResolvedValueOnce(jsonResponse({ data: [{ mal_id: 2, title: 'B' }] })),
+    )
+
+    const a = await searchAnime('query-a')
+    const b = await searchAnime('query-b')
+
+    expect(a[0].title).toBe('A')
+    expect(b[0].title).toBe('B')
   })
 })

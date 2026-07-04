@@ -80,6 +80,8 @@ the table itself only ever lets a user read/change their own row.
    - `anime_ratings` (per-user Anchor Up/Down vote, keyed by `mal_id`)
      plus the `anime_rating_summary(mal_id)` RPC function used to read
      back aggregate counts
+   - `anime_favorites` (per-user heart/favorite flag, keyed by `mal_id`),
+     same RLS pattern as `anime_ratings`
    > If you already ran an older version of this schema (with
    > `anilist_id` columns instead of `mal_id`), `create table if not
    > exists` won't rename anything for you — run
@@ -134,17 +136,20 @@ run in production.
 
 ```
 api/
-  _lib/jikan.ts         Jikan wrapper — details + search (see "Why two sources")
+  _lib/jikan.ts         Jikan wrapper — details, search, trending
+                         (see "Why two sources"), with a 5-minute
+                         in-memory response cache
   _lib/consumet.ts       Consumet wrapper — watch links only, best-effort
   anime/[id].ts           GET /api/anime/:id — merges the two sources
   anime/search.ts         GET /api/anime/search?q=... — Jikan only
+  anime/trending.ts       GET /api/anime/trending — Jikan top-airing list
   tests/                  vitest coverage for the above (mocked fetch/Consumet)
 
 supabase/
-  schema.sql            profiles + anime_tracker + anime_ratings (both
-                         keyed by mal_id), RLS policies, the progress-
-                         clamping/auto-complete trigger, and the rating
-                         summary RPC function
+  schema.sql            profiles + anime_tracker + anime_ratings +
+                         anime_favorites (all keyed by mal_id), RLS
+                         policies, the progress-clamping/auto-complete
+                         trigger, and the rating summary RPC function
 
 src/
   lib/supabaseClient.ts  createClient() from VITE_SUPABASE_* env vars
@@ -153,42 +158,59 @@ src/
     AppContext.tsx       legacy local state for the mock catalogue (below)
   services/
     animeApi.ts          fetch wrapper for the api/anime/* functions
-    tracker.ts           supabase-js CRUD for anime_tracker (RLS-scoped)
+    tracker.ts           supabase-js CRUD for anime_tracker (RLS-scoped),
+                         including getTrackerList() for My List/Home
     ratings.ts           supabase-js CRUD + RPC for anime_ratings
+    favorites.ts          supabase-js CRUD for anime_favorites (RLS-scoped)
   pages/
     LoginPage / RegisterPage   Supabase Auth UI
     AnimeDetailPage             the one details page — renders mock or
                                 live data depending on the `source` prop
                                 (see "One details page" above)
-    SearchPage                  2+ character queries hit live MyAnimeList
-                                search; empty query still shows the mock
-                                catalogue
+    SearchPage                  debounced (500ms) live MyAnimeList search
+                                for 2+ character queries; empty query
+                                still shows the mock catalogue
     HomePage / MyListPage / ProfilePage
-                                original mock-data screens (see below)
+                                mock-data screens, now also rendering
+                                live/API-backed data (see "Live/mock
+                                feature parity" below)
 ```
 
-## Known follow-ups
+## Live/mock feature parity
 
-The original request scoped live data to the details page plus search;
-this mock-data screen hasn't been migrated yet:
+The mock catalogue (`src/data/animes.ts` + the local `AppContext`
+reducer) still exists as the original demo experience on Home and My
+List, but every account-level feature now also works for real
+MyAnimeList series added via Search:
 
-- **HomePage** and **MyListPage** still read from the hardcoded
-  `src/data/animes.ts` catalogue and the old `AppContext`/`localStorage`
-  reducer, not from `anime_tracker`. A series added to your list from
-  the live Search → details flow won't currently show up in My List.
-- Migrating Home/My List to query `anime_tracker` directly (dropping
-  the mock catalogue and the local reducer entirely) would unify this
-  into one consistent data source.
-- The heart/Favorite button isn't available for live series yet — it's
-  still backed by the local `AppContext` reducer, which isn't safe to
-  reuse for real MyAnimeList ids (numeric id collisions with the mock
-  catalogue). Would need its own Supabase column, same pattern as
-  `anime_ratings`.
-- Jikan is rate-limited (~60 requests/minute, shared across everyone
-  using this deployment, since calls go through our own serverless
-  function). Fine for light use; a small server-side cache in front of
-  `api/_lib/jikan.ts` would be the next step if that limit becomes an
-  issue under real traffic.
+- **My List** reads live tracked series directly from `anime_tracker`
+  (via `services/tracker.ts`'s `getTrackerList()`) and renders them
+  alongside the mock catalogue in the Watched / Plan to Watch tabs, with
+  their own remove action.
+- **Favorites** work for live series too, via a new `anime_favorites`
+  table (same RLS-scoped, one-row-per-user pattern as `anime_ratings`).
+  The heart button on a live series' details page and My List's
+  Favorites panel both read/write it.
+- **Home** shows two live sections when there's data for them: "Continue
+  Your Voyage" (your own in-progress live series, from `anime_tracker`)
+  and "Trending Now" (Jikan's currently-airing top list, via
+  `api/anime/trending.ts`). Both are additive and best-effort — if
+  either has nothing to show or the fetch fails, that section just
+  doesn't render, so the mock-driven Home page never breaks.
+- **Live search is debounced and self-correcting**: typing fires exactly
+  one request per pause (500ms), and any in-flight request superseded by
+  newer input is cancelled via `AbortController`, so a slow stale
+  response can never overwrite fresher results.
+- **Jikan responses are cached in-memory for 5 minutes** inside
+  `api/_lib/jikan.ts` (search, details, and trending all share this),
+  cutting down on repeat calls against Jikan's ~60 req/min shared rate
+  limit now that Home also calls it. This only helps within a single
+  warm serverless instance — a persistent cache (e.g. Vercel KV) would
+  be the next step if that's not enough under real traffic.
+
+Genuinely still mock-only: the "Popular This Week" grid and "Newly
+Released" bento on Home, and the genre/filter browsing on Search's empty
+state, since those are demo content rather than user data.
 
 There's also a `/server` folder and a handful of `*.stale*` files in
 this repo that are leftovers from earlier scaffolding and a filesystem
