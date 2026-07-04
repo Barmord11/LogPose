@@ -16,12 +16,17 @@
 
 import { useEffect, useRef, useState } from 'react'
 import type { NavProps } from '../App'
+import { useApp } from '../context/AppContext'
 import { animes, genres, filterChips, recentSearches, type Genre } from '../data/animes'
 import { searchAnime, type AnimeSearchResult } from '../services/animeApi'
-import AddDropdown  from '../components/AddDropdown'
-import AnchorRating from '../components/AnchorRating'
+import AddDropdown, { AddDropdownView } from '../components/AddDropdown'
+import AnchorRating, { AnchorRatingView } from '../components/AnchorRating'
 import PlayButton   from '../components/PlayButton'
 import StatusBadge  from '../components/StatusBadge'
+import { useDragToAdd, DragDropZones } from '../components/DragToAdd'
+import { getTrackerRow, upsertStatus, removeFromTracker, type TrackerRow, type TrackerStatus } from '../services/tracker'
+import { getMyRating, setRating as submitRating, clearRating, type RatingValue } from '../services/ratings'
+import { isFavorite as fetchIsFavorite, toggleFavorite } from '../services/favorites'
 
 // ── Genre card badge colour map ──────────────────────────────
 const BADGE_STYLES: Record<string, { bg: string; color: string }> = {
@@ -404,71 +409,214 @@ export default function SearchPage({ navigate, initialQuery = '' }: SearchPagePr
   )
 }
 
-/* ── Live Anilist result card → opens the real details page ── */
-function LiveSearchCard({ result, navigate }: { result: AnimeSearchResult; navigate: NavProps['navigate'] }) {
-  const anilistIdNum = Number(result.id)
+/** Small "N episodes" chip drawn on every result card — total series length, not watch progress. */
+function EpisodeCountBadge({ count }: { count: number | null }) {
   return (
-    <div className="search-card" onClick={() => navigate('detail', anilistIdNum, 'live')}>
-      <div className="search-card__img-wrap">
-        {result.image ? (
-          <img src={result.image} alt={result.title} />
-        ) : (
-          <div style={{ width: '100%', height: '100%', background: 'var(--surface-container)' }} />
-        )}
-      </div>
-      <div className="search-card__body">
-        <h3 style={{ fontFamily: 'var(--font)', fontSize: '14px', fontWeight: 700, color: 'var(--primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '4px' }}>
-          {result.title}
-        </h3>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            {result.totalEpisodes ? `${result.totalEpisodes} episodes` : 'Episodes TBA'}
-          </span>
-          {result.releaseDate && (
-            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--primary)' }}>{result.releaseDate}</span>
-          )}
-        </div>
-      </div>
+    <div
+      style={{
+        position: 'absolute', bottom: '8px', right: '8px', zIndex: 2,
+        display: 'flex', alignItems: 'center', gap: '3px',
+        background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)',
+        padding: '2px 7px', borderRadius: '4px', fontSize: '10px', fontWeight: 800, color: '#fff',
+      }}
+    >
+      <span className="material-symbols-outlined" style={{ fontSize: '11px' }}>schedule</span>
+      {count ? `${count} ep` : 'TBA'}
     </div>
   )
 }
 
-/* ── Mock catalogue card (unchanged) ── */
-function SearchCard({ anime, navigate }: { anime: typeof animes[0]; navigate: NavProps['navigate'] }) {
+/* ── Live MyAnimeList result card → opens the real details page ──
+   Favorite / Anchor rating / Watched / Plan to Watch are all real,
+   Supabase-backed actions (same services LiveDetail uses), fetched
+   once per card on mount. On touch devices the whole card can also be
+   dragged up/down onto the "Plan to Watch" / "Watched" zones instead
+   of tapping the small (+) button — see components/DragToAdd.tsx. */
+function LiveSearchCard({ result, navigate }: { result: AnimeSearchResult; navigate: NavProps['navigate'] }) {
+  const malId = Number(result.id)
+
+  const [tracker, setTracker] = useState<TrackerRow | null>(null)
+  const [statusBusy, setStatusBusy] = useState(false)
+  const [rating, setRatingValue] = useState<RatingValue | null>(null)
+  const [ratingBusy, setRatingBusy] = useState(false)
+  const [favorite, setFavorite] = useState(false)
+  const [favoriteBusy, setFavoriteBusy] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    getTrackerRow(malId).then(row => { if (!cancelled) setTracker(row) }).catch(() => { /* not signed in — treat as untracked */ })
+    getMyRating(malId).then(r => { if (!cancelled) setRatingValue(r) }).catch(() => { /* not signed in — treat as unvoted */ })
+    fetchIsFavorite(malId).then(f => { if (!cancelled) setFavorite(f) }).catch(() => { /* not signed in — treat as not favorited */ })
+    return () => { cancelled = true }
+  }, [malId])
+
+  async function handleSetStatus(status: TrackerStatus) {
+    if (statusBusy) return
+    setStatusBusy(true)
+    try {
+      const row = await upsertStatus({ malId, status, title: result.title, imageUrl: result.image, totalEpisodes: result.totalEpisodes ?? 0 })
+      setTracker(row)
+    } finally {
+      setStatusBusy(false)
+    }
+  }
+
+  async function handleRemove() {
+    if (statusBusy) return
+    setStatusBusy(true)
+    try {
+      await removeFromTracker(malId)
+      setTracker(null)
+    } finally {
+      setStatusBusy(false)
+    }
+  }
+
+  async function handleSetRating(value: RatingValue) {
+    if (ratingBusy) return
+    const next = rating === value ? null : value
+    setRatingBusy(true)
+    try {
+      if (next === null) await clearRating(malId)
+      else await submitRating(malId, next)
+      setRatingValue(next)
+    } finally {
+      setRatingBusy(false)
+    }
+  }
+
+  async function handleToggleFavorite() {
+    if (favoriteBusy) return
+    setFavoriteBusy(true)
+    try {
+      const next = await toggleFavorite(favorite, { malId, title: result.title, imageUrl: result.image })
+      setFavorite(next)
+    } finally {
+      setFavoriteBusy(false)
+    }
+  }
+
+  const { dragging, offsetY, zone, bind } = useDragToAdd({
+    onPlan: () => handleSetStatus('Plan to Watch'),
+    onWatched: () => handleSetStatus('Watched'),
+    onTap: () => navigate('detail', malId, 'live'),
+  })
+
   return (
-    <div className="search-card" onClick={() => navigate('detail', anime.id)}>
-      <div className="search-card__img-wrap">
-        <img src={anime.cover} alt={anime.title} />
+    <>
+      <div
+        className="search-card"
+        {...bind}
+        style={dragging ? { transform: `translateY(${offsetY}px)`, transition: 'none', position: 'relative', zIndex: 5 } : undefined}
+      >
+        <div className="search-card__img-wrap">
+          {result.image ? (
+            <img src={result.image} alt={result.title} />
+          ) : (
+            <div style={{ width: '100%', height: '100%', background: 'var(--surface-container)' }} />
+          )}
 
-        {/* Hover action overlay */}
-        <div className="search-card__overlay" onClick={e => e.stopPropagation()}>
-          {/* Play button — centred large */}
-          <PlayButton watchUrl={anime.watchUrl} variant="icon" />
+          {/* Hover/tap action overlay */}
+          <div className="search-card__overlay" onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <AnchorRatingView rating={rating} onSetRating={handleSetRating} size="sm" color="white" />
+              <AddDropdownView
+                inWatched={tracker?.status === 'Watched'}
+                inPlan={tracker?.status === 'Plan to Watch'}
+                onAddWatched={() => handleSetStatus('Watched')}
+                onAddPlan={() => handleSetStatus('Plan to Watch')}
+                onRemove={handleRemove}
+                variant="overlay"
+                size="sm"
+                disabled={statusBusy}
+              />
+              <button
+                className={`heart-btn${favorite ? ' active' : ''}`}
+                title={favorite ? 'Unfavorite' : 'Favorite'}
+                onClick={handleToggleFavorite}
+                disabled={favoriteBusy}
+                style={{ color: '#fff', opacity: favoriteBusy ? 0.6 : 1 }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '20px', fontVariationSettings: favorite ? "'FILL' 1" : "'FILL' 0" }}>
+                  favorite
+                </span>
+              </button>
+            </div>
+          </div>
 
-          {/* Bottom row: AnchorRating + AddDropdown */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <AnchorRating animeId={anime.id} size="sm" color="white" />
-            <AddDropdown  animeId={anime.id} variant="overlay" size="sm" />
+          <EpisodeCountBadge count={result.totalEpisodes} />
+        </div>
+        <div className="search-card__body">
+          <h3 style={{ fontFamily: 'var(--font)', fontSize: '14px', fontWeight: 700, color: 'var(--primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '4px' }}>
+            {result.title}
+          </h3>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              {result.totalEpisodes ? `${result.totalEpisodes} episodes` : 'Episodes TBA'}
+            </span>
+            {result.releaseDate && (
+              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--primary)' }}>{result.releaseDate}</span>
+            )}
           </div>
         </div>
-
-        <StatusBadge status={anime.status} />
       </div>
+      <DragDropZones dragging={dragging} zone={zone} />
+    </>
+  )
+}
 
-      <div className="search-card__body">
-        <h3 style={{ fontFamily: 'var(--font)', fontSize: '14px', fontWeight: 700, color: 'var(--primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '4px' }}>
-          {anime.title}
-        </h3>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            {anime.genres.slice(0, 2).join(' • ')}
-          </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-            <span className="material-symbols-outlined" style={{ fontSize: '12px', color: 'var(--secondary)', fontVariationSettings: "'FILL' 1" }}>star</span>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--primary)' }}>{anime.score}</span>
+/* ── Mock catalogue card ── */
+function SearchCard({ anime, navigate }: { anime: typeof animes[0]; navigate: NavProps['navigate'] }) {
+  const { dispatch } = useApp()
+
+  const { dragging, offsetY, zone, bind } = useDragToAdd({
+    onPlan: () => dispatch({ type: 'ADD_TO_PLAN', id: anime.id }),
+    onWatched: () => dispatch({ type: 'ADD_TO_WATCHED', id: anime.id }),
+    onTap: () => navigate('detail', anime.id),
+  })
+
+  return (
+    <>
+      <div
+        className="search-card"
+        {...bind}
+        style={dragging ? { transform: `translateY(${offsetY}px)`, transition: 'none', position: 'relative', zIndex: 5 } : undefined}
+      >
+        <div className="search-card__img-wrap">
+          <img src={anime.cover} alt={anime.title} />
+
+          {/* Hover action overlay */}
+          <div className="search-card__overlay" onClick={e => e.stopPropagation()}>
+            {/* Play button — centred large */}
+            <PlayButton watchUrl={anime.watchUrl} variant="icon" />
+
+            {/* Bottom row: AnchorRating + AddDropdown */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <AnchorRating animeId={anime.id} size="sm" color="white" />
+              <AddDropdown  animeId={anime.id} variant="overlay" size="sm" />
+            </div>
+          </div>
+
+          <StatusBadge status={anime.status} />
+          <EpisodeCountBadge count={anime.episodes} />
+        </div>
+
+        <div className="search-card__body">
+          <h3 style={{ fontFamily: 'var(--font)', fontSize: '14px', fontWeight: 700, color: 'var(--primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '4px' }}>
+            {anime.title}
+          </h3>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              {anime.genres.slice(0, 2).join(' • ')}
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '12px', color: 'var(--secondary)', fontVariationSettings: "'FILL' 1" }}>star</span>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--primary)' }}>{anime.score}</span>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+      <DragDropZones dragging={dragging} zone={zone} />
+    </>
   )
 }

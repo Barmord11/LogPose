@@ -207,6 +207,12 @@
   z-index: 2;
 }
 .mylist-card:hover .mylist-card__hover-actions { opacity: 1; transform: translateY(0); }
+
+@media (max-width: 767px) {
+  /* No :hover on touch devices - the Play button living in here was
+     otherwise unreachable on phones. Keep it visible instead. */
+  .mylist-card__hover-actions { opacity: 1; transform: translateY(0); }
+}
 .mylist-card__body {
   background: rgba(255,255,255,0.75);
   backdrop-filter: blur(12px);

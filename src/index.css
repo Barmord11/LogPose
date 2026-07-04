@@ -386,6 +386,13 @@ input, textarea { font-family: inherit; }
 }
 .anime-card__poster:hover .anime-card__overlay { opacity: 1; }
 
+@media (max-width: 767px) {
+  /* No :hover on touch devices - without this, the Add/Play/Rating
+     controls inside this overlay are invisible (though technically
+     still tappable) on phones. Keep them visible instead. */
+  .anime-card__overlay { opacity: 1; }
+}
+
 /* ── 19. CHARACTER CARD ───────────────────────────────────── */
 .char-card { flex-shrink: 0; width: 112px; text-align: center; }
 .char-card__avatar {
@@ -506,10 +513,27 @@ input, textarea { font-family: inherit; }
 
 /* ── 25. SEARCH PAGE ─────────────────────────────────────── */
 .search-hero {
+  position: relative;
+  padding-top: 32px;
+}
+/* The decorative background lives on a fixed, viewport-sized layer
+   instead of directly on .search-hero. .search-hero's own height
+   changes a lot as you type (the genre bento/filter chips unmount
+   once a live search kicks in), and CSS gradient position percentages
+   are relative to the element's own box — so painting the gradient
+   straight on .search-hero made it visibly jump/rescale on every
+   keystroke that crossed the 2-character live-search threshold. A
+   fixed full-viewport pseudo-element behind the content is anchored
+   to the viewport instead, so it never reacts to content height. */
+.search-hero::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
   background:
     radial-gradient(circle at 0% 0%,   rgba(214,227,255,0.45) 0px, transparent 50%),
     radial-gradient(circle at 100% 100%, rgba(102,247,255,0.12) 0px, transparent 50%);
-  padding-top: 32px;
 }
 
 @media (min-width: 768px) {

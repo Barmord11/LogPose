@@ -5,25 +5,43 @@
  * "Watched" or "Plan to Watch". The main button shows a (+) when
  * not added, and a checkmark when already in any list.
  * Hovering/clicking the button opens the dropdown.
+ *
+ * `AddDropdownView` is the presentational piece, controlled entirely
+ * by props — it doesn't care where the status comes from or how it's
+ * persisted (same split as AnchorRating/AnchorRatingView). `AddDropdown`
+ * (default export) is a thin wrapper around it for the mock catalogue
+ * (Home/My List), backed by the local AppContext reducer. Live
+ * (API-backed) series use `AddDropdownView` directly, backed by
+ * Supabase (src/services/tracker.ts) instead — real MAL ids aren't
+ * safe to key into the local reducer.
  */
 
 import { useState, useRef, useEffect } from 'react'
 import { useApp, useAnimeStatus } from '../context/AppContext'
 
-interface AddDropdownProps {
-  animeId: number
+export interface AddDropdownViewProps {
+  inWatched: boolean
+  inPlan: boolean
+  onAddWatched: () => void
+  onAddPlan: () => void
+  onRemove: () => void
   /** 'overlay' = white text for dark poster backgrounds; 'glass' = dark for light UI */
   variant?: 'overlay' | 'glass'
   size?: 'sm' | 'md'
+  /** Disables the trigger while a mutation is in flight (live variant only). */
+  disabled?: boolean
 }
 
-export default function AddDropdown({
-  animeId,
+export function AddDropdownView({
+  inWatched,
+  inPlan,
+  onAddWatched,
+  onAddPlan,
+  onRemove,
   variant = 'overlay',
   size = 'md',
-}: AddDropdownProps) {
-  const { dispatch } = useApp()
-  const { inWatched, inPlan } = useAnimeStatus(animeId)
+  disabled = false,
+}: AddDropdownViewProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -43,15 +61,15 @@ export default function AddDropdown({
   }, [])
 
   function addToWatched() {
-    dispatch({ type: 'ADD_TO_WATCHED', id: animeId })
+    onAddWatched()
     setOpen(false)
   }
   function addToPlan() {
-    dispatch({ type: 'ADD_TO_PLAN', id: animeId })
+    onAddPlan()
     setOpen(false)
   }
   function removeFromList() {
-    dispatch({ type: 'REMOVE_FROM_LIST', id: animeId })
+    onRemove()
     setOpen(false)
   }
 
@@ -65,6 +83,7 @@ export default function AddDropdown({
       <button
         title={isAdded ? 'Logged — click to change' : 'Log this voyage'}
         onClick={() => setOpen(o => !o)}
+        disabled={disabled}
         style={{
           width: btnSize,
           height: btnSize,
@@ -84,7 +103,8 @@ export default function AddDropdown({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          cursor: 'pointer',
+          cursor: disabled ? 'wait' : 'pointer',
+          opacity: disabled ? 0.6 : 1,
           color: isAdded ? '#fff' : variant === 'overlay' ? '#fff' : 'var(--primary)',
           transition: 'background 0.25s, transform 0.18s cubic-bezier(0.34,1.56,0.64,1)',
         }}
@@ -170,6 +190,35 @@ export default function AddDropdown({
         </div>
       )}
     </div>
+  )
+}
+
+interface AddDropdownProps {
+  animeId: number
+  /** 'overlay' = white text for dark poster backgrounds; 'glass' = dark for light UI */
+  variant?: 'overlay' | 'glass'
+  size?: 'sm' | 'md'
+}
+
+/** Mock-catalogue wrapper — reads/writes the local AppContext reducer, same as before. */
+export default function AddDropdown({
+  animeId,
+  variant = 'overlay',
+  size = 'md',
+}: AddDropdownProps) {
+  const { dispatch } = useApp()
+  const { inWatched, inPlan } = useAnimeStatus(animeId)
+
+  return (
+    <AddDropdownView
+      inWatched={inWatched}
+      inPlan={inPlan}
+      onAddWatched={() => dispatch({ type: 'ADD_TO_WATCHED', id: animeId })}
+      onAddPlan={() => dispatch({ type: 'ADD_TO_PLAN', id: animeId })}
+      onRemove={() => dispatch({ type: 'REMOVE_FROM_LIST', id: animeId })}
+      variant={variant}
+      size={size}
+    />
   )
 }
 

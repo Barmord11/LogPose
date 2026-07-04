@@ -9,13 +9,16 @@
 import { useEffect, useState } from 'react'
 import type { NavProps } from '../App'
 import { animes }         from '../data/animes'
-import { useProfileStats } from '../context/AppContext'
+import { useApp, useProfileStats } from '../context/AppContext'
 import SectionHeader      from '../components/SectionHeader'
-import AddDropdown        from '../components/AddDropdown'
+import AddDropdown, { AddDropdownView } from '../components/AddDropdown'
 import PlayButton         from '../components/PlayButton'
-import AnchorRating       from '../components/AnchorRating'
-import { getTrackerList, type TrackerRow } from '../services/tracker'
+import AnchorRating, { AnchorRatingView } from '../components/AnchorRating'
+import { useDragToAdd, DragDropZones } from '../components/DragToAdd'
+import { getTrackerList, getTrackerRow, upsertStatus, removeFromTracker, type TrackerRow, type TrackerStatus } from '../services/tracker'
 import { fetchTrending, type AnimeSearchResult } from '../services/animeApi'
+import { getMyRating, setRating as submitRating, clearRating, type RatingValue } from '../services/ratings'
+import { isFavorite as fetchIsFavorite, toggleFavorite } from '../services/favorites'
 
 const FEATURED = animes[4] // Kōkai no Kiroku — most legendary
 
@@ -345,89 +348,213 @@ function ContinueCard({ row, navigate }: { row: TrackerRow; navigate: NavProps['
   )
 }
 
-/* ── Trending Now card — live Jikan top-airing result ── */
+/* ── Trending Now card — live Jikan top-airing result. Favorite,
+   Anchor rating and Watched/Plan status are real Supabase-backed
+   actions, same as LiveSearchCard, fetched once per card on mount. ── */
 function TrendingCard({ result, navigate }: { result: AnimeSearchResult; navigate: NavProps['navigate'] }) {
+  const malId = Number(result.id)
+
+  const [tracker, setTracker] = useState<TrackerRow | null>(null)
+  const [statusBusy, setStatusBusy] = useState(false)
+  const [rating, setRatingValue] = useState<RatingValue | null>(null)
+  const [ratingBusy, setRatingBusy] = useState(false)
+  const [favorite, setFavorite] = useState(false)
+  const [favoriteBusy, setFavoriteBusy] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    getTrackerRow(malId).then(row => { if (!cancelled) setTracker(row) }).catch(() => { /* not signed in — treat as untracked */ })
+    getMyRating(malId).then(r => { if (!cancelled) setRatingValue(r) }).catch(() => { /* not signed in — treat as unvoted */ })
+    fetchIsFavorite(malId).then(f => { if (!cancelled) setFavorite(f) }).catch(() => { /* not signed in — treat as not favorited */ })
+    return () => { cancelled = true }
+  }, [malId])
+
+  async function handleSetStatus(status: TrackerStatus) {
+    if (statusBusy) return
+    setStatusBusy(true)
+    try {
+      const row = await upsertStatus({ malId, status, title: result.title, imageUrl: result.image, totalEpisodes: result.totalEpisodes ?? 0 })
+      setTracker(row)
+    } finally {
+      setStatusBusy(false)
+    }
+  }
+
+  async function handleRemove() {
+    if (statusBusy) return
+    setStatusBusy(true)
+    try {
+      await removeFromTracker(malId)
+      setTracker(null)
+    } finally {
+      setStatusBusy(false)
+    }
+  }
+
+  async function handleSetRating(value: RatingValue) {
+    if (ratingBusy) return
+    const next = rating === value ? null : value
+    setRatingBusy(true)
+    try {
+      if (next === null) await clearRating(malId)
+      else await submitRating(malId, next)
+      setRatingValue(next)
+    } finally {
+      setRatingBusy(false)
+    }
+  }
+
+  async function handleToggleFavorite() {
+    if (favoriteBusy) return
+    setFavoriteBusy(true)
+    try {
+      const next = await toggleFavorite(favorite, { malId, title: result.title, imageUrl: result.image })
+      setFavorite(next)
+    } finally {
+      setFavoriteBusy(false)
+    }
+  }
+
+  const { dragging, offsetY, zone, bind } = useDragToAdd({
+    onPlan: () => handleSetStatus('Plan to Watch'),
+    onWatched: () => handleSetStatus('Watched'),
+    onTap: () => navigate('detail', malId, 'live'),
+  })
+
   return (
-    <div style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column' }} onClick={() => navigate('detail', Number(result.id), 'live')}>
-      <div
-        style={{
-          position: 'relative',
-          aspectRatio: '3/4',
-          borderRadius: '14px',
-          overflow: 'hidden',
-          marginBottom: '10px',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
-          border: '1px solid rgba(255,255,255,0.4)',
-          background: 'var(--surface-container)',
-        }}
-      >
-        {result.image ? (
-          <img src={result.image} alt={result.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        ) : (
-          <div style={{ width: '100%', height: '100%' }} />
-        )}
+    <>
+      <div style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column' }}>
+        <div
+          {...bind}
+          style={{
+            position: 'relative',
+            aspectRatio: '3/4',
+            borderRadius: '14px',
+            overflow: 'hidden',
+            marginBottom: '10px',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
+            border: '1px solid rgba(255,255,255,0.4)',
+            background: 'var(--surface-container)',
+            ...(dragging ? { transform: `translateY(${offsetY}px)`, transition: 'none', zIndex: 5 } : null),
+          }}
+          className="anime-card__poster"
+        >
+          {result.image ? (
+            <img src={result.image} alt={result.title} className="anime-card__img" />
+          ) : (
+            <div style={{ width: '100%', height: '100%' }} />
+          )}
+          <div className="anime-card__overlay" onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <AddDropdownView
+                inWatched={tracker?.status === 'Watched'}
+                inPlan={tracker?.status === 'Plan to Watch'}
+                onAddWatched={() => handleSetStatus('Watched')}
+                onAddPlan={() => handleSetStatus('Plan to Watch')}
+                onRemove={handleRemove}
+                variant="overlay"
+                size="sm"
+                disabled={statusBusy}
+              />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center' }}>
+              <AnchorRatingView rating={rating} onSetRating={handleSetRating} size="sm" color="white" />
+              <button
+                className={`heart-btn${favorite ? ' active' : ''}`}
+                title={favorite ? 'Unfavorite' : 'Favorite'}
+                onClick={handleToggleFavorite}
+                disabled={favoriteBusy}
+                style={{ color: '#fff', opacity: favoriteBusy ? 0.6 : 1 }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '20px', fontVariationSettings: favorite ? "'FILL' 1" : "'FILL' 0" }}>
+                  favorite
+                </span>
+              </button>
+            </div>
+          </div>
+          <div style={{
+            position: 'absolute', bottom: '8px', right: '8px', zIndex: 2,
+            background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)',
+            padding: '2px 7px', borderRadius: '4px', fontSize: '10px', fontWeight: 800, color: '#fff',
+          }}>
+            {result.totalEpisodes ? `${result.totalEpisodes} ep` : 'TBA'}
+          </div>
+        </div>
+        <h3 onClick={bind.onClick} style={{ fontFamily: 'var(--font)', fontSize: '14px', fontWeight: 700, color: 'var(--primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '2px', cursor: 'pointer' }}>
+          {result.title}
+        </h3>
+        <p style={{ fontSize: '11px', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          {result.totalEpisodes ? `${result.totalEpisodes} episodes` : 'Episodes TBA'}
+        </p>
       </div>
-      <h3 style={{ fontFamily: 'var(--font)', fontSize: '14px', fontWeight: 700, color: 'var(--primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '2px' }}>
-        {result.title}
-      </h3>
-      <p style={{ fontSize: '11px', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-        {result.totalEpisodes ? `${result.totalEpisodes} episodes` : 'Episodes TBA'}
-      </p>
-    </div>
+      <DragDropZones dragging={dragging} zone={zone} />
+    </>
   )
 }
 
 /* ── Popular Card ── */
 function PopularCard({ anime, navigate }: { anime: typeof animes[0]; navigate: NavProps['navigate'] }) {
-  return (
-    <div
-      style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column' }}
-    >
-      <div
-        onClick={() => navigate('detail', anime.id)}
-        style={{
-          position: 'relative',
-          aspectRatio: '3/4',
-          borderRadius: '14px',
-          overflow: 'hidden',
-          marginBottom: '10px',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
-          border: '1px solid rgba(255,255,255,0.4)',
-          background: 'var(--surface-container)',
-        }}
-        className="anime-card__poster"
-      >
-        <img src={anime.cover} alt={anime.title} className="anime-card__img" />
-        <div className="anime-card__overlay" onClick={e => e.stopPropagation()}>
-          {/* Top row: add */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <AddDropdown animeId={anime.id} variant="overlay" size="sm" />
-          </div>
-          {/* Bottom row: play + rating */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center' }}>
-            <PlayButton watchUrl={anime.watchUrl} variant="icon" />
-            <AnchorRating animeId={anime.id} size="sm" color="white" />
-          </div>
-        </div>
-        {/* Episode count badge */}
-        <div style={{
-          position: 'absolute', bottom: '8px', right: '8px',
-          background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)',
-          padding: '2px 7px', borderRadius: '4px', fontSize: '10px', fontWeight: 800, color: '#fff',
-        }}>
-          {anime.episodes} ep
-        </div>
-      </div>
+  const { dispatch } = useApp()
 
-      <h3
-        onClick={() => navigate('detail', anime.id)}
-        style={{ fontFamily: 'var(--font)', fontSize: '14px', fontWeight: 700, color: 'var(--primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '2px', cursor: 'pointer' }}
+  const { dragging, offsetY, zone, bind } = useDragToAdd({
+    onPlan: () => dispatch({ type: 'ADD_TO_PLAN', id: anime.id }),
+    onWatched: () => dispatch({ type: 'ADD_TO_WATCHED', id: anime.id }),
+    onTap: () => navigate('detail', anime.id),
+  })
+
+  return (
+    <>
+      <div
+        style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column' }}
       >
-        {anime.title}
-      </h3>
-      <p style={{ fontSize: '11px', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-        {anime.genres.slice(0, 2).join(' • ')}
-      </p>
-    </div>
+        <div
+          {...bind}
+          style={{
+            position: 'relative',
+            aspectRatio: '3/4',
+            borderRadius: '14px',
+            overflow: 'hidden',
+            marginBottom: '10px',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
+            border: '1px solid rgba(255,255,255,0.4)',
+            background: 'var(--surface-container)',
+            ...(dragging ? { transform: `translateY(${offsetY}px)`, transition: 'none', zIndex: 5 } : null),
+          }}
+          className="anime-card__poster"
+        >
+          <img src={anime.cover} alt={anime.title} className="anime-card__img" />
+          <div className="anime-card__overlay" onClick={e => e.stopPropagation()}>
+            {/* Top row: add */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <AddDropdown animeId={anime.id} variant="overlay" size="sm" />
+            </div>
+            {/* Bottom row: play + rating */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center' }}>
+              <PlayButton watchUrl={anime.watchUrl} variant="icon" />
+              <AnchorRating animeId={anime.id} size="sm" color="white" />
+            </div>
+          </div>
+          {/* Episode count badge */}
+          <div style={{
+            position: 'absolute', bottom: '8px', right: '8px',
+            background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)',
+            padding: '2px 7px', borderRadius: '4px', fontSize: '10px', fontWeight: 800, color: '#fff',
+          }}>
+            {anime.episodes} ep
+          </div>
+        </div>
+
+        <h3
+          onClick={bind.onClick}
+          style={{ fontFamily: 'var(--font)', fontSize: '14px', fontWeight: 700, color: 'var(--primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '2px', cursor: 'pointer' }}
+        >
+          {anime.title}
+        </h3>
+        <p style={{ fontSize: '11px', fontWeight: 700, color: 'var(--on-surface-variant)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          {anime.genres.slice(0, 2).join(' • ')}
+        </p>
+      </div>
+      <DragDropZones dragging={dragging} zone={zone} />
+    </>
   )
 }
