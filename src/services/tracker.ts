@@ -115,3 +115,20 @@ export async function removeFromTracker(malId: number): Promise<void> {
   const { error } = await supabase.from('anime_tracker').delete().eq('mal_id', malId)
   if (error) throw error
 }
+
+/**
+ * Fetches every tracked (live/API) series for the signed-in user, most
+ * recently added first, optionally filtered to one status. RLS already
+ * scopes this to `auth.uid()` — no explicit user_id filter needed here.
+ *
+ * This is what lets My List show series added from the live Search →
+ * details flow, instead of only the hardcoded mock catalogue.
+ */
+export async function getTrackerList(status?: TrackerStatus): Promise<TrackerRow[]> {
+  let query = supabase.from('anime_tracker').select('*').order('id', { ascending: false })
+  if (status) query = query.eq('status', status)
+
+  const { data, error } = await query
+  if (error) throw error
+  return ((data ?? []) as TrackerDbRow[]).map(mapRow)
+}

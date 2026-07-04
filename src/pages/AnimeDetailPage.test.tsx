@@ -4,12 +4,14 @@ import AnimeDetailPage from './AnimeDetailPage'
 import * as animeApi from '../services/animeApi'
 import * as tracker from '../services/tracker'
 import * as ratings from '../services/ratings'
+import * as favorites from '../services/favorites'
 import type { AnimeInfo } from '../services/animeApi'
 import type { TrackerRow } from '../services/tracker'
 
 vi.mock('../services/animeApi')
 vi.mock('../services/tracker')
 vi.mock('../services/ratings')
+vi.mock('../services/favorites')
 
 const mockAnime: AnimeInfo = {
   id: '21',
@@ -56,6 +58,7 @@ beforeEach(() => {
   vi.mocked(tracker.getTrackerRow).mockResolvedValue(null)
   vi.mocked(ratings.getMyRating).mockResolvedValue(null)
   vi.mocked(ratings.getRatingSummary).mockResolvedValue({ upCount: 0, downCount: 0 })
+  vi.mocked(favorites.isFavorite).mockResolvedValue(false)
 })
 
 it('shows a loading state, then the anime title once fetched', async () => {
@@ -155,4 +158,23 @@ it('clicking the same rating again clears the vote', async () => {
 
   await waitFor(() => expect(ratings.clearRating).toHaveBeenCalledWith(21))
   await waitFor(() => expect(screen.getByText(/no ratings yet/i)).toBeInTheDocument())
+})
+
+it('lets a signed-in user favorite and unfavorite a live series', async () => {
+  vi.mocked(favorites.toggleFavorite).mockResolvedValueOnce(true).mockResolvedValueOnce(false)
+
+  await renderLive()
+  const heartBtn = screen.getByTitle('Favorite')
+
+  fireEvent.click(heartBtn)
+  await waitFor(() =>
+    expect(favorites.toggleFavorite).toHaveBeenCalledWith(false, { malId: 21, title: 'One Piece', imageUrl: null }),
+  )
+  await waitFor(() => expect(screen.getByTitle('Unfavorite')).toBeInTheDocument())
+
+  fireEvent.click(screen.getByTitle('Unfavorite'))
+  await waitFor(() =>
+    expect(favorites.toggleFavorite).toHaveBeenLastCalledWith(true, { malId: 21, title: 'One Piece', imageUrl: null }),
+  )
+  await waitFor(() => expect(screen.getByTitle('Favorite')).toBeInTheDocument())
 })

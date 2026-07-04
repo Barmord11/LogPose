@@ -48,6 +48,7 @@ import {
   getRatingSummary,
   type RatingValue,
 } from '../services/ratings'
+import { isFavorite as fetchIsFavorite, toggleFavorite } from '../services/favorites'
 
 type DetailTab = 'overview' | 'characters' | 'episodes'
 
@@ -426,6 +427,10 @@ function LiveDetail({ malId, navigate, backTo }: { malId: number; navigate: NavP
   const [ratingSummary, setRatingSummary] = useState<{ upCount: number; downCount: number } | null>(null)
   const [ratingBusy, setRatingBusy] = useState(false)
 
+  // Favorite (heart) flag — its own Supabase table, separate from anime_tracker.
+  const [favorite, setFavorite] = useState(false)
+  const [favoriteBusy, setFavoriteBusy] = useState(false)
+
   useEffect(() => {
     let cancelled = false
 
@@ -449,6 +454,10 @@ function LiveDetail({ malId, navigate, backTo }: { malId: number; navigate: NavP
     getRatingSummary(malId)
       .then(summary => { if (!cancelled) setRatingSummary(summary) })
       .catch(() => { /* summary is best-effort — leave it null on failure */ })
+
+    fetchIsFavorite(malId)
+      .then(fav => { if (!cancelled) setFavorite(fav) })
+      .catch(() => { /* not signed in — treat as not favorited */ })
 
     return () => { cancelled = true }
   }, [malId])
@@ -514,6 +523,17 @@ function LiveDetail({ malId, navigate, backTo }: { malId: number; navigate: NavP
       setRatingSummary(summary)
     } finally {
       setRatingBusy(false)
+    }
+  }
+
+  async function handleToggleFavorite() {
+    if (!anime || favoriteBusy) return
+    setFavoriteBusy(true)
+    try {
+      const next = await toggleFavorite(favorite, { malId, title: anime.title, imageUrl: anime.image })
+      setFavorite(next)
+    } finally {
+      setFavoriteBusy(false)
     }
   }
 
@@ -605,7 +625,20 @@ function LiveDetail({ malId, navigate, backTo }: { malId: number; navigate: NavP
                     : 'No ratings yet — be the first!'}
                 </p>
               </div>
-              <AnchorRatingView rating={myRating} onSetRating={handleSetRating} size="md" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <AnchorRatingView rating={myRating} onSetRating={handleSetRating} size="md" />
+                <button
+                  className={`heart-btn${favorite ? ' active' : ''}`}
+                  title={favorite ? 'Unfavorite' : 'Favorite'}
+                  onClick={handleToggleFavorite}
+                  disabled={favoriteBusy}
+                  style={{ width: '44px', height: '44px', borderRadius: '9999px', background: favorite ? 'rgba(232,67,147,0.1)' : 'transparent', opacity: favoriteBusy ? 0.6 : 1 }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '26px', fontVariationSettings: favorite ? "'FILL' 1" : "'FILL' 0" }}>
+                    favorite
+                  </span>
+                </button>
+              </div>
             </div>
 
             {/* Status control — RESTRICTED to Watched / Plan to Watch only */}

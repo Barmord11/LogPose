@@ -68,9 +68,14 @@ export async function fetchAnimeInfo(malId: string | number): Promise<AnimeInfo>
   return parseJsonOrThrow(res) as Promise<AnimeInfo>
 }
 
-/** GET /api/anime/search?q=... — MyAnimeList title search (via Jikan), card-sized results. */
-export async function searchAnime(query: string): Promise<AnimeSearchResult[]> {
-  const res = await fetch(`${BASE_URL}/api/anime/search?q=${encodeURIComponent(query)}`)
+/**
+ * GET /api/anime/search?q=... — MyAnimeList title search (via Jikan), card-sized results.
+ * Accepts an optional AbortSignal so callers (e.g. the debounced search box)
+ * can cancel a request that's been superseded by newer input, instead of
+ * letting a slow, stale response overwrite fresher results.
+ */
+export async function searchAnime(query: string, signal?: AbortSignal): Promise<AnimeSearchResult[]> {
+  const res = await fetch(`${BASE_URL}/api/anime/search?q=${encodeURIComponent(query)}`, { signal })
   const body = await parseJsonOrThrow(res)
   return (body?.results ?? []) as AnimeSearchResult[]
 }

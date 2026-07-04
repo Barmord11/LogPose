@@ -44,9 +44,21 @@ describe('searchAnime', () => {
 
     const results = await searchAnime('foo bar')
 
-    expect(globalThis.fetch).toHaveBeenCalledWith('/api/anime/search?q=foo%20bar')
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/anime/search?q=foo%20bar', { signal: undefined })
     expect(results).toHaveLength(1)
     expect(results[0].title).toBe('Foo')
+  })
+
+  it('forwards an AbortSignal so a superseded search can be cancelled', async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({ results: [] }),
+    } as Response)
+    const controller = new AbortController()
+
+    await searchAnime('foo', controller.signal)
+
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/anime/search?q=foo', { signal: controller.signal })
   })
 
   it('returns an empty array when the response has no results field', async () => {

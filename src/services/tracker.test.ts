@@ -11,6 +11,7 @@ function makeQueryBuilder() {
   builder.upsert = vi.fn(chain)
   builder.update = vi.fn(chain)
   builder.delete = vi.fn(chain)
+  builder.order = vi.fn(chain)
   builder.single = vi.fn(() => Promise.resolve(queryResult))
   builder.maybeSingle = vi.fn(() => Promise.resolve(queryResult))
   // Real supabase-js query builders are themselves thenable, so a bare
@@ -30,7 +31,7 @@ vi.mock('../lib/supabaseClient', () => ({
   },
 }))
 
-const { getTrackerRow, upsertStatus, updateProgress, removeFromTracker } = await import('./tracker')
+const { getTrackerRow, upsertStatus, updateProgress, removeFromTracker, getTrackerList } = await import('./tracker')
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -112,5 +113,35 @@ describe('removeFromTracker', () => {
   it('throws when the delete fails', async () => {
     queryResult = { error: new Error('denied') }
     await expect(removeFromTracker(1)).rejects.toThrow('denied')
+  })
+})
+
+describe('getTrackerList', () => {
+  it('returns an empty array when nothing is tracked', async () => {
+    queryResult = { data: [], error: null }
+    expect(await getTrackerList()).toEqual([])
+  })
+
+  it('maps every row to the TrackerRow shape', async () => {
+    queryResult = {
+      data: [
+        { id: 2, mal_id: 20, title: 'B', image_url: null, total_episodes: 24, episodes_watched: 24, status: 'Watched' },
+        { id: 1, mal_id: 10, title: 'A', image_url: 'a.jpg', total_episodes: 12, episodes_watched: 3, status: 'Plan to Watch' },
+      ],
+      error: null,
+    }
+    const rows = await getTrackerList()
+    expect(rows).toHaveLength(2)
+    expect(rows[0]).toEqual({ id: 2, malId: 20, title: 'B', imageUrl: null, totalEpisodes: 24, episodesWatched: 24, status: 'Watched' })
+  })
+
+  it('handles a null data payload as an empty list', async () => {
+    queryResult = { data: null, error: null }
+    expect(await getTrackerList('Watched')).toEqual([])
+  })
+
+  it('throws when supabase returns an error', async () => {
+    queryResult = { data: null, error: new Error('RLS denied') }
+    await expect(getTrackerList()).rejects.toThrow('RLS denied')
   })
 })

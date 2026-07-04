@@ -6,10 +6,12 @@
  * Each card: cover image (→ detail), title, progress bar, action bar
  */
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { NavProps } from '../App'
 import { animes }        from '../data/animes'
 import { useApp, useAnimeStatus } from '../context/AppContext'
+import { getTrackerList, removeFromTracker, type TrackerRow, type TrackerStatus } from '../services/tracker'
+import { listFavorites, removeFavorite, type FavoriteRow } from '../services/favorites'
 import AnchorRating from '../components/AnchorRating'
 import AddDropdown  from '../components/AddDropdown'
 import PlayButton   from '../components/PlayButton'
@@ -17,12 +19,39 @@ import StatusBadge  from '../components/StatusBadge'
 
 type ListTab = 'watched' | 'plan'
 
+/** Maps a My List tab to the matching anime_tracker status. */
+const TAB_STATUS: Record<ListTab, TrackerStatus> = {
+  watched: 'Watched',
+  plan: 'Plan to Watch',
+}
+
 export default function MyListPage({ navigate }: NavProps) {
   const { state } = useApp()
   const [activeTab, setActiveTab] = useState<ListTab>('watched')
 
+  // Live (API-backed) series added from Search — kept separate from the
+  // mock catalogue's local reducer, and merged in at render time so both
+  // sources show up side by side until the mock catalogue is retired.
+  const [liveRows, setLiveRows] = useState<TrackerRow[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    getTrackerList()
+      .then(rows => { if (!cancelled) setLiveRows(rows) })
+      .catch(() => { /* not signed in yet, or RLS denied — just show the mock list */ })
+    return () => { cancelled = true }
+  }, [])
+
+  function handleLiveRemoved(malId: number) {
+    setLiveRows(rows => rows.filter(r => r.malId !== malId))
+  }
+
   const ids = activeTab === 'watched' ? state.watchedList : state.planToWatchList
-  const list = animes.filter(a => ids.includes(a.id))
+  const mockList = animes.filter(a => ids.includes(a.id))
+  const liveList = liveRows.filter(r => r.status === TAB_STATUS[activeTab])
+
+  const liveWatchedCount = liveRows.filter(r => r.status === 'Watched').length
+  const livePlanCount = liveRows.filter(r => r.status === 'Plan to Watch').length
 
   return (
     <div style={{ minHeight: '100vh', paddingBottom: '48px' }}>
@@ -46,7 +75,7 @@ export default function MyListPage({ navigate }: NavProps) {
             My Log
           </h1>
           <p style={{ fontSize: '14px', color: 'var(--on-surface-variant)', fontWeight: 500 }}>
-            Your personal navigation chart — {state.watchedList.length + state.planToWatchList.length} voyages logged
+            Your personal navigation chart — {state.watchedList.length + state.planToWatchList.length + liveRows.length} voyages logged
           </p>
         </div>
 
@@ -61,8 +90,8 @@ export default function MyListPage({ navigate }: NavProps) {
           }}
         >
           {([
-            { key: 'watched', label: 'Watched',       count: state.watchedList.length },
-            { key: 'plan',    label: 'Plan to Watch', count: state.planToWatchList.length },
+            { key: 'watched', label: 'Watched',       count: state.watchedList.length + liveWatchedCount },
+            { key: 'plan',    label: 'Plan to Watch', count: state.planToWatchList.length + livePlanCount },
           ] as const).map(tab => (
             <button
               key={tab.key}
@@ -113,13 +142,16 @@ export default function MyListPage({ navigate }: NavProps) {
       {/* ══ MAIN + FAVORITES SIDE PANEL ════════════════════════ */}
       <div className="mylist-layout" style={{ padding: '0 16px', maxWidth: '1280px', margin: '0 auto' }}>
 
-        {/* Main column: active watch list */}
+        {/* Main column: active watch list (mock catalogue + live tracked series) */}
         <section style={{ minWidth: 0 }}>
-          {list.length === 0 ? (
+          {mockList.length === 0 && liveList.length === 0 ? (
             <EmptyState tab={activeTab} navigate={navigate} />
           ) : (
             <div style={{ display: 'grid', gap: '16px' }} className="mylist-responsive-grid">
-              {list.map(anime => (
+              {liveList.map(row => (
+                <LiveMyListCard key={`live-${row.malId}`} row={row} navigate={navigate} onRemoved={handleLiveRemoved} />
+              ))}
+              {mockList.map(anime => (
                 <MyListCard key={anime.id} anime={anime} navigate={navigate} />
               ))}
             </div>
@@ -133,10 +165,28 @@ export default function MyListPage({ navigate }: NavProps) {
   )
 }
 
-/* ── Favorites side panel ── */
+/* ── Favorites side panel — mock catalogue hearts + live favorites ── */
 function FavoritesPanel({ navigate }: { navigate: NavProps['navigate'] }) {
   const { state, dispatch } = useApp()
   const favs = animes.filter(a => state.favorites.includes(a.id))
+
+  const [liveFavs, setLiveFavs] = useState<FavoriteRow[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    listFavorites()
+      .then(rows => { if (!cancelled) setLiveFavs(rows) })
+      .catch(() => { /* not signed in yet, or RLS denied */ })
+    return () => { cancelled = true }
+  }, [])
+
+  async function handleRemoveLiveFav(e: React.MouseEvent, malId: number) {
+    e.stopPropagation()
+    await removeFavorite(malId)
+    setLiveFavs(rows => rows.filter(r => r.malId !== malId))
+  }
+
+  const totalCount = favs.length + liveFavs.length
 
   return (
     <aside
@@ -156,15 +206,59 @@ function FavoritesPanel({ navigate }: { navigate: NavProps['navigate'] }) {
         <h2 style={{ fontFamily: 'var(--font)', fontSize: '16px', fontWeight: 800, color: 'var(--primary)', flex: 1 }}>
           Favorites
         </h2>
-        <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--outline)' }}>{favs.length}</span>
+        <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--outline)' }}>{totalCount}</span>
       </div>
 
-      {favs.length === 0 ? (
+      {totalCount === 0 ? (
         <p style={{ fontSize: '12px', color: 'var(--on-surface-variant)', lineHeight: 1.6 }}>
           Tap the heart on any series to keep your most treasured voyages here.
         </p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          {liveFavs.map(fav => (
+            <div
+              key={`live-${fav.malId}`}
+              onClick={() => navigate('detail', fav.malId, 'live')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '6px',
+                borderRadius: '12px',
+                cursor: 'pointer',
+                transition: 'background 0.15s',
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(232,67,147,0.06)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+            >
+              {fav.imageUrl ? (
+                <img
+                  src={fav.imageUrl}
+                  alt={fav.title}
+                  style={{ width: '42px', height: '56px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }}
+                />
+              ) : (
+                <div style={{ width: '42px', height: '56px', borderRadius: '8px', background: 'var(--surface-container)', flexShrink: 0 }} />
+              )}
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <p style={{ fontFamily: 'var(--font)', fontSize: '13px', fontWeight: 700, color: 'var(--primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {fav.title}
+                </p>
+                <p style={{ fontSize: '10px', fontWeight: 700, color: 'var(--outline)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '2px' }}>
+                  MyAnimeList
+                </p>
+              </div>
+              <button
+                className="heart-btn active"
+                title="Remove from favorites"
+                onClick={e => handleRemoveLiveFav(e, fav.malId)}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '18px', fontVariationSettings: "'FILL' 1" }}>
+                  favorite
+                </span>
+              </button>
+            </div>
+          ))}
           {favs.map(anime => (
             <div
               key={anime.id}
@@ -309,6 +403,103 @@ function MyListCard({ anime, navigate }: { anime: typeof animes[0]; navigate: Na
 
           {/* Anchor Up / Down */}
           <AnchorRating animeId={anime.id} size="sm" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ── Live (API-backed) My List Card — reads straight from anime_tracker ── */
+function LiveMyListCard({ row, navigate, onRemoved }: { row: TrackerRow; navigate: NavProps['navigate']; onRemoved: (malId: number) => void }) {
+  const [busy, setBusy] = useState(false)
+  const progress = row.totalEpisodes > 0 ? Math.round((row.episodesWatched / row.totalEpisodes) * 100) : 0
+
+  async function handleRemove(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (busy) return
+    setBusy(true)
+    try {
+      await removeFromTracker(row.malId)
+      onRemoved(row.malId)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="mylist-card glass-card">
+      {/* Cover image — click → the live details page */}
+      <div
+        className="mylist-card__img-wrap"
+        onClick={() => navigate('detail', row.malId, 'live')}
+        style={{ cursor: 'pointer' }}
+      >
+        {row.imageUrl ? (
+          <img src={row.imageUrl} alt={row.title} />
+        ) : (
+          <div style={{ width: '100%', height: '100%', background: 'var(--surface-container)' }} />
+        )}
+        <div className="mylist-card__overlay" />
+        <div
+          style={{
+            position: 'absolute', top: '10px', left: '10px', padding: '3px 10px', borderRadius: '9999px',
+            fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em',
+            background: 'rgba(255,255,255,0.85)', color: 'var(--primary)', backdropFilter: 'blur(8px)', zIndex: 2,
+          }}
+        >
+          MAL
+        </div>
+      </div>
+
+      {/* Card body */}
+      <div className="mylist-card__body">
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px', marginBottom: '6px' }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <h3
+              onClick={() => navigate('detail', row.malId, 'live')}
+              style={{
+                fontFamily: 'var(--font)',
+                fontSize: '15px',
+                fontWeight: 700,
+                color: 'var(--primary)',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                cursor: 'pointer',
+                marginBottom: '2px',
+              }}
+            >
+              {row.title}
+            </h3>
+            <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--outline)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              {row.totalEpisodes} eps
+            </span>
+          </div>
+          <button
+            onClick={handleRemove}
+            disabled={busy}
+            title="Remove from list"
+            className="heart-btn"
+            style={{ opacity: busy ? 0.5 : 1 }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>close</span>
+          </button>
+        </div>
+
+        {/* Progress bar */}
+        <div className="progress-bar">
+          <div
+            className="progress-bar__fill"
+            style={{ width: `${progress}%`, transition: 'width 0.5s ease' }}
+          />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
+          <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            {row.episodesWatched}/{row.totalEpisodes} eps
+          </span>
+          <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--on-surface-variant)' }}>
+            {progress}%
+          </span>
         </div>
       </div>
     </div>

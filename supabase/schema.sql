@@ -19,6 +19,12 @@
                                  series, plus a function to read back
                                  the aggregate without exposing who
                                  voted which way.
+     4. public.anime_favorites — per-user heart/favorite flag for a
+                                 series, keyed by mal_id — same shape
+                                 and RLS pattern as anime_ratings, since
+                                 the old heart button (AppContext's
+                                 local reducer) isn't safe to reuse for
+                                 real MyAnimeList ids.
 
    Series are identified by MyAnimeList id (mal_id from Jikan), not an
    Anilist id — LogPose's details/search moved to Jikan, a stable,
@@ -253,3 +259,45 @@ as $$
 $$;
 
 grant execute on function public.anime_rating_summary(integer) to authenticated;
+
+-- ---------------------------------------------------------
+-- 4. anime_favorites
+-- ---------------------------------------------------------
+-- The heart/favorite flag for a live (API-backed) series. Separate
+-- table from anime_tracker on purpose: a series can be favorited
+-- without being tracked (or vice versa), exactly like the original
+-- mock-catalogue behaviour in AppContext.
+create table if not exists public.anime_favorites (
+  id            bigint generated always as identity primary key,
+  user_id       uuid not null references auth.users (id) on delete cascade,
+  mal_id        integer not null,
+
+  -- Cached UI data, same reasoning as anime_tracker: lets the
+  -- Favorites panel render a title + poster without an extra Jikan
+  -- round trip per favorited series.
+  title         text not null,
+  image_url     text,
+
+  created_at    timestamptz not null default now(),
+
+  constraint uq_favorite_user_anime unique (user_id, mal_id)
+);
+
+create index if not exists ix_favorites_user_id on public.anime_favorites (user_id);
+
+alter table public.anime_favorites enable row level security;
+
+drop policy if exists "favorites_select_own" on public.anime_favorites;
+create policy "favorites_select_own"
+  on public.anime_favorites for select
+  using (auth.uid() = user_id);
+
+drop policy if exists "favorites_insert_own" on public.anime_favorites;
+create policy "favorites_insert_own"
+  on public.anime_favorites for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists "favorites_delete_own" on public.anime_favorites;
+create policy "favorites_delete_own"
+  on public.anime_favorites for delete
+  using (auth.uid() = user_id);

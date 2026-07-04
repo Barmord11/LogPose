@@ -42,7 +42,9 @@ const GENRE_OVERLAYS: Record<string, string> = {
 }
 
 const MIN_QUERY_LENGTH = 2
-const DEBOUNCE_MS = 350
+// Long enough that a normal typing cadence never fires a request per
+// keystroke — the search only goes out once the user actually pauses.
+const DEBOUNCE_MS = 500
 
 interface SearchPageProps extends NavProps {
   /** Query handed over from the global (desktop top bar) search */
@@ -58,6 +60,7 @@ export default function SearchPage({ navigate, initialQuery = '' }: SearchPagePr
   const [liveLoading, setLiveLoading] = useState(false)
   const [liveError,   setLiveError]   = useState<string | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
 
   // Keep in sync when a new global search arrives
   useEffect(() => { setQuery(initialQuery) }, [initialQuery])
@@ -65,8 +68,16 @@ export default function SearchPage({ navigate, initialQuery = '' }: SearchPagePr
   const trimmedQuery = query.trim()
   const isLiveSearch = trimmedQuery.length >= MIN_QUERY_LENGTH
 
-  // Debounced live Anilist search via Consumet
+  // Debounced live MyAnimeList search (via Jikan). Nothing is sent to the
+  // network until the user pauses typing for DEBOUNCE_MS — typing "one
+  // piece" fires exactly one request, not one per letter. If a new
+  // keystroke arrives before that fires, the pending timer AND any
+  // still-in-flight request from the previous keystroke are both
+  // cancelled, so a slow stale response can never clobber newer results.
   useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    abortRef.current?.abort()
+
     if (!isLiveSearch) {
       setLiveResults([])
       setLiveError(null)
@@ -74,20 +85,23 @@ export default function SearchPage({ navigate, initialQuery = '' }: SearchPagePr
       return
     }
 
-    if (debounceRef.current) clearTimeout(debounceRef.current)
     setLiveLoading(true)
     setLiveError(null)
 
-    debounceRef.current = setTimeout(async () => {
-      try {
-        const results = await searchAnime(trimmedQuery)
-        setLiveResults(results)
-      } catch (err) {
-        setLiveError(err instanceof Error ? err.message : 'Search failed. Please try again.')
-        setLiveResults([])
-      } finally {
-        setLiveLoading(false)
-      }
+    debounceRef.current = setTimeout(() => {
+      const controller = new AbortController()
+      abortRef.current = controller
+      searchAnime(trimmedQuery, controller.signal)
+        .then(results => {
+          setLiveResults(results)
+          setLiveLoading(false)
+        })
+        .catch(err => {
+          if (err instanceof DOMException && err.name === 'AbortError') return // superseded — a newer search is already running
+          setLiveError(err instanceof Error ? err.message : 'Search failed. Please try again.')
+          setLiveResults([])
+          setLiveLoading(false)
+        })
     }, DEBOUNCE_MS)
 
     return () => {
