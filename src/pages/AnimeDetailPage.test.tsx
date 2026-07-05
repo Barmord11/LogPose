@@ -130,7 +130,7 @@ it('lets you type a specific episode number directly into the progress input, cl
   vi.mocked(tracker.updateProgress).mockResolvedValue(trackedRow({ episodesWatched: 3, status: 'Watched' }))
 
   await renderLive()
-  const input = screen.getByLabelText(/episodes watched/i)
+  const input = screen.getByRole('spinbutton', { name: 'Episodes watched' })
   expect(input).toHaveValue(1)
 
   // Typing past totalEpisodes (3) still only ever requests the clamped value -
