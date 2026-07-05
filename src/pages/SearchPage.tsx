@@ -25,6 +25,7 @@ import { searchAnime, fetchPopular, type AnimeSearchResult } from '../services/a
 import { AddDropdownView } from '../components/AddDropdown'
 import { AnchorRatingView } from '../components/AnchorRating'
 import { useDragToAdd, DragDropZones } from '../components/DragToAdd'
+import CardSkeleton from '../components/CardSkeleton'
 import { getTrackerRow, upsertStatus, removeFromTracker, type TrackerRow, type TrackerStatus } from '../services/tracker'
 import { getMyRating, setRating as submitRating, clearRating, type RatingValue } from '../services/ratings'
 import { isFavorite as fetchIsFavorite, toggleFavorite } from '../services/favorites'
@@ -251,8 +252,15 @@ export default function SearchPage({ navigate, initialQuery = '' }: SearchPagePr
 
         {isLiveSearch ? (
           liveLoading ? (
-            <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--on-surface-variant)' }}>
-              <p style={{ fontWeight: 600 }}>Searching the Grand Line…</p>
+            // A real .anime-grid of skeleton cards (not a plain
+            // centered sentence) so the page's column count/width is
+            // already correct on the very first paint - a short line
+            // of text doesn't fill a wide desktop grid the way the
+            // real results will, so on a slow connection this used to
+            // make the page flash a much narrower-looking layout than
+            // the one about to render.
+            <div className="anime-grid">
+              {Array.from({ length: 10 }).map((_, i) => <CardSkeleton key={i} />)}
             </div>
           ) : liveError ? (
             <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--error)' }}>
@@ -273,8 +281,8 @@ export default function SearchPage({ navigate, initialQuery = '' }: SearchPagePr
             </div>
           )
         ) : popularLoading ? (
-          <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--on-surface-variant)' }}>
-            <p style={{ fontWeight: 600 }}>Charting the most popular voyages…</p>
+          <div className="anime-grid">
+            {Array.from({ length: 10 }).map((_, i) => <CardSkeleton key={i} />)}
           </div>
         ) : popularError ? (
           <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--error)' }}>

@@ -12,6 +12,7 @@ import { useProfileStats } from '../context/AppContext'
 import { navigatorLevel } from '../context/reducer'
 import { useLiveStats }   from '../hooks/useLiveStats'
 import SectionHeader      from '../components/SectionHeader'
+import CardSkeleton       from '../components/CardSkeleton'
 import { AddDropdownView } from '../components/AddDropdown'
 import { AnchorRatingView } from '../components/AnchorRating'
 import { useDragToAdd, DragDropZones } from '../components/DragToAdd'
@@ -505,17 +506,6 @@ function TrendingCard({ result, navigate }: { result: AnimeSearchResult; navigat
       </div>
       <DragDropZones dragging={dragging} zone={zone} />
     </>
-  )
-}
-
-/* ── Card skeleton — loading placeholder for the Popular This Week grid ── */
-function CardSkeleton() {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column' }}>
-      <div style={{ aspectRatio: '3/4', borderRadius: '14px', marginBottom: '10px', background: 'var(--surface-container)' }} />
-      <div style={{ height: '12px', width: '80%', borderRadius: '6px', background: 'var(--surface-container)', marginBottom: '6px' }} />
-      <div style={{ height: '10px', width: '50%', borderRadius: '6px', background: 'var(--surface-container)' }} />
-    </div>
   )
 }
 

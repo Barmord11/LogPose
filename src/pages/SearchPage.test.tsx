@@ -99,3 +99,17 @@ it('does not render the old genre bento - it was removed as leftover mock conten
   await waitFor(() => expect(screen.getByText('Most Popular — Live from AniList')).toBeInTheDocument())
   expect(screen.queryByText('Popular Genres')).not.toBeInTheDocument()
 })
+
+it('shows a full-width grid of skeleton cards while loading, not a plain centered sentence', async () => {
+  // A short line of loading text doesn't fill a wide desktop .anime-grid
+  // the way real results do, which used to make the page flash a much
+  // narrower-looking layout on a slow connection. Regression test for
+  // that - the loading state must use the same .anime-grid as real
+  // results, populated with placeholder cards.
+  vi.mocked(animeApi.fetchPopular).mockReturnValue(new Promise(() => {})) // never resolves - stay in the loading state
+  const { container } = renderPage()
+
+  const grid = container.querySelector('.anime-grid')
+  expect(grid).toBeInTheDocument()
+  expect(grid?.children.length).toBeGreaterThan(1)
+})
