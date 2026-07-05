@@ -6,26 +6,12 @@ import * as tracker from '../services/tracker'
 import * as animeApi from '../services/animeApi'
 import * as ratings from '../services/ratings'
 import * as favorites from '../services/favorites'
-import type { TrackerRow } from '../services/tracker'
 import type { AnimeSearchResult, AnimeInfo } from '../services/animeApi'
 
 vi.mock('../services/tracker')
 vi.mock('../services/animeApi')
 vi.mock('../services/ratings')
 vi.mock('../services/favorites')
-
-function trackedRow(overrides: Partial<TrackerRow> = {}): TrackerRow {
-  return {
-    id: 1,
-    anilistId: 21,
-    title: 'One Piece',
-    imageUrl: null,
-    totalEpisodes: 1000,
-    episodesWatched: 200,
-    status: 'Plan to Watch',
-    ...overrides,
-  }
-}
 
 function animeInfo(overrides: Partial<AnimeInfo> = {}): AnimeInfo {
   return {
@@ -78,23 +64,62 @@ beforeEach(() => {
 it('does not show the live sections when there is nothing to show', async () => {
   renderPage()
   await waitFor(() => expect(tracker.getTrackerList).toHaveBeenCalled())
-  expect(screen.queryByText('Continue Your Voyage')).not.toBeInTheDocument()
+  expect(screen.queryByText('Favorites')).not.toBeInTheDocument()
   expect(screen.queryByText('Trending Now')).not.toBeInTheDocument()
 })
 
-it('shows Continue Your Voyage when the user has live in-progress series', async () => {
-  vi.mocked(tracker.getTrackerList).mockResolvedValue([trackedRow()])
+it('shows a Favorites section (replacing Continue Your Voyage) when the user has favorited live series', async () => {
+  vi.mocked(favorites.listFavorites).mockResolvedValue([
+    { anilistId: 21, title: 'One Piece', imageUrl: null },
+  ])
 
   renderPage()
 
-  await waitFor(() => expect(screen.getByText('Continue Your Voyage')).toBeInTheDocument())
+  await waitFor(() => expect(screen.getByText('Favorites')).toBeInTheDocument())
   expect(screen.getByText('One Piece')).toBeInTheDocument()
-  expect(screen.getByText('200/1000 eps')).toBeInTheDocument()
+  expect(screen.queryByText('Continue Your Voyage')).not.toBeInTheDocument()
 })
 
-it('requests only Plan to Watch rows for Continue Your Voyage', async () => {
-  renderPage()
-  await waitFor(() => expect(tracker.getTrackerList).toHaveBeenCalledWith('Plan to Watch'))
+it("opens a favorited series' AnikotoTV watch link from its hover play button, without navigating to the detail page", async () => {
+  vi.mocked(favorites.listFavorites).mockResolvedValue([
+    { anilistId: 21, title: 'One Piece', imageUrl: null },
+  ])
+  const navigate = vi.fn()
+
+  render(
+    <AppProvider>
+      <HomePage navigate={navigate} />
+    </AppProvider>,
+  )
+
+  await waitFor(() => expect(screen.getByText('One Piece')).toBeInTheDocument())
+
+  const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
+  screen.getByTitle('Watch Now').click()
+
+  expect(openSpy).toHaveBeenCalledWith('https://anikototv.to/filter?keyword=One+Piece', '_blank', 'noopener,noreferrer')
+  expect(navigate).not.toHaveBeenCalled()
+})
+
+it('removes a favorite from the Home Favorites section in place, without navigating to the detail page', async () => {
+  vi.mocked(favorites.listFavorites).mockResolvedValue([
+    { anilistId: 21, title: 'One Piece', imageUrl: null },
+  ])
+  vi.mocked(favorites.removeFavorite).mockResolvedValue(undefined)
+  const navigate = vi.fn()
+
+  render(
+    <AppProvider>
+      <HomePage navigate={navigate} />
+    </AppProvider>,
+  )
+
+  await waitFor(() => expect(screen.getByText('One Piece')).toBeInTheDocument())
+  screen.getByTitle('Remove from favorites').click()
+
+  await waitFor(() => expect(favorites.removeFavorite).toHaveBeenCalledWith(21))
+  await waitFor(() => expect(screen.queryByText('One Piece')).not.toBeInTheDocument())
+  expect(navigate).not.toHaveBeenCalled()
 })
 
 it('shows Trending Now when AniList returns live trending results', async () => {

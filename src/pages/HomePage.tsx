@@ -15,11 +15,12 @@ import SectionHeader      from '../components/SectionHeader'
 import CardSkeleton       from '../components/CardSkeleton'
 import { AddDropdownView } from '../components/AddDropdown'
 import { AnchorRatingView } from '../components/AnchorRating'
+import PlayButton          from '../components/PlayButton'
 import { useDragToAdd, DragDropZones } from '../components/DragToAdd'
-import { getTrackerList, getTrackerRow, upsertStatus, removeFromTracker, type TrackerRow, type TrackerStatus } from '../services/tracker'
+import { getTrackerRow, upsertStatus, removeFromTracker, type TrackerRow, type TrackerStatus } from '../services/tracker'
 import { fetchTrending, fetchPopular, fetchAnimeInfo, type AnimeSearchResult, type AnimeInfo } from '../services/animeApi'
 import { getMyRating, setRating as submitRating, clearRating, type RatingValue } from '../services/ratings'
-import { isFavorite as fetchIsFavorite, toggleFavorite } from '../services/favorites'
+import { isFavorite as fetchIsFavorite, toggleFavorite, listFavorites, removeFavorite, type FavoriteRow } from '../services/favorites'
 
 export default function HomePage({ navigate }: NavProps) {
   // Mock catalogue's local stats + live (Supabase-backed) stats are
@@ -36,7 +37,7 @@ export default function HomePage({ navigate }: NavProps) {
   // Live (API-backed) sections — additive to the mock-catalogue design
   // below, and best-effort: if either fails or comes back empty, that
   // section just doesn't render rather than breaking the page.
-  const [continueWatching, setContinueWatching] = useState<TrackerRow[]>([])
+  const [favorites, setFavorites] = useState<FavoriteRow[]>([])
   const [trending, setTrending] = useState<AnimeSearchResult[]>([])
   // Real AniList data (replaces the old hardcoded mock catalogue for the
   // hero + "Popular This Week" grid) — all-time most-popular series, not
@@ -47,9 +48,9 @@ export default function HomePage({ navigate }: NavProps) {
   useEffect(() => {
     let cancelled = false
 
-    getTrackerList('Plan to Watch')
-      .then(rows => { if (!cancelled) setContinueWatching(rows) })
-      .catch(err => console.error('getTrackerList failed', err))
+    listFavorites()
+      .then(rows => { if (!cancelled) setFavorites(rows) })
+      .catch(() => { /* not signed in yet, or RLS denied - just skip the section */ })
 
     fetchTrending()
       .then(results => { if (!cancelled) setTrending(results) })
@@ -64,6 +65,10 @@ export default function HomePage({ navigate }: NavProps) {
 
     return () => { cancelled = true }
   }, [])
+
+  function handleFavoriteRemoved(anilistId: number) {
+    setFavorites(rows => rows.filter(r => r.anilistId !== anilistId))
+  }
 
   return (
     <div style={{ minHeight: '100vh', paddingBottom: '32px' }}>
@@ -95,8 +100,8 @@ export default function HomePage({ navigate }: NavProps) {
         )}
       </section>
 
-      {/* ══ CONTINUE YOUR VOYAGE (live tracker, Plan to Watch) ═══ */}
-      {continueWatching.length > 0 && (
+      {/* ══ FAVORITES (quick access to saved series' watch links) ═ */}
+      {favorites.length > 0 && (
         <section
           style={{
             padding: '0 16px',
@@ -108,12 +113,12 @@ export default function HomePage({ navigate }: NavProps) {
         >
           <div style={{ marginBottom: '16px' }}>
             <h2 style={{ fontFamily: 'var(--font)', fontSize: 'clamp(20px, 2.5vw, 26px)', fontWeight: 700, color: 'var(--primary)' }}>
-              Continue Your Voyage
+              Favorites
             </h2>
           </div>
           <div className="anime-grid">
-            {continueWatching.slice(0, 5).map(row => (
-              <ContinueCard key={row.anilistId} row={row} navigate={navigate} />
+            {favorites.slice(0, 5).map(fav => (
+              <FavoriteCard key={fav.anilistId} fav={fav} navigate={navigate} onRemoved={handleFavoriteRemoved} />
             ))}
           </div>
         </section>
@@ -124,7 +129,7 @@ export default function HomePage({ navigate }: NavProps) {
         style={{
           padding: '0 16px',
           maxWidth: '1280px',
-          margin: `${continueWatching.length > 0 ? '0' : '-40px'} auto 48px`,
+          margin: `${favorites.length > 0 ? '0' : '-40px'} auto 48px`,
           position: 'relative',
           zIndex: 20,
         }}
@@ -314,38 +319,73 @@ export default function HomePage({ navigate }: NavProps) {
   )
 }
 
-/* ── Continue Your Voyage card — live tracker row, Plan to Watch ── */
-function ContinueCard({ row, navigate }: { row: TrackerRow; navigate: NavProps['navigate'] }) {
-  const progress = row.totalEpisodes > 0 ? Math.round((row.episodesWatched / row.totalEpisodes) * 100) : 0
+/* ── Favorites card — square "box" layout (not the 3/4 rectangle used
+   everywhere else) built for one purpose: quick access to a saved
+   series' watch link. A play button appears over the box on hover
+   (always visible on touch, same as .search-card__overlay elsewhere)
+   and opens AnikotoTV's search results for the title directly, so
+   there's no need to visit the detail page first just to watch. The
+   heart in the corner unfavorites in place. Clicking the rest of the
+   box still goes to the detail page, same as every other card. ── */
+function FavoriteCard({ fav, navigate, onRemoved }: { fav: FavoriteRow; navigate: NavProps['navigate']; onRemoved: (anilistId: number) => void }) {
+  const [removing, setRemoving] = useState(false)
+  const watchUrl = `https://anikototv.to/filter?${new URLSearchParams({ keyword: fav.title }).toString()}`
+
+  async function handleRemove(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (removing) return
+    setRemoving(true)
+    try {
+      await removeFavorite(fav.anilistId)
+      onRemoved(fav.anilistId)
+    } catch (err) {
+      console.error('removeFavorite failed', err)
+      setRemoving(false)
+    }
+  }
+
   return (
-    <div style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column' }} onClick={() => navigate('detail', row.anilistId, 'live')}>
-      <div
-        style={{
-          position: 'relative',
-          aspectRatio: '3/4',
-          borderRadius: '14px',
-          overflow: 'hidden',
-          marginBottom: '10px',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
-          border: '1px solid rgba(255,255,255,0.4)',
-          background: 'var(--surface-container)',
-        }}
-      >
-        {row.imageUrl ? (
-          <img src={row.imageUrl} alt={row.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+    <div className="search-card" onClick={() => navigate('detail', fav.anilistId, 'live')}>
+      <div className="search-card__img-wrap" style={{ aspectRatio: '1/1' }}>
+        {fav.imageUrl ? (
+          <img src={fav.imageUrl} alt={fav.title} />
         ) : (
-          <div style={{ width: '100%', height: '100%' }} />
+          <div style={{ width: '100%', height: '100%', background: 'var(--surface-container)' }} />
         )}
-        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '4px', background: 'rgba(0,0,0,0.2)' }}>
-          <div style={{ width: `${progress}%`, height: '100%', background: 'linear-gradient(135deg, #fe6a34, #ab3500)' }} />
+
+        {/* Hover overlay - a single centered play button, unlike the
+           top-right action rail used elsewhere, since watching is the
+           only action this card exists for. */}
+        <div
+          className="search-card__overlay"
+          style={{ alignItems: 'center', justifyContent: 'center' }}
+          onClick={e => e.stopPropagation()}
+        >
+          <PlayButton watchUrl={watchUrl} variant="icon" color="orange" />
         </div>
+
+        <button
+          className="heart-btn active"
+          title="Remove from favorites"
+          onClick={handleRemove}
+          disabled={removing}
+          style={{
+            position: 'absolute', top: '8px', right: '8px', zIndex: 2,
+            width: '28px', height: '28px', borderRadius: '9999px',
+            background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)',
+            color: '#fff', opacity: removing ? 0.5 : 1,
+          }}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: '16px', fontVariationSettings: "'FILL' 1" }}>
+            favorite
+          </span>
+        </button>
       </div>
-      <h3 style={{ fontFamily: 'var(--font)', fontSize: '14px', fontWeight: 700, color: 'var(--primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '2px' }}>
-        {row.title}
-      </h3>
-      <p style={{ fontSize: '11px', fontWeight: 700, color: 'var(--on-surface-variant)' }}>
-        {row.episodesWatched}/{row.totalEpisodes} eps
-      </p>
+      <div className="search-card__body">
+        <h3 style={{ fontFamily: 'var(--font)', fontSize: '14px', fontWeight: 700, color: 'var(--primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {fav.title}
+        </h3>
+      </div>
     </div>
   )
 }
