@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { AnilistLookupError, fetchPopular } from '../_lib/anilist.js'
+import { setPublicCache } from '../_lib/cache.js'
 
 /**
  * GET /api/anime/popular
@@ -22,6 +23,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const results = await fetchPopular(10)
+    // Identical for every visitor and changes rarely - safe to cache
+    // at the edge for everyone, not just repeat callers.
+    setPublicCache(res, 300, 1800)
     res.status(200).json({ results })
   } catch (err) {
     if (err instanceof AnilistLookupError) {

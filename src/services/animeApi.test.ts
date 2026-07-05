@@ -1,10 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { fetchAnimeInfo, searchAnime, fetchTrending } from './animeApi'
+import { fetchAnimeInfo, searchAnime, fetchTrending, __resetAnimeApiCacheForTests } from './animeApi'
 
 const originalFetch = globalThis.fetch
 
 beforeEach(() => {
   globalThis.fetch = vi.fn()
+  // Each `it` below expects its own mocked fetch to actually be
+  // called - without this, a cache entry from an earlier test (same
+  // endpoint/query) would short-circuit later ones straight to a
+  // stale mocked value.
+  __resetAnimeApiCacheForTests()
 })
 
 afterEach(() => {
@@ -83,5 +88,45 @@ describe('fetchTrending', () => {
   it('returns an empty array when the response has no results field', async () => {
     vi.mocked(globalThis.fetch).mockResolvedValue({ ok: true, json: async () => ({}) } as Response)
     expect(await fetchTrending()).toEqual([])
+  })
+})
+
+describe('client-side caching', () => {
+  it('serves a second call to the same endpoint from cache instead of hitting the network again', async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({ results: [{ id: '1', title: 'Foo', image: null, releaseDate: null, totalEpisodes: null }] }),
+    } as Response)
+
+    await fetchTrending()
+    await fetchTrending()
+
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps separate cache entries per series id, per search query, and does not cache the random pick', async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: '1', title: 'One Piece', image: null, totalEpisodes: 1000, episodes: [] }),
+    } as Response)
+
+    await fetchAnimeInfo(1)
+    await fetchAnimeInfo(2) // different id - must not reuse id 1's cached entry
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2)
+
+    vi.mocked(globalThis.fetch).mockResolvedValue({ ok: true, json: async () => ({ results: [] }) } as Response)
+    await searchAnime('one piece')
+    await searchAnime('ONE PIECE  ') // same query, different case/whitespace - should still hit cache
+    expect(globalThis.fetch).toHaveBeenCalledTimes(3)
+  })
+
+  it('resets cleanly via the test-only reset hook', async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValue({ ok: true, json: async () => ({ results: [] }) } as Response)
+
+    await fetchTrending()
+    __resetAnimeApiCacheForTests()
+    await fetchTrending()
+
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2)
   })
 })

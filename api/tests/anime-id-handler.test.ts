@@ -18,6 +18,7 @@ function mockRes() {
   const res = {} as VercelResponse
   res.status = vi.fn().mockReturnValue(res)
   res.json = vi.fn().mockReturnValue(res)
+  res.setHeader = vi.fn().mockReturnValue(res)
   return res
 }
 
@@ -57,6 +58,7 @@ describe('GET /api/anime/:id', () => {
       ...detailsPayload,
       episodes: [{ id: 'e1', number: 1, title: null, image: null, url: 'https://watch.example/ep1' }],
     })
+    expect(res.setHeader).toHaveBeenCalledWith('Cache-Control', expect.stringContaining('s-maxage'))
   })
 
   it('degrades to an empty episode list when Consumet/AnimeKai fails, without failing the request', async () => {

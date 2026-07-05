@@ -62,42 +62,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let mounted = true
+    let resolvedInitialState = false
 
-    // IMPORTANT: this must always resolve `loading` to false, even if
-    // Supabase is unreachable — otherwise the app hangs on the
-    // "Charting the waters" screen forever with no way to tell why.
-    supabase.auth.getSession()
-      .then(async ({ data, error }) => {
-        if (!mounted) return
-        if (error) throw error
-        setSession(data.session)
-        if (data.session) await loadProfile(data.session.user.id)
-      })
-      .catch((err: unknown) => {
-        if (!mounted) return
-        console.error('Failed to load the initial Supabase session:', err)
-        setInitError(
-          err instanceof Error
-            ? err.message
-            : 'Could not reach Supabase. Check your VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY and that the project is active.',
-        )
-      })
-      .finally(() => {
-        if (mounted) setLoading(false)
-      })
-
-    const { data: subscription } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+    // Supabase fires onAuthStateChange once immediately with whatever
+    // session it already has (from localStorage) as soon as this
+    // listener is registered, then again on every real change
+    // (sign-in, sign-out, token refresh). Treating it as the ONE
+    // source of truth for `session`/`profile`/`loading` — instead of
+    // also writing those from a separate getSession() call below —
+    // avoids a race that used to let a signed-in visitor land on a
+    // fresh page load, have getSession() and this listener resolve in
+    // an unlucky order, and get stuck on the login screen showing an
+    // already-valid session until they manually refreshed.
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       if (!mounted) return
       setSession(nextSession)
       if (nextSession) {
-        await loadProfile(nextSession.user.id)
+        loadProfile(nextSession.user.id)
       } else {
         setProfile(null)
       }
+      resolvedInitialState = true
+      setLoading(false)
     })
+
+    // Runs alongside the listener above purely to surface a clear,
+    // specific error if Supabase itself is unreachable (wrong
+    // URL/key, project paused, network down, etc.) — actual session
+    // state is owned by the listener, not this call.
+    supabase.auth.getSession().catch((err: unknown) => {
+      if (!mounted) return
+      console.error('Failed to reach Supabase:', err)
+      setInitError(
+        err instanceof Error
+          ? err.message
+          : 'Could not reach Supabase. Check your VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY and that the project is active.',
+      )
+    })
+
+    // Safety net: onAuthStateChange's first callback is expected
+    // almost instantly, but if the SDK ever fails to fire it at all
+    // (a broken build, a wedged internal lock, etc.) don't leave the
+    // visitor staring at "Charting the waters…" forever with no way
+    // to tell why.
+    const failSafe = setTimeout(() => {
+      if (mounted && !resolvedInitialState) setLoading(false)
+    }, 8000)
 
     return () => {
       mounted = false
+      clearTimeout(failSafe)
       subscription.subscription.unsubscribe()
     }
   }, [])

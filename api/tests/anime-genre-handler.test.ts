@@ -12,6 +12,7 @@ function mockRes() {
   const res = {} as VercelResponse
   res.status = vi.fn().mockReturnValue(res)
   res.json = vi.fn().mockReturnValue(res)
+  res.setHeader = vi.fn().mockReturnValue(res)
   return res
 }
 
@@ -31,6 +32,7 @@ describe('GET /api/anime/genre', () => {
     expect(searchByGenre).toHaveBeenCalledWith(['Action', 'Adventure'])
     expect(res.status).toHaveBeenCalledWith(200)
     expect(res.json).toHaveBeenCalledWith({ results })
+    expect(res.setHeader).toHaveBeenCalledWith('Cache-Control', expect.stringContaining('s-maxage'))
   })
 
   it('trims whitespace and drops empty entries from the genre list', async () => {

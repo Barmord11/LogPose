@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { AnilistLookupError, fetchRandomAnime } from '../_lib/anilist.js'
+import { setNoStore } from '../_lib/cache.js'
 
 /**
  * GET /api/anime/random
@@ -17,6 +18,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const result = await fetchRandomAnime()
+    // The whole point of this endpoint is a different answer every
+    // time - must never be cached/reused for a later visitor (or
+    // even a later call from the same visitor).
+    setNoStore(res)
     res.status(200).json({ result })
   } catch (err) {
     if (err instanceof AnilistLookupError) {

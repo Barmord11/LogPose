@@ -12,6 +12,7 @@ function mockRes() {
   const res = {} as VercelResponse
   res.status = vi.fn().mockReturnValue(res)
   res.json = vi.fn().mockReturnValue(res)
+  res.setHeader = vi.fn().mockReturnValue(res)
   return res
 }
 
@@ -31,6 +32,8 @@ describe('GET /api/anime/popular', () => {
     expect(fetchPopular).toHaveBeenCalledWith(10)
     expect(res.status).toHaveBeenCalledWith(200)
     expect(res.json).toHaveBeenCalledWith({ results })
+    // Same for every visitor - safe (and worthwhile) to cache at the edge.
+    expect(res.setHeader).toHaveBeenCalledWith('Cache-Control', expect.stringContaining('s-maxage'))
   })
 
   it('rejects non-GET methods with 405', async () => {

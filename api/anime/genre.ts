@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { AnilistLookupError, searchByGenre } from '../_lib/anilist.js'
+import { setPublicCache } from '../_lib/cache.js'
 
 /**
  * GET /api/anime/genre?g=Action,Adventure
@@ -28,6 +29,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const results = await searchByGenre(genres)
+    // Same genre combination = same results for everyone.
+    setPublicCache(res, 300, 1800)
     res.status(200).json({ results })
   } catch (err) {
     if (err instanceof AnilistLookupError) {

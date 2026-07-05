@@ -12,6 +12,7 @@ function mockRes() {
   const res = {} as VercelResponse
   res.status = vi.fn().mockReturnValue(res)
   res.json = vi.fn().mockReturnValue(res)
+  res.setHeader = vi.fn().mockReturnValue(res)
   return res
 }
 
@@ -31,6 +32,7 @@ describe('GET /api/anime/search', () => {
     expect(searchAnime).toHaveBeenCalledWith('foo')
     expect(res.status).toHaveBeenCalledWith(200)
     expect(res.json).toHaveBeenCalledWith({ results })
+    expect(res.setHeader).toHaveBeenCalledWith('Cache-Control', expect.stringContaining('s-maxage'))
   })
 
   it('rejects non-GET methods with 405', async () => {

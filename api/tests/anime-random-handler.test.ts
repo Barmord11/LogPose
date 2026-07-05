@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import handler from '../anime/trending.js'
-import { fetchTrending, AnilistLookupError } from '../_lib/anilist.js'
+import handler from '../anime/random.js'
+import { fetchRandomAnime, AnilistLookupError } from '../_lib/anilist.js'
 
 vi.mock('../_lib/anilist.js', () => ({
-  fetchTrending: vi.fn(),
+  fetchRandomAnime: vi.fn(),
   AnilistLookupError: class AnilistLookupError extends Error {},
 }))
 
@@ -20,19 +20,20 @@ beforeEach(() => {
   vi.clearAllMocks()
 })
 
-describe('GET /api/anime/trending', () => {
-  it('returns 200 with { results }', async () => {
-    const results = [{ id: '1', title: 'Foo', image: null, releaseDate: null, totalEpisodes: null }]
-    vi.mocked(fetchTrending).mockResolvedValue(results)
+describe('GET /api/anime/random', () => {
+  it('returns 200 with { result } and explicitly opts out of caching', async () => {
+    const result = { id: '1', title: 'Foo', image: null, releaseDate: null, totalEpisodes: null }
+    vi.mocked(fetchRandomAnime).mockResolvedValue(result)
 
     const req = { method: 'GET' } as unknown as VercelRequest
     const res = mockRes()
     await handler(req, res)
 
-    expect(fetchTrending).toHaveBeenCalledWith(10)
     expect(res.status).toHaveBeenCalledWith(200)
-    expect(res.json).toHaveBeenCalledWith({ results })
-    expect(res.setHeader).toHaveBeenCalledWith('Cache-Control', expect.stringContaining('s-maxage'))
+    expect(res.json).toHaveBeenCalledWith({ result })
+    // Must never be cached/reused - the whole point is a fresh pick
+    // every time, for every caller.
+    expect(res.setHeader).toHaveBeenCalledWith('Cache-Control', 'no-store')
   })
 
   it('rejects non-GET methods with 405', async () => {
@@ -42,8 +43,8 @@ describe('GET /api/anime/trending', () => {
     expect(res.status).toHaveBeenCalledWith(405)
   })
 
-  it('502s when the AniList trending fetch fails', async () => {
-    vi.mocked(fetchTrending).mockRejectedValue(new AnilistLookupError('trending failed'))
+  it('502s when the AniList random fetch fails', async () => {
+    vi.mocked(fetchRandomAnime).mockRejectedValue(new AnilistLookupError('random failed'))
     const req = { method: 'GET' } as unknown as VercelRequest
     const res = mockRes()
     await handler(req, res)
@@ -51,11 +52,11 @@ describe('GET /api/anime/trending', () => {
   })
 
   it('502s with a generic message on an unexpected error', async () => {
-    vi.mocked(fetchTrending).mockRejectedValue(new Error('boom'))
+    vi.mocked(fetchRandomAnime).mockRejectedValue(new Error('boom'))
     const req = { method: 'GET' } as unknown as VercelRequest
     const res = mockRes()
     await handler(req, res)
     expect(res.status).toHaveBeenCalledWith(502)
-    expect(res.json).toHaveBeenCalledWith({ error: 'Failed to fetch trending anime' })
+    expect(res.json).toHaveBeenCalledWith({ error: 'Failed to fetch a random anime' })
   })
 })

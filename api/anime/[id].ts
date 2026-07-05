@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { AnilistLookupError, fetchAnimeInfo } from '../_lib/anilist.js'
 import { ConsumetLookupError, fetchWatchEpisodes } from '../_lib/consumet.js'
+import { setPublicCache } from '../_lib/cache.js'
 
 /**
  * GET /api/anime/:id  (id = an AniList id)
@@ -53,5 +54,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!(err instanceof ConsumetLookupError)) console.error(err)
   }
 
+  // Same details for every visitor and rarely changes - longer TTL
+  // than the browsing lists since a series' own info page is worth
+  // keeping warm at the edge for a while.
+  setPublicCache(res, 600, 3600)
   res.status(200).json({ ...anime, episodes })
 }
