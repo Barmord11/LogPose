@@ -28,7 +28,11 @@ every "Watch" button is an outbound link opened in a new tab.
     see "Why two sources" below.
 - **Hosting** — [Vercel](https://vercel.com): one `vercel deploy` ships
   the static frontend and the `api/` functions together. There is no
-  separate backend server to run or keep alive.
+  separate backend server to run or keep alive. Every `/api/anime/*`
+  route is served by a single catch-all function, `api/[...path].ts`
+  (see "Structure" below) — Vercel's Hobby plan caps a deployment at 12
+  Serverless Functions, so rather than one file per route, one file
+  routes internally to all of them.
 
 ### Why two sources
 
@@ -52,10 +56,11 @@ details/search experience, so that job stays separate:
    limit, no scraping. If this fails, the details page shows an error —
    but in practice it's the reliable half.
 2. **Watch link — Consumet, on AnimeKai.** Kept because per-episode
-   watch links aren't something AniList provides at all. `api/anime/[id].ts`
-   fetches this *separately* from the AniList call and treats a failure
-   as "no watch link right now" rather than failing the whole request —
-   one flaky scraper should never take down the details page.
+   watch links aren't something AniList provides at all. The `:id` route
+   inside `api/[...path].ts` fetches this *separately* from the AniList
+   call and treats a failure as "no watch link right now" rather than
+   failing the whole request — one flaky scraper should never take down
+   the details page.
 
 Series are identified by **AniList id** (`anilist_id`) everywhere in
 the app and the database. Consumet's own AniList meta-provider
@@ -156,12 +161,21 @@ api/
                           "Why two sources"), with a 5-minute
                           in-memory response cache
   _lib/consumet.ts        Consumet wrapper — watch links only, best-effort
-  anime/[id].ts            GET /api/anime/:id — merges the two sources
-  anime/search.ts          GET /api/anime/search?q=... — AniList only
-  anime/trending.ts        GET /api/anime/trending — AniList trending list
-  anime/popular.ts         GET /api/anime/popular — AniList all-time popular
-  anime/genre.ts           GET /api/anime/genre?g=... — AniList by genre
-  tests/                   vitest coverage for the above (mocked fetch/Consumet)
+  [...path].ts             single catch-all Serverless Function for every
+                          /api/anime/* route (one Function total, to stay
+                          under Vercel's Hobby-plan 12-Function cap) —
+                          reads the path segments from req.query.path and
+                          dispatches internally:
+                            GET /api/anime/:id        merges the two sources
+                            GET /api/anime/search?q=...   AniList only
+                            GET /api/anime/trending    AniList trending list
+                            GET /api/anime/popular     AniList all-time popular
+                            GET /api/anime/genre?g=... AniList by genre
+  _tests/                  vitest coverage for the above (mocked fetch/Consumet)
+
+  Both _lib/ and _tests/ are prefixed with "_" so Vercel excludes them
+  from the Function count entirely (only [...path].ts itself compiles
+  down to a Function) — see the "Hosting" bullet above.
 
 supabase/
   schema.sql            profiles + anime_tracker + anime_ratings +
@@ -188,7 +202,8 @@ src/
     SearchPage                  debounced (500ms) live AniList search for
                                 2+ character queries; genre bento and the
                                 empty-query default view are both live
-                                AniList data too (popular.ts / genre.ts)
+                                AniList data too (the popular/genre
+                                routes in api/[...path].ts)
     HomePage / MyListPage / ProfilePage
                                 mock-data screens, now also rendering
                                 live/API-backed data (see "Live/mock
@@ -211,22 +226,24 @@ series added via Search:
   The heart button on a live series' details page and My List's
   Favorites panel both read/write it.
 - **Home's hero and "Popular This Week" grid are real AniList data**
-  (`api/anime/popular.ts` — all-time most popular, not airing-only),
-  replacing the old hardcoded mock catalogue there. The hero also
-  fetches full details (`fetchAnimeInfo`) for its synopsis and outbound
-  watch link. The "Director's Choice" bento tile uses the #2 popular
-  pick for the same reason — no fictional series presented as real data.
-  Home also shows two more live sections when there's data for them:
-  "Continue Your Voyage" (your own in-progress live series, from
-  `anime_tracker`) and "Trending Now" (AniList's currently-airing
-  trending list, via `api/anime/trending.ts`). All of these are
-  additive and best-effort — if any has nothing to show or its fetch
-  fails, that section just shows a friendly fallback instead of
-  breaking the page.
+  (the `popular` route in `api/[...path].ts` — all-time most popular,
+  not airing-only), replacing the old hardcoded mock catalogue there.
+  The hero also fetches full details (`fetchAnimeInfo`) for its
+  synopsis and outbound watch link. The "Director's Choice" bento tile
+  uses the #2 popular pick for the same reason — no fictional series
+  presented as real data. Home also shows two more live sections when
+  there's data for them: a Favorites section (series you've saved for
+  quick access to their watch link, sourced from `anime_favorites` —
+  this replaced an earlier "Continue Your Voyage" section built on
+  in-progress tracker rows) and "Trending Now" (AniList's
+  currently-airing trending list, via the `trending` route). All of
+  these are additive and best-effort — if any has nothing to show or
+  its fetch fails, that section just shows a friendly fallback instead
+  of breaking the page.
 - **Search's default (no query, no genre) view and its genre bento are
-  also real AniList data** (`api/anime/popular.ts` and
-  `api/anime/genre.ts` respectively — genre lookups use each genre
-  card's `anilistGenres` field in `src/data/animes.ts`, since AniList's
+  also real AniList data** (the `popular` and `genre` routes in
+  `api/[...path].ts` respectively — genre lookups use each genre card's
+  `anilistGenres` field in `src/data/animes.ts`, since AniList's
   proper-case genre names don't match the mock catalogue's all-caps
   `matchTags`). The old "Narrow Your Compass" filter chips (Top Rated,
   Airing Now, etc.) were mock-catalogue-only predicates with no AniList
