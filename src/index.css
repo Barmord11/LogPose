@@ -110,9 +110,17 @@
 html { font-size: 16px; scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
 body {
   font-family: var(--font);
+  /* #f4f1ea (not var(--background)) matches this illustration's own
+     cream paper tone exactly, so it reads as a seamless wallpaper
+     rather than a photo in a box - the wave/lighthouse art is a tall
+     portrait image, and most viewports are wider than that, so
+     background-size:contain (not cover) is what keeps both the top
+     wave and the bottom-right lighthouse fully visible instead of
+     cropping one of them off-screen. Any letterboxed margin on wide
+     screens is filled with this matching cream instead of empty white. */
   background:
-    var(--background)
-    url('/images/bg-ocean.jpg') center top / cover no-repeat fixed;
+    #f4f1ea
+    url('/images/bg-wave-lighthouse.jpg') center center / contain no-repeat fixed;
   color: var(--on-surface);
   line-height: 1.6;
   min-height: 100dvh;
@@ -679,25 +687,4 @@ input, textarea { font-family: inherit; }
   justify-content: flex-end;
   padding: 10px;
 }
-.search-card:hover .search-card__overlay { opacity: 1; }
-
-.search-card__action-rail {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-
-@media (max-width: 767px) {
-  /* There's no :hover on touch devices - without this, the Play,
-     rating, and add-to-list controls inside this overlay are
-     completely unreachable on phones. Keep them tappable instead. */
-  .search-card__overlay { opacity: 1; }
-}
-
-.search-card__body {
-  padding: 12px 14px;
-  background: rgba(255,255,255,0.8);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-}
+.search-card:hover .search-card_
