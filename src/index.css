@@ -112,15 +112,15 @@ body {
   font-family: var(--font);
   /* #f4f1ea (not var(--background)) matches this illustration's own
      cream paper tone exactly, so it reads as a seamless wallpaper
-     rather than a photo in a box - the wave/lighthouse art is a tall
-     portrait image, and most viewports are wider than that, so
-     background-size:contain (not cover) is what keeps both the top
-     wave and the bottom-right lighthouse fully visible instead of
-     cropping one of them off-screen. Any letterboxed margin on wide
-     screens is filled with this matching cream instead of empty white. */
+     rather than a photo in a box. The art is a tall portrait image;
+     background-size:contain kept the whole illustration on screen but
+     on wide desktop viewports that meant a narrow vertical strip with
+     a lot of empty cream on both sides - cover fills the full width
+     of the viewport instead (cropping some of the image's top/bottom
+     to do it, centered so the wave stays the focal point). */
   background:
     #f4f1ea
-    url('/images/bg-wave-lighthouse.jpg') center center / contain no-repeat fixed;
+    url('/images/bg-wave-lighthouse.jpg') center center / cover no-repeat fixed;
   color: var(--on-surface);
   line-height: 1.6;
   min-height: 100dvh;
