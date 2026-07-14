@@ -241,7 +241,11 @@ input, textarea { font-family: inherit; }
 /* Desktop main: offset for sidebar + topbar */
 @media (min-width: 768px) {
   .app-main {
-    padding-bottom: 0;
+    /* A little extra room below the last section, before the footer -
+       .app-main's total height is what background-position:bottom
+       measures against, so without this the watermark's bottom edge
+       landed exactly at the footer with no room to actually see it. */
+    padding-bottom: 90px;
     margin-left: 256px;
     padding-top: 80px;
     min-height: 100vh;

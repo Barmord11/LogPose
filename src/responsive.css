@@ -18,7 +18,11 @@
 @media (min-width: 768px) {
   .sidebar { display: flex; }
   .bottom-nav { display: none !important; }
-  .app-main { padding-bottom: 0; }
+  /* .app-main's own desktop padding-bottom lives in index.css now
+     (it's more than just 0 - it also gives the background watermark
+     room to show past the footer) - a second override here was
+     silently winning the cascade (this file loads after index.css)
+     and always forcing it back to 0. */
   .desktop-header { display: flex !important; }
   .mobile-header { display: none !important; }
 }
@@ -252,10 +256,6 @@
 }
 
 /* ── DETAIL PAGE GRID ─────────────────────────────────────── */
-/* display/gap/margin-top used to be set inline in AnimeDetailPage.tsx,
-   which meant the inline style always won regardless of viewport and
-   this ≥768px override could never actually apply - moved fully into
-   this class so the breakpoint below works as intended. */
 .detail-grid {
   display: grid;
   grid-template-columns: 1fr;
