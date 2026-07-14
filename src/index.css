@@ -226,16 +226,16 @@ input, textarea { font-family: inherit; }
      aspect ratio, so the whole illustration shows uncropped instead
      of being zoomed/cropped the way cover or a fixed viewport-sized
      box was.
-     Position: with background-attachment:local, percentages/keywords
-     like "bottom" are computed against the FULL scrollable content
-     height, not just one screen's worth - on a tall page that put the
-     image so far down it was effectively out of view without heavy
-     scrolling. Anchoring from the top with a fixed pixel offset
-     instead is what actually keeps the whole image visible near the
-     start of the page on every screen, regardless of how much content
-     follows it, while still giving it some breathing room instead of
-     sitting flush against the very top edge. */
-  background: #f4f1ea url('/images/bg-wave-lighthouse.jpg') center top 1200px / 100% auto no-repeat local;
+     Position: bottom - with background-attachment:local this aligns
+     the image's own bottom edge with the bottom of the full
+     scrollable content area, i.e. right where the page's real footer
+     sits (confirmed against a live screenshot). Earlier attempts at
+     a fixed pixel offset from the top undershot that on pages with
+     more content, since a fixed offset can't track a footer whose
+     position varies with how much is above it - bottom inherently
+     does track it, since it's defined relative to the content's own
+     end, not the viewport. */
+  background: #f4f1ea url('/images/bg-wave-lighthouse.jpg') center bottom / 100% auto no-repeat local;
 }
 
 /* Desktop main: offset for sidebar + topbar */
