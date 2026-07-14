@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import handler from '../[...path].js'
+import handler from '../router.js'
 import {
   fetchAnimeInfo,
   fetchPopular,
@@ -35,18 +35,21 @@ function mockRes() {
   return res
 }
 
-/** Builds a request the same shape Vercel gives a catch-all [...path]
- * function - the segments after /api/ land in query.path as an array,
- * alongside any real query-string params. */
+/** Builds a request the same shape router.ts actually reads: the real
+ * requested path in req.url (parsed by the handler itself, the same
+ * way a vercel.json rewrite forwards it), plus real query-string
+ * params in req.query the way Vercel always populates them. */
 function reqFor(pathSegments: string[], extraQuery: Record<string, string> = {}, method = 'GET') {
-  return { method, query: { path: pathSegments, ...extraQuery } } as unknown as VercelRequest
+  const qs = new URLSearchParams(extraQuery).toString()
+  const url = `/api/${pathSegments.join('/')}${qs ? `?${qs}` : ''}`
+  return { method, url, query: { ...extraQuery } } as unknown as VercelRequest
 }
 
 beforeEach(() => {
   vi.clearAllMocks()
 })
 
-describe('single /api/[...path] router', () => {
+describe('single /api/router request-URL parsing', () => {
   it('rejects non-GET methods with 405 before any routing happens', async () => {
     const req = reqFor(['anime', 'popular'], {}, 'POST')
     const res = mockRes()

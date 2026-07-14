@@ -20,13 +20,24 @@ import { setPublicCache, setNoStore } from './_lib/cache.js'
  * turns into a Function - see api/_lib and api/_tests) as one Function.
  * This project only ever had 6 real routes, but rather than keep
  * counting files against that cap as routes are added, every /api/*
- * request now lands on this one file - Vercel's dynamic catch-all
- * filename convention ([...path].ts placed at the api/ root matches
- * any path under /api/) - which reads the path segments out of
- * req.query.path and dispatches internally. That's a fixed cost of
- * exactly one Function no matter how many routes live below it, and it
- * needs no vercel.json rewrites - the filename alone is what tells
- * Vercel to route every /api/* request here.
+ * request now lands on this one file, which dispatches internally.
+ *
+ * This file is intentionally named router.ts (no [...] in the
+ * filename) and is wired up via the explicit "rewrites" entry in
+ * vercel.json, NOT Vercel's zero-config dynamic catch-all filename
+ * convention ([...path].ts). That convention is the officially
+ * documented way to do this and works for plenty of projects, but in
+ * this project's actual deployment it only ever matched a single path
+ * segment (GET /api/anime worked, GET /api/anime/popular 404'd at
+ * Vercel's platform level before ever reaching this function) -
+ * verified directly against the live deployment, including with
+ * cache-busting query strings to rule out a caching fluke. Rather than
+ * keep depending on that filename-inferred routing behavior, the
+ * rewrite in vercel.json forwards every /api/* request here
+ * explicitly, and the path segments are parsed straight out of
+ * req.url below instead of out of a dynamic-segment query param -
+ * removing the dependency on Vercel correctly inferring "catch-all"
+ * from this file's name.
  *
  * The actual per-route logic didn't move. It always lived in
  * _lib/anilist.ts and _lib/consumet.ts (already excluded from the
@@ -49,8 +60,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return
   }
 
-  const rawPath = req.query.path
-  const segments = Array.isArray(rawPath) ? rawPath : rawPath ? [rawPath] : []
+  // req.url is the ORIGINAL client-requested path (e.g.
+  // "/api/anime/popular?foo=bar") - a vercel.json rewrite forwards the
+  // request to this function without changing what the function sees
+  // here, same as every other reverse-proxy rewrite. Parsed with the
+  // WHATWG URL API (a dummy base is required for a relative input)
+  // rather than req.query, since req.query only carries the dynamic
+  // segment(s) Vercel itself infers from the filename - see the
+  // file-level comment above for why that inference isn't reliable
+  // here.
+  const pathname = new URL(req.url ?? '', 'http://placeholder').pathname
+  const segments = pathname.split('/').filter(Boolean).slice(1) // drop the leading "api" segment
 
   // Every current route lives under /api/anime/<something> - anything
   // else 404s, the same as an unmatched file would have before.
