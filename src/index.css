@@ -8,7 +8,7 @@
 :root {
   /* Surface scale */
   --surface:                   #f7f9fb;
-  --surface-dim:               #d8dadc;
+  --surface-dim:                #d8dadc;
   --surface-bright:            #f7f9fb;
   --surface-container-lowest:  #ffffff;
   --surface-container-low:     #f2f4f6;
@@ -687,4 +687,25 @@ input, textarea { font-family: inherit; }
   justify-content: flex-end;
   padding: 10px;
 }
-.search-card:hover .search-card_
+.search-card:hover .search-card__overlay { opacity: 1; }
+
+.search-card__action-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (max-width: 767px) {
+  /* There's no :hover on touch devices - without this, the Play,
+     rating, and add-to-list controls inside this overlay are
+     completely unreachable on phones. Keep them tappable instead. */
+  .search-card__overlay { opacity: 1; }
+}
+
+.search-card__body {
+  padding: 12px 14px;
+  background: rgba(255,255,255,0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
