@@ -171,6 +171,12 @@ function FavoritesPanel({ navigate }: { navigate: NavProps['navigate'] }) {
   const favs = animes.filter(a => state.favorites.includes(a.id))
 
   const [liveFavs, setLiveFavs] = useState<FavoriteRow[]>([])
+  // Below the 1024px breakpoint (see .mylist-layout in responsive.css)
+  // this panel stacks full-width beneath the main watch list instead of
+  // sitting beside it, so it defaults collapsed there to keep the list
+  // itself the first thing a mobile/tablet visitor sees. Desktop ignores
+  // this via the matching CSS and always shows the panel body.
+  const [favoritesOpen, setFavoritesOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -199,7 +205,22 @@ function FavoritesPanel({ navigate }: { navigate: NavProps['navigate'] }) {
         top: '96px',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+      {/* role="button" (not a real <button>) so the visible <h2> title
+         inside stays valid markup. Desktop hides the chevron and ignores
+         clicks entirely via .mylist-favorites-toggle in responsive.css. */}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setFavoritesOpen(o => !o)}
+        onKeyDown={e => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            setFavoritesOpen(o => !o)
+          }
+        }}
+        className="mylist-favorites-toggle"
+        style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', cursor: 'pointer' }}
+      >
         <span className="material-symbols-outlined" style={{ fontSize: '20px', color: '#e84393', fontVariationSettings: "'FILL' 1" }}>
           favorite
         </span>
@@ -207,8 +228,15 @@ function FavoritesPanel({ navigate }: { navigate: NavProps['navigate'] }) {
           Favorites
         </h2>
         <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--outline)' }}>{totalCount}</span>
+        <span
+          className="material-symbols-outlined mylist-favorites-toggle__chevron"
+          style={{ fontSize: '20px', color: 'var(--on-surface-variant)', transform: favoritesOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}
+        >
+          expand_more
+        </span>
       </div>
 
+      <div className={`mylist-favorites-body${favoritesOpen ? ' is-open' : ''}`}>
       {totalCount === 0 ? (
         <p style={{ fontSize: '12px', color: 'var(--on-surface-variant)', lineHeight: 1.6 }}>
           Tap the heart on any series to keep your most treasured voyages here.
@@ -301,6 +329,7 @@ function FavoritesPanel({ navigate }: { navigate: NavProps['navigate'] }) {
           ))}
         </div>
       )}
+      </div>
     </aside>
   )
 }

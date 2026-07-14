@@ -1,5 +1,5 @@
 import { it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import HomePage from './HomePage'
 import { AppProvider } from '../context/AppContext'
 import * as tracker from '../services/tracker'
@@ -121,24 +121,6 @@ it('removes a favorite from the Home Favorites section in place, without navigat
   await waitFor(() => expect(favorites.removeFavorite).toHaveBeenCalledWith(21))
   await waitFor(() => expect(screen.queryByText('One Piece')).not.toBeInTheDocument())
   expect(navigate).not.toHaveBeenCalled()
-})
-
-it('Favorites starts collapsed (mobile) and the header toggle opens/closes the card grid', async () => {
-  vi.mocked(favorites.listFavorites).mockResolvedValue([
-    { anilistId: 21, title: 'One Piece', imageUrl: null },
-  ])
-
-  renderPage()
-
-  await waitFor(() => expect(screen.getByText('One Piece')).toBeInTheDocument())
-  const grid = screen.getByText('One Piece').closest('.favorites-grid')
-  expect(grid).not.toHaveClass('is-open')
-
-  fireEvent.click(screen.getByRole('button', { name: /favorites/i }))
-  expect(grid).toHaveClass('is-open')
-
-  fireEvent.click(screen.getByRole('button', { name: /favorites/i }))
-  expect(grid).not.toHaveClass('is-open')
 })
 
 it('shows Trending Now when AniList returns live trending results', async () => {

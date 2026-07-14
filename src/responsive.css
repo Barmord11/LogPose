@@ -308,6 +308,23 @@
   }
 }
 
+/* ── MYLIST FAVORITES PANEL COLLAPSE ──────────────────────── */
+/* Below 1024px the favorites panel stacks full-width beneath the main
+   watch list (see .mylist-layout above) instead of sitting beside it as
+   a slim sidebar - collapsed by default there so it doesn't push the
+   watch list itself further down the page. Desktop ignores the
+   collapsed state entirely (chevron hidden, panel always open), same
+   as the sidebar's original always-visible layout. */
+@media (max-width: 1023px) {
+  .mylist-favorites-body { display: none; }
+  .mylist-favorites-body.is-open { display: block; }
+}
+
+@media (min-width: 1024px) {
+  .mylist-favorites-toggle { cursor: default; }
+  .mylist-favorites-toggle__chevron { display: none; }
+}
+
 /* ── MYLIST RESPONSIVE GRID ───────────────────────────────── */
 .mylist-responsive-grid {
   display: grid;

@@ -47,12 +47,6 @@ export default function HomePage({ navigate }: NavProps) {
   const [popular, setPopular] = useState<AnimeSearchResult[]>([])
   const [popularLoading, setPopularLoading] = useState(true)
   const [newReleases, setNewReleases] = useState<AnimeSearchResult[]>([])
-  // Mobile-only collapse state for the Favorites section (see
-  // .favorites-toggle/.favorites-grid in index.css) - a CSS media query
-  // ignores this entirely on desktop, where the grid always shows, same
-  // as every other section. Defaults closed on mobile so the full card
-  // grid doesn't push everything else down the moment the page loads.
-  const [favoritesOpen, setFavoritesOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -132,43 +126,12 @@ export default function HomePage({ navigate }: NavProps) {
             zIndex: 20,
           }}
         >
-          {/* On mobile this row is the whole section by default (see
-             .favorites-toggle/.favorites-grid in index.css) - tapping it
-             reveals the card grid below instead of the grid always
-             taking up space right under the hero. Desktop ignores
-             favoritesOpen entirely via the same CSS and always shows the
-             grid, same as every other section. role="button" (not a real
-             <button>) so the visible <h2> title inside stays valid
-             markup. */}
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={() => setFavoritesOpen(o => !o)}
-            onKeyDown={e => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                setFavoritesOpen(o => !o)
-              }
-            }}
-            className="glass-header favorites-toggle"
-            style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
-          >
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-              <h2 style={{ fontFamily: 'var(--font)', fontSize: 'clamp(20px, 2.5vw, 26px)', fontWeight: 700, color: 'var(--primary)' }}>
-                Favorites
-              </h2>
-              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--on-surface-variant)' }}>
-                {favorites.length}
-              </span>
-            </div>
-            <span
-              className="material-symbols-outlined favorites-toggle__chevron"
-              style={{ fontSize: '24px', color: 'var(--on-surface-variant)', transform: favoritesOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}
-            >
-              expand_more
-            </span>
+          <div className="glass-header" style={{ marginBottom: '16px' }}>
+            <h2 style={{ fontFamily: 'var(--font)', fontSize: 'clamp(20px, 2.5vw, 26px)', fontWeight: 700, color: 'var(--primary)' }}>
+              Favorites
+            </h2>
           </div>
-          <div className={`anime-grid favorites-grid${favoritesOpen ? ' is-open' : ''}`}>
+          <div className="anime-grid">
             {favorites.slice(0, 5).map(fav => (
               <FavoriteCard key={fav.anilistId} fav={fav} navigate={navigate} onRemoved={handleFavoriteRemoved} />
             ))}

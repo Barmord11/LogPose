@@ -74,3 +74,19 @@ it('shows live favorites in the Favorites panel', async () => {
   renderPage()
   await waitFor(() => expect(screen.getByText('Naruto')).toBeInTheDocument())
 })
+
+it('Favorites panel starts collapsed and the header toggle opens/closes it', async () => {
+  const fav: FavoriteRow = { anilistId: 42, title: 'Naruto', imageUrl: null }
+  vi.mocked(favorites.listFavorites).mockResolvedValue([fav])
+
+  renderPage()
+  await waitFor(() => expect(screen.getByText('Naruto')).toBeInTheDocument())
+  const body = screen.getByText('Naruto').closest('.mylist-favorites-body')
+  expect(body).not.toHaveClass('is-open')
+
+  fireEvent.click(screen.getByRole('button', { name: /favorites/i }))
+  expect(body).toHaveClass('is-open')
+
+  fireEvent.click(screen.getByRole('button', { name: /favorites/i }))
+  expect(body).not.toHaveClass('is-open')
+})
