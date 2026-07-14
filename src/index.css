@@ -235,7 +235,7 @@ input, textarea { font-family: inherit; }
      start of the page on every screen, regardless of how much content
      follows it, while still giving it some breathing room instead of
      sitting flush against the very top edge. */
-  background: #f4f1ea url('/images/bg-wave-lighthouse.jpg') center top 90px / 100% auto no-repeat local;
+  background: #f4f1ea url('/images/bg-wave-lighthouse.jpg') center top 380px / 100% auto no-repeat local;
 }
 
 /* Desktop main: offset for sidebar + topbar */
