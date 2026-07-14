@@ -267,7 +267,22 @@ input, textarea { font-family: inherit; }
     padding-bottom: 90px;
     margin-left: 256px;
     padding-top: 80px;
-    min-height: 100vh;
+    /* Plain 100vh was tall enough on content-heavy pages (Home, Search,
+       My List), but a short page (Profile, with just a banner + one
+       stats row + a short list) has a scrollHeight well under that on
+       a lot of desktop window sizes, and background-position:bottom
+       with attachment:local measures against that actual scrollHeight,
+       not the viewport - the image's own rendered height is
+       (this element's width) * 1.502 (bg-wave-lighthouse.jpg is
+       1023x1537, and background-size is 100% auto), so a page shorter
+       than that silently crops the TOP of the image off entirely
+       instead of just leaving empty space below it, which read as the
+       artwork being "shrunk" on that page compared to longer ones.
+       max() keeps whichever floor is taller: the usual 100vh, or
+       exactly the image's own rendered height at this element's width
+       (100vw - 256px sidebar), so every page - however short - always
+       has room to show the whole illustration uncropped. */
+    min-height: max(100vh, calc(150.24vw - 384.63px));
   }
 }
 

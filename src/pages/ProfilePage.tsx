@@ -206,14 +206,18 @@ export default function ProfilePage({ navigate }: NavProps) {
       </div>
       </div>
 
-      {/* ══ LIVE STATS GRID ════════════════════════════════════ */}
+      {/* ══ LIVE STATS GRID ════════════════════════════════════
+         Column count itself comes entirely from the .profile-stats-grid
+         CSS class (2-col mobile -> 4-col desktop, see responsive.css) -
+         no gridTemplateColumns here. An inline style on the same
+         property always wins over a stylesheet rule regardless of any
+         media query in that stylesheet, so a hardcoded 2-column inline
+         value here previously froze this grid at 2 columns even on
+         wide desktop screens where the CSS was already trying to make
+         it 4. */}
       <section style={{ padding: '0 16px 32px', maxWidth: '1280px', margin: '0 auto' }}>
         <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(2, 1fr)',
-            gap: '12px',
-          }}
+          style={{ display: 'grid', gap: '12px' }}
           className="profile-stats-grid"
         >
           {/* Episodes Watched — PRIMARY stat, larger */}
