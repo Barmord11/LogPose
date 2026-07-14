@@ -227,6 +227,20 @@ input, textarea { font-family: inherit; }
     max-width: none;
     box-shadow: none;
     display: block;
+    /* .app-shell is a flex item of #root (#root is display:flex,
+       flex-direction:column) - align-items:stretch should size it to
+       #root's full width automatically, but verified live (via
+       computed styles + getBoundingClientRect on the deployed site)
+       that it was NOT stretching: it rendered at a fraction of the
+       available width instead of filling it. Root cause wasn't a
+       stray max-width/width rule anywhere in this stylesheet (checked
+       directly via the live page's own CSSOM) - forcing width:100%
+       here fixed it immediately, confirmed on the live page before
+       writing this. Everything inside .app-shell (.app-main's own box,
+       and therefore its background image) inherits that shrink, which
+       is why the background illustration was only covering part of
+       the page width instead of spanning it edge to edge. */
+    width: 100%;
   }
 }
 
