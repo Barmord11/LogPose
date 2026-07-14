@@ -225,8 +225,10 @@ input, textarea { font-family: inherit; }
      element's own width and lets height scale to the image's natural
      aspect ratio, so the whole illustration shows uncropped instead
      of being zoomed/cropped the way cover or a fixed viewport-sized
-     box was. */
-  background: #f4f1ea url('/images/bg-wave-lighthouse.jpg') top center / 100% auto no-repeat local;
+     box was. Positioned at the bottom (not top) per explicit request -
+     the artwork sits low/grounded rather than flush against the very
+     top edge. */
+  background: #f4f1ea url('/images/bg-wave-lighthouse.jpg') bottom center / 100% auto no-repeat local;
 }
 
 /* Desktop main: offset for sidebar + topbar */
