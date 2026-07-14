@@ -165,7 +165,7 @@ export default function SearchPage({ navigate, initialQuery = '' }: SearchPagePr
               value={query}
               onChange={e => setQuery(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') scrollToResults() }}
-              placeholder="Search real anime titles (live AniList search)..."
+              placeholder="Search real anime titles on LogPose..."
               style={{
                 flex: 1,
                 background: 'transparent',
@@ -219,7 +219,7 @@ export default function SearchPage({ navigate, initialQuery = '' }: SearchPagePr
       <section id="search-results" style={{ padding: '0 16px', maxWidth: '1280px', margin: '0 auto', scrollMarginTop: '96px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '8px' }}>
           <h2 style={{ fontFamily: 'var(--font)', fontSize: 'clamp(20px, 2.5vw, 26px)', fontWeight: 700, color: 'var(--primary)' }}>
-            {isLiveSearch ? `Results for "${trimmedQuery}"` : 'Most Popular — Live from AniList'}
+            {isLiveSearch ? `Results for "${trimmedQuery}"` : 'Most Popular — Live on LogPose'}
           </h2>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             {hasActiveFilter && (

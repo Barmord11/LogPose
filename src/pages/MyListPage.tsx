@@ -245,7 +245,7 @@ function FavoritesPanel({ navigate }: { navigate: NavProps['navigate'] }) {
                   {fav.title}
                 </p>
                 <p style={{ fontSize: '10px', fontWeight: 700, color: 'var(--outline)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '2px' }}>
-                  AniList
+                  LogPose Live
                 </p>
               </div>
               <button

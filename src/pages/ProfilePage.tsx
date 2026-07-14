@@ -68,10 +68,19 @@ export default function ProfilePage({ navigate }: NavProps) {
   return (
     <div style={{ minHeight: '100vh', paddingBottom: '80px' }}>
 
+      {/* Full-bleed on mobile (edge-to-edge banner, like a typical mobile
+         profile header) - on desktop .profile-hero-wrap constrains this
+         to the same 1280px content column every other section on the
+         site uses (see index.css), so the banner reads as a proper card
+         instead of a flat stripe stretched across an arbitrarily wide
+         browser window. */}
+      <div className="profile-hero-wrap">
+
       {/* ══ AVATAR HERO CARD ═══════════════════════════════════ */}
       <div style={{ position: 'relative', paddingBottom: '60px' }}>
         {/* Banner gradient */}
         <div
+          className="profile-hero-banner"
           style={{
             height: '200px',
             background: 'linear-gradient(135deg, var(--primary) 0%, #405f91 60%, rgba(0,49,52,0.8) 100%)',
@@ -194,6 +203,7 @@ export default function ProfilePage({ navigate }: NavProps) {
         <p style={{ fontSize: '13px', color: 'var(--on-surface-variant)', marginTop: '8px', lineHeight: 1.5 }}>
           {user?.email}
         </p>
+      </div>
       </div>
 
       {/* ══ LIVE STATS GRID ════════════════════════════════════ */}

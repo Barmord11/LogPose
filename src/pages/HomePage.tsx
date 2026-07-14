@@ -47,6 +47,12 @@ export default function HomePage({ navigate }: NavProps) {
   const [popular, setPopular] = useState<AnimeSearchResult[]>([])
   const [popularLoading, setPopularLoading] = useState(true)
   const [newReleases, setNewReleases] = useState<AnimeSearchResult[]>([])
+  // Mobile-only collapse state for the Favorites section (see
+  // .favorites-toggle/.favorites-grid in index.css) - a CSS media query
+  // ignores this entirely on desktop, where the grid always shows, same
+  // as every other section. Defaults closed on mobile so the full card
+  // grid doesn't push everything else down the moment the page loads.
+  const [favoritesOpen, setFavoritesOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -98,7 +104,7 @@ export default function HomePage({ navigate }: NavProps) {
               Discover Your Next Voyage
             </h1>
             <p style={{ fontSize: '14px', color: 'var(--on-surface-variant)', marginBottom: '20px' }}>
-              Couldn't reach AniList right now — try Search instead.
+              Couldn't load recommendations right now — try Search instead.
             </p>
             <button onClick={() => navigate('search')} className="btn-sunset" style={{ padding: '13px 24px', fontSize: '14px', borderRadius: '9999px', border: 'none' }}>
               Browse Search
@@ -126,12 +132,43 @@ export default function HomePage({ navigate }: NavProps) {
             zIndex: 20,
           }}
         >
-          <div className="glass-header" style={{ marginBottom: '16px' }}>
-            <h2 style={{ fontFamily: 'var(--font)', fontSize: 'clamp(20px, 2.5vw, 26px)', fontWeight: 700, color: 'var(--primary)' }}>
-              Favorites
-            </h2>
+          {/* On mobile this row is the whole section by default (see
+             .favorites-toggle/.favorites-grid in index.css) - tapping it
+             reveals the card grid below instead of the grid always
+             taking up space right under the hero. Desktop ignores
+             favoritesOpen entirely via the same CSS and always shows the
+             grid, same as every other section. role="button" (not a real
+             <button>) so the visible <h2> title inside stays valid
+             markup. */}
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => setFavoritesOpen(o => !o)}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                setFavoritesOpen(o => !o)
+              }
+            }}
+            className="glass-header favorites-toggle"
+            style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+              <h2 style={{ fontFamily: 'var(--font)', fontSize: 'clamp(20px, 2.5vw, 26px)', fontWeight: 700, color: 'var(--primary)' }}>
+                Favorites
+              </h2>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--on-surface-variant)' }}>
+                {favorites.length}
+              </span>
+            </div>
+            <span
+              className="material-symbols-outlined favorites-toggle__chevron"
+              style={{ fontSize: '24px', color: 'var(--on-surface-variant)', transform: favoritesOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}
+            >
+              expand_more
+            </span>
           </div>
-          <div className="anime-grid">
+          <div className={`anime-grid favorites-grid${favoritesOpen ? ' is-open' : ''}`}>
             {favorites.slice(0, 5).map(fav => (
               <FavoriteCard key={fav.anilistId} fav={fav} navigate={navigate} onRemoved={handleFavoriteRemoved} />
             ))}
@@ -181,7 +218,7 @@ export default function HomePage({ navigate }: NavProps) {
               Trending Now
             </h2>
             <p style={{ fontSize: '12px', color: 'var(--on-surface-variant)', marginTop: '4px' }}>
-              Live from AniList — currently airing, ranked by trending score
+              Currently airing in LogPose, ranked by trending score
             </p>
           </div>
           <div className="anime-grid">
@@ -205,7 +242,7 @@ export default function HomePage({ navigate }: NavProps) {
               Newly Released
             </h2>
             <p style={{ fontSize: '12px', color: 'var(--on-surface-variant)', marginTop: '4px' }}>
-              Live from AniList — newest series to start airing
+              The newest series to start airing on LogPose
             </p>
           </div>
           <div className="anime-grid">
@@ -638,7 +675,7 @@ function LiveHero({ result, navigate }: { result: AnimeSearchResult; navigate: N
         >
           <span className="material-symbols-outlined" style={{ fontSize: '14px', color: '#fff', fontVariationSettings: "'FILL' 1" }}>trending_up</span>
           <span style={{ fontSize: '10px', fontWeight: 800, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.14em' }}>
-            Most Popular — Live from AniList
+            Most Popular — Live on LogPose
           </span>
         </div>
 

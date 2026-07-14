@@ -91,12 +91,12 @@ it('shows real AniList popular results by default (no query)', async () => {
   renderPage()
 
   await waitFor(() => expect(screen.getByText('Most Popular Show')).toBeInTheDocument())
-  expect(screen.getByText('Most Popular — Live from AniList')).toBeInTheDocument()
+  expect(screen.getByText('Most Popular — Live on LogPose')).toBeInTheDocument()
 })
 
 it('does not render the old genre bento - it was removed as leftover mock content above the live results', async () => {
   renderPage()
-  await waitFor(() => expect(screen.getByText('Most Popular — Live from AniList')).toBeInTheDocument())
+  await waitFor(() => expect(screen.getByText('Most Popular — Live on LogPose')).toBeInTheDocument())
   expect(screen.queryByText('Popular Genres')).not.toBeInTheDocument()
 })
 

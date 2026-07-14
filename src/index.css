@@ -746,3 +746,40 @@ input, textarea { font-family: inherit; }
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
+
+/* ── 28. PROFILE HERO (banner + avatar) ──────────────────── */
+/* Left as full-bleed on mobile (no constraint here at all) - a banner
+   spanning edge-to-edge is the expected look for a mobile profile
+   header. Only on desktop does it need constraining: unlike every
+   other section on this page (Live Stats Grid, Action List) and every
+   other page in the app, this banner had no max-width, so on a wide
+   desktop window it stretched edge-to-edge across the full remaining
+   viewport width instead of sitting in the same 1280px content column
+   as everything else - a flat, disconnected-looking stripe rather
+   than a proper card. */
+@media (min-width: 768px) {
+  .profile-hero-wrap {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 40px;
+  }
+  .profile-hero-banner {
+    border-radius: 28px;
+  }
+}
+
+/* ── 29. FAVORITES MOBILE COLLAPSE ───────────────────────── */
+/* On mobile, Favorites defaults to a compact header row (title + count
+   + chevron) instead of always showing the full card grid right under
+   the hero - tapping the header reveals the grid. Desktop ignores the
+   collapsed state entirely (grid always shows, chevron hidden), same
+   always-open layout as every other section there. */
+@media (max-width: 767px) {
+  .favorites-grid { display: none; }
+  .favorites-grid.is-open { display: grid; }
+}
+
+@media (min-width: 768px) {
+  .favorites-toggle { cursor: default; }
+  .favorites-toggle__chevron { display: none; }
+}

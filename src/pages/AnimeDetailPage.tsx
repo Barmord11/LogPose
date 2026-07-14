@@ -773,7 +773,7 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
             </div>
 
             <div className="stat-chip-grid">
-              <StatChip label="AniList Score" value={anime.score != null ? `★ ${anime.score.toFixed(1)}` : '—'} accent />
+              <StatChip label="Global Score" value={anime.score != null ? `★ ${anime.score.toFixed(1)}` : '—'} accent />
               <StatChip label="Episodes" value={String(anime.totalEpisodes)} />
               <StatChip label="Status" value={anime.status ?? '—'} accent />
               <StatChip label="Format" value={anime.format ?? '—'} />
@@ -784,13 +784,13 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
             {activeTab === 'overview' && (
               <div className="page-enter">
                 <p style={{ fontFamily: 'var(--font)', fontSize: '15px', lineHeight: 1.75, color: 'var(--on-surface)', whiteSpace: 'pre-line' }}>
-                  {anime.description ?? 'No synopsis available yet from AniList.'}
+                  {anime.description ?? 'No synopsis available yet for this series.'}
                 </p>
                 <div style={{ display: 'flex', gap: '12px', marginTop: '20px', flexWrap: 'wrap' }}>
                   {[
                     anime.format ? { icon: 'theaters', label: anime.format } : null,
                     { icon: 'schedule', label: `${anime.totalEpisodes} episodes` },
-                    anime.score != null ? { icon: 'star', label: `${anime.score.toFixed(1)} AniList score` } : null,
+                    anime.score != null ? { icon: 'star', label: `${anime.score.toFixed(1)} global score` } : null,
                     totalVotes > 0 ? { icon: 'anchor', label: `${percentPositive}% positive on LogPose` } : null,
                   ].filter((item): item is { icon: string; label: string } => item !== null).map(item => (
                     <div
