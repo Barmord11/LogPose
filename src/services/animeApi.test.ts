@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { fetchAnimeInfo, searchAnime, fetchTrending, __resetAnimeApiCacheForTests } from './animeApi'
+import { fetchAnimeInfo, searchAnime, fetchTrending, fetchNewReleases, __resetAnimeApiCacheForTests } from './animeApi'
 
 const originalFetch = globalThis.fetch
 
@@ -88,6 +88,25 @@ describe('fetchTrending', () => {
   it('returns an empty array when the response has no results field', async () => {
     vi.mocked(globalThis.fetch).mockResolvedValue({ ok: true, json: async () => ({}) } as Response)
     expect(await fetchTrending()).toEqual([])
+  })
+})
+
+describe('fetchNewReleases', () => {
+  it('fetches /api/anime/new-releases and returns the results array', async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({ results: [{ id: '1', title: 'Foo', image: null, releaseDate: null, totalEpisodes: null }] }),
+    } as Response)
+
+    const results = await fetchNewReleases()
+
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/anime/new-releases')
+    expect(results).toHaveLength(1)
+  })
+
+  it('returns an empty array when the response has no results field', async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValue({ ok: true, json: async () => ({}) } as Response)
+    expect(await fetchNewReleases()).toEqual([])
   })
 })
 

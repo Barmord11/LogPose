@@ -1,9 +1,12 @@
 /**
  * HomePage — The Grand Departure
  * ──────────────────────────────
- * Hero banner → Popular This Week grid → Newly Released bento
- * Mobile: 2-col grid, single-col bento
- * Desktop: 4-5 col grid, 2-col bento with row-spanning feature tile
+ * Hero banner → Favorites → Popular This Week → Trending Now →
+ * Newly Released → Voyage Tools (New Dubs / Captain's Log)
+ * All four anime sections (Favorites, Popular, Trending, Newly
+ * Released) share the same anime-grid card layout and a frosted
+ * "liquid glass" header panel (see .glass-header in index.css).
+ * Mobile: 2-col grid. Desktop: 4-5 col grid.
  */
 
 import { useEffect, useState } from 'react'
@@ -11,14 +14,13 @@ import type { NavProps } from '../App'
 import { useProfileStats } from '../context/AppContext'
 import { navigatorLevel } from '../context/reducer'
 import { useLiveStats }   from '../hooks/useLiveStats'
-import SectionHeader      from '../components/SectionHeader'
 import CardSkeleton       from '../components/CardSkeleton'
 import { AddDropdownView } from '../components/AddDropdown'
 import { AnchorRatingView } from '../components/AnchorRating'
 import PlayButton          from '../components/PlayButton'
 import { useDragToAdd, DragDropZones } from '../components/DragToAdd'
 import { getTrackerRow, upsertStatus, removeFromTracker, type TrackerRow, type TrackerStatus } from '../services/tracker'
-import { fetchTrending, fetchPopular, fetchAnimeInfo, type AnimeSearchResult, type AnimeInfo } from '../services/animeApi'
+import { fetchTrending, fetchPopular, fetchNewReleases, fetchAnimeInfo, type AnimeSearchResult, type AnimeInfo } from '../services/animeApi'
 import { getMyRating, setRating as submitRating, clearRating, type RatingValue } from '../services/ratings'
 import { isFavorite as fetchIsFavorite, toggleFavorite, listFavorites, removeFavorite, type FavoriteRow } from '../services/favorites'
 
@@ -44,6 +46,7 @@ export default function HomePage({ navigate }: NavProps) {
   // limited to currently-airing like `trending` above.
   const [popular, setPopular] = useState<AnimeSearchResult[]>([])
   const [popularLoading, setPopularLoading] = useState(true)
+  const [newReleases, setNewReleases] = useState<AnimeSearchResult[]>([])
 
   useEffect(() => {
     let cancelled = false
@@ -62,6 +65,10 @@ export default function HomePage({ navigate }: NavProps) {
         console.error('fetchPopular failed', err)
         if (!cancelled) setPopularLoading(false)
       })
+
+    fetchNewReleases()
+      .then(results => { if (!cancelled) setNewReleases(results) })
+      .catch(err => console.error('fetchNewReleases failed', err))
 
     return () => { cancelled = true }
   }, [])
@@ -100,18 +107,26 @@ export default function HomePage({ navigate }: NavProps) {
         )}
       </section>
 
-      {/* ══ FAVORITES (quick access to saved series' watch links) ═ */}
+      {/* ══ FAVORITES (quick access to saved series' watch links) ═
+         margin-top is a small positive gap (not the -40px "float over
+         the hero" treatment Popular This Week uses below) - Favorites
+         sits directly under the hero on every page load whenever it's
+         shown, so overlapping it risked the header landing partly
+         under the hero's own bottom gradient/content and reading as
+         "hidden". Popular This Week only ever overlaps when Favorites
+         is empty, i.e. it's always the first thing under the hero in
+         that case, same reasoning, just inverted. */}
       {favorites.length > 0 && (
         <section
           style={{
             padding: '0 16px',
             maxWidth: '1280px',
-            margin: '-40px auto 32px',
+            margin: '24px auto 32px',
             position: 'relative',
             zIndex: 20,
           }}
         >
-          <div style={{ marginBottom: '16px' }}>
+          <div className="glass-header" style={{ marginBottom: '16px' }}>
             <h2 style={{ fontFamily: 'var(--font)', fontSize: 'clamp(20px, 2.5vw, 26px)', fontWeight: 700, color: 'var(--primary)' }}>
               Favorites
             </h2>
@@ -134,7 +149,7 @@ export default function HomePage({ navigate }: NavProps) {
           zIndex: 20,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '24px' }}>
+        <div className="glass-header" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '24px' }}>
           <div>
             <h2 style={{ fontFamily: 'var(--font)', fontSize: 'clamp(22px, 3vw, 32px)', fontWeight: 700, color: 'var(--primary)' }}>
               Popular This Week
@@ -161,7 +176,7 @@ export default function HomePage({ navigate }: NavProps) {
       {/* ══ TRENDING NOW (live AniList trending) ═══════════ */}
       {trending.length > 0 && (
         <section style={{ padding: '0 16px', maxWidth: '1280px', margin: '0 auto 48px' }}>
-          <div style={{ marginBottom: '24px' }}>
+          <div className="glass-header" style={{ marginBottom: '24px' }}>
             <h2 style={{ fontFamily: 'var(--font)', fontSize: 'clamp(22px, 3vw, 32px)', fontWeight: 700, color: 'var(--primary)' }}>
               Trending Now
             </h2>
@@ -177,72 +192,40 @@ export default function HomePage({ navigate }: NavProps) {
         </section>
       )}
 
-      {/* ══ NEWLY RELEASED BENTO ════════════════════════════════ */}
+      {/* ══ NEWLY RELEASED (live AniList, most recent start dates) ═
+         Same anime-grid + TrendingCard layout as Popular This Week and
+         Trending Now above (was previously a 3-tile bento box of promo
+         tiles that didn't actually show newly released series at all -
+         see the "Voyage Tools" strip below for where those tiles
+         landed). */}
+      {newReleases.length > 0 && (
+        <section style={{ padding: '0 16px', maxWidth: '1280px', margin: '0 auto 48px' }}>
+          <div className="glass-header" style={{ marginBottom: '24px' }}>
+            <h2 style={{ fontFamily: 'var(--font)', fontSize: 'clamp(22px, 3vw, 32px)', fontWeight: 700, color: 'var(--primary)' }}>
+              Newly Released
+            </h2>
+            <p style={{ fontSize: '12px', color: 'var(--on-surface-variant)', marginTop: '4px' }}>
+              Live from AniList — newest series to start airing
+            </p>
+          </div>
+          <div className="anime-grid">
+            {newReleases.slice(0, 10).map(result => (
+              <TrendingCard key={`new-${result.id}`} result={result} navigate={navigate} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ══ VOYAGE TOOLS ════════════════════════════════════════
+         The two promo tiles that used to live inside the "Newly
+         Released" bento box (that box's actual anime grid is above
+         now, wired to real newest-start-date data) - kept here as
+         their own compact row so Captain's Log's real level/episode
+         stats don't disappear, without forcing the Newly Released
+         section itself into a different-looking layout than every
+         other category on this page. */}
       <section style={{ padding: '0 16px', maxWidth: '1280px', margin: '0 auto 32px' }}>
-        <SectionHeader variant="border" title="Newly Released" style={{ marginBottom: '24px' }} />
-
-        <div className="bento-grid">
-          {/* Main feature — a real AniList pick (2nd-most-popular, so it differs from the hero) */}
-          {(() => {
-            const feature = popular[1] ?? popular[0]
-            if (!feature) {
-              return (
-                <div
-                  className="bento-main glass-card"
-                  onClick={() => navigate('search')}
-                  style={{ position: 'relative', borderRadius: '24px', overflow: 'hidden', minHeight: '260px', cursor: 'pointer', display: 'flex', alignItems: 'flex-end', padding: '24px 28px' }}
-                >
-                  <div>
-                    <span style={{ color: 'var(--secondary-container)', fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.2em' }}>
-                      ✦ Director's Choice
-                    </span>
-                    <h3 style={{ fontFamily: 'var(--font)', fontSize: '24px', fontWeight: 800, color: 'var(--primary)', marginTop: '4px', marginBottom: '8px' }}>
-                      Explore the Fleet
-                    </h3>
-                    <p style={{ fontSize: '13px', color: 'var(--on-surface-variant)', maxWidth: '360px' }}>
-                      Browse trending and popular series from AniList.
-                    </p>
-                  </div>
-                </div>
-              )
-            }
-            return (
-              <div
-                className="bento-main glass-card"
-                onClick={() => navigate('detail', Number(feature.id), 'live')}
-                style={{
-                  position: 'relative',
-                  borderRadius: '24px',
-                  overflow: 'hidden',
-                  minHeight: '260px',
-                  cursor: 'pointer',
-                }}
-              >
-                {feature.image && (
-                  <img
-                    src={feature.image}
-                    alt={feature.title}
-                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.04)' }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)' }}
-                  />
-                )}
-                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,23,54,0.85), transparent 50%)' }} />
-                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '24px 28px' }}>
-                  <span style={{ color: 'var(--secondary-container)', fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.2em' }}>
-                    ✦ Director's Choice
-                  </span>
-                  <h3 style={{ fontFamily: 'var(--font)', fontSize: '24px', fontWeight: 800, color: '#fff', marginTop: '4px', marginBottom: '8px' }}>
-                    {feature.title}
-                  </h3>
-                  <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.70)', maxWidth: '360px' }}>
-                    One of AniList's most popular picks right now{feature.totalEpisodes ? ` — ${feature.totalEpisodes} episodes` : ''}.
-                  </p>
-                </div>
-              </div>
-            )
-          })()}
-
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
           {/* New Dubs tile */}
           <div
             style={{

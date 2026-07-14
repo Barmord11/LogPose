@@ -183,6 +183,15 @@ export async function fetchPopular(): Promise<AnimeSearchResult[]> {
   })
 }
 
+/** GET /api/anime/new-releases — series with the most recent start dates (already airing or finished), for Home's "Newly Released" section. Cached, same as trending/popular. */
+export async function fetchNewReleases(): Promise<AnimeSearchResult[]> {
+  return withCache('new-releases', async () => {
+    const res = await fetch(`${BASE_URL}/api/anime/new-releases`)
+    const body = await parseJsonOrThrow(res)
+    return (body?.results ?? []) as AnimeSearchResult[]
+  })
+}
+
 /** GET /api/anime/genre?g=Action,Adventure — popularity-ranked series matching any of the given AniList genre names. Cached per genre combination. */
 export async function fetchByGenre(genreNames: string[]): Promise<AnimeSearchResult[]> {
   return withCache(`genre:${[...genreNames].sort().join(',').toLowerCase()}`, async () => {

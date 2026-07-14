@@ -149,6 +149,25 @@ input, textarea { font-family: inherit; }
   border: 1px solid var(--glass-border);
 }
 
+/* "Liquid glass" section header — a frosted pill/panel sitting behind a
+   section's title row (Popular This Week, Trending Now, Newly Released,
+   Favorites), so the heading reads clearly over the page's background
+   watermark/imagery instead of floating directly on top of it. The
+   inset top highlight is what sells the "liquid" look (a soft light
+   catching the top edge of the glass) rather than just being a flat
+   frosted rectangle like .glass-card. */
+.glass-header {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 16px 24px;
+  box-shadow:
+    0 4px 24px rgba(0, 23, 54, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
 /* Heavier blur for modals/panels */
 .glass-panel {
   background: rgba(255, 255, 255, 0.72);

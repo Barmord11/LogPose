@@ -328,6 +328,38 @@ export async function fetchPopular(limit = 10): Promise<AnilistSearchResult[]> {
   return results.map(mapCardResult)
 }
 
+const NEW_RELEASES_QUERY = `
+  query ($perPage: Int) {
+    Page(page: 1, perPage: $perPage) {
+      media(type: ANIME, isAdult: false, status_in: [RELEASING, FINISHED], sort: START_DATE_DESC) {
+        id
+        title { english romaji }
+        coverImage { extraLarge }
+        episodes
+        startDate { year }
+      }
+    }
+  }
+`
+
+/**
+ * Series with the most recent start dates (already airing or finished,
+ * never NOT_YET_RELEASED) — feeds Home's "Newly Released" section. Same
+ * card-sized shape as fetchPopular/fetchTrending.
+ */
+export async function fetchNewReleases(limit = 10): Promise<AnilistSearchResult[]> {
+  let body: any
+  try {
+    body = await anilistQuery(NEW_RELEASES_QUERY, { perPage: limit })
+  } catch (err) {
+    if (err instanceof AnilistLookupError) throw err
+    throw new AnilistLookupError('AniList new releases fetch failed', err)
+  }
+
+  const results = Array.isArray(body?.data?.Page?.media) ? body.data.Page.media : []
+  return results.map(mapCardResult)
+}
+
 const GENRE_QUERY = `
   query ($genres: [String], $perPage: Int) {
     Page(page: 1, perPage: $perPage) {

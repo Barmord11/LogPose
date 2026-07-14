@@ -4,6 +4,7 @@ import {
   fetchAnimeInfo,
   fetchPopular,
   fetchTrending,
+  fetchNewReleases,
   fetchRandomAnime,
   searchAnime,
   searchByGenre,
@@ -49,6 +50,7 @@ import { setPublicCache, setNoStore } from './_lib/cache.js'
  * fetch URLs don't need to change):
  *   GET /api/anime/popular
  *   GET /api/anime/trending
+ *   GET /api/anime/new-releases
  *   GET /api/anime/random
  *   GET /api/anime/search?q=...
  *   GET /api/anime/genre?g=Action,Adventure
@@ -87,6 +89,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return
     case 'trending':
       await handleTrending(res)
+      return
+    case 'new-releases':
+      await handleNewReleases(res)
       return
     case 'random':
       await handleRandom(res)
@@ -137,6 +142,21 @@ async function handleTrending(res: VercelResponse) {
     }
     console.error(err)
     res.status(502).json({ error: 'Failed to fetch trending anime' })
+  }
+}
+
+async function handleNewReleases(res: VercelResponse) {
+  try {
+    const results = await fetchNewReleases(10)
+    setPublicCache(res, 300, 1800)
+    res.status(200).json({ results })
+  } catch (err) {
+    if (err instanceof AnilistLookupError) {
+      res.status(502).json({ error: err.message })
+      return
+    }
+    console.error(err)
+    res.status(502).json({ error: 'Failed to fetch newly released anime' })
   }
 }
 

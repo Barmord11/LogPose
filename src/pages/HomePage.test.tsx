@@ -48,6 +48,7 @@ beforeEach(() => {
   // grid (replacing the old mock catalogue) - default to empty so
   // mounting the page doesn't throw on an un-mocked promise.
   vi.mocked(animeApi.fetchPopular).mockResolvedValue([])
+  vi.mocked(animeApi.fetchNewReleases).mockResolvedValue([])
   vi.mocked(animeApi.fetchAnimeInfo).mockResolvedValue(animeInfo())
   // TrendingCard/LiveHero fetch their own status/rating/favorite on
   // mount - give every card a benign "signed out"-shaped default so
@@ -169,9 +170,26 @@ it('renders the hero and Popular This Week grid from real AniList popular data',
   // The #1 popular result's title appears twice — once in the hero (via
   // LiveHero's fetched info) and once as its own card in the grid below.
   await waitFor(() => expect(screen.getAllByText('Most Popular Show').length).toBeGreaterThanOrEqual(2))
-  // The #2 result appears twice too — once in the Popular This Week grid
-  // and once in the "Director's Choice" bento tile (popular[1]).
   expect(screen.getAllByText('Second Popular Show').length).toBeGreaterThanOrEqual(1)
+})
+
+it('shows Newly Released when AniList returns new-release results', async () => {
+  const result: AnimeSearchResult = { id: '40', title: 'Fresh Show', image: null, releaseDate: 2026, totalEpisodes: 12 }
+  vi.mocked(animeApi.fetchNewReleases).mockResolvedValue([result])
+
+  renderPage()
+
+  await waitFor(() => expect(screen.getByText('Newly Released')).toBeInTheDocument())
+  expect(screen.getByText('Fresh Show')).toBeInTheDocument()
+})
+
+it('does not break the page when the new-releases fetch fails', async () => {
+  vi.mocked(animeApi.fetchNewReleases).mockRejectedValue(new Error('AniList down'))
+
+  renderPage()
+
+  await waitFor(() => expect(screen.getByText('Popular This Week')).toBeInTheDocument())
+  expect(screen.queryByText('Newly Released')).not.toBeInTheDocument()
 })
 
 it('falls back to a friendly message when the popular fetch fails, without crashing', async () => {

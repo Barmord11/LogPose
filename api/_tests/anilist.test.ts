@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { fetchAnimeInfo, searchAnime, fetchTrending, fetchPopular, searchByGenre, AnilistLookupError, __resetAnilistCacheForTests } from '../_lib/anilist.js'
+import { fetchAnimeInfo, searchAnime, fetchTrending, fetchPopular, fetchNewReleases, searchByGenre, AnilistLookupError, __resetAnilistCacheForTests } from '../_lib/anilist.js'
 
 function jsonResponse(body: unknown, ok = true, status = 200) {
   return { ok, status, json: async () => body } as Response
@@ -207,6 +207,44 @@ describe('fetchPopular', () => {
   it('throws AnilistLookupError when the request fails', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(jsonResponse({}, false, 500)))
     await expect(fetchPopular()).rejects.toBeInstanceOf(AnilistLookupError)
+  })
+})
+
+describe('fetchNewReleases', () => {
+  it('strips the new-releases payload to card-sized data', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(jsonResponse({
+      data: {
+        Page: {
+          media: [{ id: 40, title: { romaji: 'Fresh Show' }, coverImage: { extraLarge: 'img' }, startDate: { year: 2026 }, episodes: 12 }],
+        },
+      },
+    })))
+    const results = await fetchNewReleases(10)
+    expect(results).toEqual([{ id: '40', title: 'Fresh Show', image: 'img', releaseDate: 2026, totalEpisodes: 12 }])
+  })
+
+  it('requests start-date-desc sort, excluding not-yet-released titles', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse({ data: { Page: { media: [] } } }))
+    vi.stubGlobal('fetch', fetchMock)
+    await fetchNewReleases(10)
+    const [, init] = fetchMock.mock.calls[0]
+    const body = JSON.parse(init.body)
+    expect(body.query).toContain('START_DATE_DESC')
+    expect(body.query).toContain('status_in: [RELEASING, FINISHED]')
+  })
+
+  it('requests the given perPage limit', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse({ data: { Page: { media: [] } } }))
+    vi.stubGlobal('fetch', fetchMock)
+    await fetchNewReleases(5)
+    const [, init] = fetchMock.mock.calls[0]
+    const body = JSON.parse(init.body)
+    expect(body.variables).toEqual({ perPage: 5 })
+  })
+
+  it('throws AnilistLookupError when the request fails', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(jsonResponse({}, false, 500)))
+    await expect(fetchNewReleases()).rejects.toBeInstanceOf(AnilistLookupError)
   })
 })
 

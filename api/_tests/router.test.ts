@@ -5,6 +5,7 @@ import {
   fetchAnimeInfo,
   fetchPopular,
   fetchTrending,
+  fetchNewReleases,
   fetchRandomAnime,
   searchAnime,
   searchByGenre,
@@ -16,6 +17,7 @@ vi.mock('../_lib/anilist.js', () => ({
   fetchAnimeInfo: vi.fn(),
   fetchPopular: vi.fn(),
   fetchTrending: vi.fn(),
+  fetchNewReleases: vi.fn(),
   fetchRandomAnime: vi.fn(),
   searchAnime: vi.fn(),
   searchByGenre: vi.fn(),
@@ -192,6 +194,39 @@ describe('GET /api/anime/trending', () => {
     await handler(req, res)
     expect(res.status).toHaveBeenCalledWith(502)
     expect(res.json).toHaveBeenCalledWith({ error: 'Failed to fetch trending anime' })
+  })
+})
+
+describe('GET /api/anime/new-releases', () => {
+  it('returns 200 with { results }', async () => {
+    const results = [{ id: '1', title: 'Foo', image: null, releaseDate: null, totalEpisodes: null }]
+    vi.mocked(fetchNewReleases).mockResolvedValue(results)
+
+    const req = reqFor(['anime', 'new-releases'])
+    const res = mockRes()
+    await handler(req, res)
+
+    expect(fetchNewReleases).toHaveBeenCalledWith(10)
+    expect(res.status).toHaveBeenCalledWith(200)
+    expect(res.json).toHaveBeenCalledWith({ results })
+    expect(res.setHeader).toHaveBeenCalledWith('Cache-Control', expect.stringContaining('s-maxage'))
+  })
+
+  it('502s when the AniList new-releases fetch fails', async () => {
+    vi.mocked(fetchNewReleases).mockRejectedValue(new AnilistLookupError('new releases failed'))
+    const req = reqFor(['anime', 'new-releases'])
+    const res = mockRes()
+    await handler(req, res)
+    expect(res.status).toHaveBeenCalledWith(502)
+  })
+
+  it('502s with a generic message on an unexpected error', async () => {
+    vi.mocked(fetchNewReleases).mockRejectedValue(new Error('boom'))
+    const req = reqFor(['anime', 'new-releases'])
+    const res = mockRes()
+    await handler(req, res)
+    expect(res.status).toHaveBeenCalledWith(502)
+    expect(res.json).toHaveBeenCalledWith({ error: 'Failed to fetch newly released anime' })
   })
 })
 
