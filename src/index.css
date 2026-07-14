@@ -111,21 +111,46 @@ html { font-size: 16px; scroll-behavior: smooth; -webkit-text-size-adjust: 100%;
 body {
   font-family: var(--font);
   /* #f4f1ea (not var(--background)) matches this illustration's own
-     cream paper tone exactly, so it reads as a seamless wallpaper
-     rather than a photo in a box. The art is a tall portrait image;
-     background-size:contain kept the whole illustration on screen but
-     on wide desktop viewports that meant a narrow vertical strip with
-     a lot of empty cream on both sides - cover fills the full width
-     of the viewport instead (cropping some of the image's top/bottom
-     to do it, centered so the wave stays the focal point). */
-  background:
-    #f4f1ea
-    url('/images/bg-wave-lighthouse.jpg') center center / cover no-repeat fixed;
+     cream paper tone exactly - kept here as a plain fallback color.
+     The actual artwork lives on the ::before layer below, not here:
+     a background declared directly on body sizes/positions itself
+     relative to the FULL viewport even with background-attachment:
+     fixed (that's how the spec defines fixed positioning areas), so
+     there's no way to keep it out from under a fixed-position sidebar
+     just by adjusting size/position - the sidebar's own translucent
+     glass-nav background would still let it bleed through underneath.
+     The ::before pseudo-element below is a separate fixed box whose
+     *own edges* start after the sidebar on desktop, so the image
+     itself never renders behind the nav at all. */
+  background-color: #f4f1ea;
   color: var(--on-surface);
   line-height: 1.6;
   min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Wave/lighthouse watermark - a fixed full-height layer behind all
+   content. Kept separate from body's own background (see comment
+   above) specifically so it can start at the sidebar's right edge on
+   desktop instead of spanning the full viewport and showing through
+   the sidebar's translucent glass. Stays still on scroll (position:
+   fixed, not just background-attachment:fixed) and never intercepts
+   clicks (pointer-events:none). */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: url('/images/bg-wave-lighthouse.jpg') center center / cover no-repeat;
+}
+
+@media (min-width: 768px) {
+  /* 256px matches .sidebar's own width (see responsive.css) - the
+     watermark's left edge lines up exactly with the sidebar's right
+     edge, so nothing renders under the nav on desktop. */
+  body::before { left: 256px; }
 }
 img, svg { display: block; max-width: 100%; }
 a { color: inherit; text-decoration: none; }
