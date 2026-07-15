@@ -128,13 +128,46 @@
 .desktop-footer a:hover { color: var(--secondary); }
 
 /* ── PROFILE HERO LOGO ────────────────────────────────────── */
-/* Mobile size is already "enough" - only bumped up further on desktop,
-   where the banner has more room to make it a proper hero moment. */
+/* Mobile: centered horizontally above the avatar (which is itself
+   centered at the bottom of the banner via left:50%/translateX(-50%))
+   - just the mark, no label, to keep the small banner uncluttered.
+   Desktop: pinned top-left instead, laid out as a row so the
+   "LogPose Profile" label sits visibly next to it. */
+.profile-hero-logo-wrap {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.profile-hero-logo-text {
+  display: none;
+}
 .profile-hero-logo {
   width: 104px;
   height: 104px;
 }
 @media (min-width: 768px) {
+  .profile-hero-logo-wrap {
+    top: 20px;
+    left: 24px;
+    transform: none;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+  }
+  .profile-hero-logo-text {
+    display: block;
+    font-family: var(--font);
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    color: #ffffff;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.35);
+  }
   .profile-hero-logo {
     width: 150px;
     height: 150px;

@@ -110,21 +110,24 @@ export default function ProfilePage({ navigate }: NavProps) {
             />
           ))}
 
-          {/* LogPose mark — top-left of the banner, noticeably bigger than
-             the 46px sidebar/homepage logo since this is a hero moment. */}
-          <img
-            src="/images/logo-compass.png"
-            alt="LogPose Profile"
-            title="LogPose Profile"
-            className="profile-hero-logo"
-            style={{
-              position: 'absolute',
-              top: '20px',
-              left: '24px',
-              objectFit: 'contain',
-              filter: 'drop-shadow(0 2px 10px rgba(0,0,0,0.3))',
-            }}
-          />
+          {/* LogPose mark — centered above the avatar on mobile, top-left
+             with a visible "LogPose Profile" label next to it on desktop
+             (see .profile-hero-logo-wrap in responsive.css). Noticeably
+             bigger than the 46px sidebar/homepage logo since this is a
+             hero moment. */}
+          <div className="profile-hero-logo-wrap">
+            <img
+              src="/images/logo-compass.png"
+              alt="LogPose Profile"
+              title="LogPose Profile"
+              className="profile-hero-logo"
+              style={{
+                objectFit: 'contain',
+                filter: 'drop-shadow(0 2px 10px rgba(0,0,0,0.3))',
+              }}
+            />
+            <span className="profile-hero-logo-text">LogPose Profile</span>
+          </div>
 
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'flex-end', padding: '0 16px 0' }}>
             <span className="material-symbols-outlined" style={{ fontSize: '16px', color: 'rgba(255,255,255,0.3)', marginBottom: '16px', fontVariationSettings: "'FILL' 1" }}>
