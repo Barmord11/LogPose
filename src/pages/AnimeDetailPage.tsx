@@ -751,6 +751,7 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
                     type="number"
                     inputMode="numeric"
                     aria-label="Episodes watched"
+                    className="progress-input"
                     min={0}
                     max={anime.totalEpisodes > 0 ? anime.totalEpisodes : undefined}
                     value={progressDraft}

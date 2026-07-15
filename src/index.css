@@ -294,6 +294,13 @@
   background: rgba(255, 107, 53, 0.10);
 }
 
+/* Series detail page "Your Progress" episode-count input - same inline
+   color: var(--primary) story as everything else fixed today, black
+   text on a dark surface in dark mode. */
+:root[data-theme='dark'] .progress-input {
+  color: var(--secondary) !important;
+}
+
 /* ── 2. RESET ─────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-size: 16px; scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
