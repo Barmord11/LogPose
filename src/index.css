@@ -232,6 +232,30 @@
   color: var(--on-surface) !important;
 }
 
+/* My List + Profile pages both have the same inline
+   color: var(--primary) problem on several elements - black text that
+   was fine on the light theme's near-white surfaces is invisible on
+   dark ones. Page/section-level headings go orange (matching the
+   .glass-header treatment on Home); everything else (card titles,
+   list-item text, stat values) goes to the light on-surface color
+   instead, per "orange is headers, white is just text". Skipped on
+   purpose: the "AL" source badge and the captain-name edit input,
+   which both sit on their own explicit light/white background
+   regardless of theme, so black text there stays readable as-is. */
+:root[data-theme='dark'] .mylist-grid__title h1,
+:root[data-theme='dark'] .mylist-favorites-toggle h2,
+:root[data-theme='dark'] .mylist-empty-title,
+:root[data-theme='dark'] .profile-hero-wrap h1 {
+  color: var(--secondary) !important;
+}
+
+:root[data-theme='dark'] .mylist-card h3,
+:root[data-theme='dark'] .mylist-fav-item__title,
+:root[data-theme='dark'] .action-item p:first-child,
+:root[data-theme='dark'] .profile-stat__value {
+  color: var(--on-surface) !important;
+}
+
 /* ── 2. RESET ─────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-size: 16px; scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
@@ -962,7 +986,7 @@ input, textarea { font-family: inherit; }
    reads as a smooth dissolve over the base rather than a hard cut. */
 .theme-toggle {
   position: relative;
-  width: 78px;
+  width: 120px;
   aspect-ratio: 3 / 2; /* matches the source images' native 300×200 ratio */
   padding: 0;
   border: none;

@@ -262,7 +262,7 @@ function FavoritesPanel({ navigate }: { navigate: NavProps['navigate'] }) {
                 <div style={{ width: '42px', height: '56px', borderRadius: '8px', background: 'var(--surface-container)', flexShrink: 0 }} />
               )}
               <div style={{ minWidth: 0, flex: 1 }}>
-                <p style={{ fontFamily: 'var(--font)', fontSize: '13px', fontWeight: 700, color: 'var(--primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <p className="mylist-fav-item__title" style={{ fontFamily: 'var(--font)', fontSize: '13px', fontWeight: 700, color: 'var(--primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {fav.title}
                 </p>
                 <p style={{ fontSize: '10px', fontWeight: 700, color: 'var(--outline)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '2px' }}>
@@ -302,7 +302,7 @@ function FavoritesPanel({ navigate }: { navigate: NavProps['navigate'] }) {
                 style={{ width: '42px', height: '56px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }}
               />
               <div style={{ minWidth: 0, flex: 1 }}>
-                <p style={{ fontFamily: 'var(--font)', fontSize: '13px', fontWeight: 700, color: 'var(--primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <p className="mylist-fav-item__title" style={{ fontFamily: 'var(--font)', fontSize: '13px', fontWeight: 700, color: 'var(--primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {anime.title}
                 </p>
                 <p style={{ fontSize: '10px', fontWeight: 700, color: 'var(--outline)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '2px' }}>
@@ -571,7 +571,7 @@ function EmptyState({ tab, navigate }: { tab: ListTab; navigate: NavProps['navig
           {copy.icon}
         </span>
       </div>
-      <h2 style={{ fontFamily: 'var(--font)', fontSize: '22px', fontWeight: 700, color: 'var(--primary)' }}>
+      <h2 className="mylist-empty-title" style={{ fontFamily: 'var(--font)', fontSize: '22px', fontWeight: 700, color: 'var(--primary)' }}>
         {copy.title}
       </h2>
       <p style={{ fontSize: '15px', color: 'var(--on-surface-variant)', maxWidth: '320px', lineHeight: 1.6 }}>
