@@ -131,12 +131,44 @@ it('lets you type a specific episode number directly into the progress input, cl
 
   await renderLive()
   const input = screen.getByRole('spinbutton', { name: 'Episodes watched' })
-  expect(input).toHaveValue(1)
+  // The draft populates from the tracker row via an effect once it loads,
+  // one tick after the input itself first appears - wait for it rather
+  // than asserting synchronously.
+  await waitFor(() => expect(input).toHaveValue(1))
 
   // Typing past totalEpisodes (3) still only ever requests the clamped value -
   // handleProgressChange (shared with the +/- buttons) clamps client-side.
+  // The save only fires once the field is committed (blur/Enter), not on
+  // every keystroke - see the next test.
   fireEvent.change(input, { target: { value: '99' } })
+  fireEvent.blur(input)
 
+  await waitFor(() => expect(tracker.updateProgress).toHaveBeenCalledWith(21, 3))
+})
+
+it('does not save while the episode input is still being typed into, only once it is committed', async () => {
+  // Regression test: the field used to be bound straight to the
+  // server-confirmed value and saved on every keystroke, which reloaded
+  // (and disabled) the field before a second digit could be typed - so
+  // typing "10" only ever registered the "1". It should now let the user
+  // finish typing a multi-digit number before anything saves.
+  vi.mocked(tracker.getTrackerRow).mockResolvedValue(trackedRow({ episodesWatched: 2 }))
+  vi.mocked(tracker.updateProgress).mockResolvedValue(trackedRow({ episodesWatched: 3, status: 'Watched' }))
+
+  await renderLive()
+  const input = screen.getByRole('spinbutton', { name: 'Episodes watched' })
+
+  fireEvent.change(input, { target: { value: '1' } })
+  expect(input).toHaveValue(1)
+  expect(tracker.updateProgress).not.toHaveBeenCalled()
+
+  // "10" itself gets clamped to totalEpisodes (3) once committed - the
+  // point of this test is that nothing saves between these two keystrokes.
+  fireEvent.change(input, { target: { value: '10' } })
+  expect(input).toHaveValue(10)
+  expect(tracker.updateProgress).not.toHaveBeenCalled()
+
+  fireEvent.blur(input)
   await waitFor(() => expect(tracker.updateProgress).toHaveBeenCalledWith(21, 3))
 })
 

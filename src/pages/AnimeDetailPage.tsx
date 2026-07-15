@@ -25,7 +25,7 @@
  *     to the signed-in user.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { NavProps, Page } from '../App'
 import { animes } from '../data/animes'
 import { useApp, useAnimeStatus } from '../context/AppContext'
@@ -435,6 +435,24 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
   const [progressBusy, setProgressBusy] = useState(false)
   const [activeTab, setActiveTab] = useState<DetailTab>('overview')
 
+  // The episode-count input used to be bound straight to the server-
+  // confirmed tracker value and fired a save on every keystroke -
+  // typing "10" only ever registered the "1" because the field reloaded
+  // (and briefly disabled itself) before the "0" could be typed. It now
+  // tracks its own draft string while focused and only commits (calls
+  // handleProgressChange) on blur or Enter, same as a normal form
+  // field. progressInputFocused prevents an external update (the +/-
+  // buttons, or another tab) from clobbering text the user is actively
+  // typing.
+  const [progressDraft, setProgressDraft] = useState('')
+  const progressInputFocused = useRef(false)
+
+  useEffect(() => {
+    if (!progressInputFocused.current) {
+      setProgressDraft(String(tracker?.episodesWatched ?? 0))
+    }
+  }, [tracker?.episodesWatched])
+
   // LogPose's own community rating (Supabase), separate from AniList's score.
   const [myRating, setMyRating] = useState<RatingValue | null>(null)
   const [ratingSummary, setRatingSummary] = useState<{ upCount: number; downCount: number } | null>(null)
@@ -527,6 +545,19 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
     } finally {
       setProgressBusy(false)
     }
+  }
+
+  // Commits whatever's currently typed in the episode-count field - called
+  // on blur/Enter, never on every keystroke (see progressDraft above). An
+  // empty or non-numeric draft just resets back to the last confirmed
+  // value instead of saving anything.
+  function commitProgressDraft() {
+    const parsed = Number(progressDraft)
+    if (progressDraft.trim() === '' || Number.isNaN(parsed)) {
+      setProgressDraft(String(tracker?.episodesWatched ?? 0))
+      return
+    }
+    handleProgressChange(parsed)
   }
 
   // Clicking the same direction again removes the vote — same UX as
@@ -710,22 +741,30 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginTop: '14px' }}>
                   <CounterButton icon="remove" disabled={progressBusy || watchedCount <= 0} onClick={() => handleProgressChange(watchedCount - 1)} />
                   {/* Direct-entry input, for jumping straight to an episode
-                     number instead of clicking +/- repeatedly. Shares
-                     handleProgressChange with the buttons above, which
-                     clamps to [0, totalEpisodes] and fires the same
-                     updateProgress mutation either way. */}
+                     number instead of clicking +/- repeatedly. Typing is
+                     purely local (progressDraft) until blur/Enter commits
+                     it via handleProgressChange (shared with the buttons
+                     above, clamping to [0, totalEpisodes]) - saving on
+                     every keystroke used to reload/disable the field
+                     before a second digit could be typed. */}
                   <input
                     type="number"
                     inputMode="numeric"
                     aria-label="Episodes watched"
                     min={0}
                     max={anime.totalEpisodes > 0 ? anime.totalEpisodes : undefined}
-                    value={watchedCount}
+                    value={progressDraft}
                     disabled={progressBusy}
-                    onChange={e => {
-                      const parsed = Number(e.target.value)
-                      if (Number.isNaN(parsed)) return
-                      handleProgressChange(parsed)
+                    onFocus={() => { progressInputFocused.current = true }}
+                    onChange={e => setProgressDraft(e.target.value)}
+                    onBlur={() => {
+                      progressInputFocused.current = false
+                      commitProgressDraft()
+                    }}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.currentTarget.blur()
+                      }
                     }}
                     style={{
                       width: '56px',
