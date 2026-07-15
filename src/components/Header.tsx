@@ -45,7 +45,7 @@ export default function Header({ navigate, activePage }: HeaderProps) {
         <img
           src="/images/logo-compass.png"
           alt=""
-          style={{ width: '30px', height: '30px', objectFit: 'contain' }}
+          style={{ width: '36px', height: '36px', objectFit: 'contain' }}
         />
         <span
           style={{
