@@ -1106,6 +1106,7 @@ input, textarea { font-family: inherit; }
 .sidebar-theme-toggle {
   display: flex;
   justify-content: center;
+  margin: 0 2px;
   padding-top: 8px;
   padding-bottom: 16px;
   border-bottom: 1px solid rgba(196, 198, 208, 0.18);
@@ -1119,12 +1120,14 @@ input, textarea { font-family: inherit; }
   display: flex;
   align-items: center;
   gap: 8px;
+  height: 52px;
   padding: 0 10px;
   border-radius: 9999px;
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.18);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+  overflow: hidden;
 }
 :root[data-theme='dark'] .mobile-header-actions {
   background: rgba(255, 140, 60, 0.06);
