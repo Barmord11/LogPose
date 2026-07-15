@@ -64,8 +64,10 @@ export default function Header({ navigate, activePage }: HeaderProps) {
       </button>
 
       {/* Right actions — search, then profile, then the theme toggle
-         farthest right, per the requested left-to-right order. */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+         farthest right, per the requested left-to-right order. Wrapped
+         in a low-opacity glass pill so the three read as one grouped
+         menu unit instead of three loose icons. */}
+      <div className="mobile-header-actions">
         {/* Search icon */}
         <button
           onClick={() => navigate('search')}

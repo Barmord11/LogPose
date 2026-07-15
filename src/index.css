@@ -1106,13 +1106,38 @@ input, textarea { font-family: inherit; }
   padding-top: 16px;
 }
 
-/* ── 32. MOBILE HEADER THEME TOGGLE PLACEMENT ──────────── */
-/* Sits as the last item in the right-actions cluster (search, then
-   profile, then the toggle) - a normal flex child now, no special
-   positioning needed. The shared .theme-toggle is sized for the
-   desktop sidebar (150px wide) - far too big for a 64px-tall mobile
-   header, so it's scaled down locally instead of shrinking the shared
-   component (which would also shrink it in the sidebar). */
+/* ── 32. MOBILE HEADER RIGHT-ACTIONS GROUP ─────────────── */
+/* Search, profile, and the theme toggle sit inside one low-opacity
+   glass pill so they read as a single grouped menu unit rather than
+   three loose icons floating in the header. */
+.mobile-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+:root[data-theme='dark'] .mobile-header-actions {
+  background: rgba(255, 140, 60, 0.06);
+  border-color: rgba(255, 140, 60, 0.18);
+}
+
+/* Sits as the last item in the group (search, then profile, then the
+   toggle). The shared .theme-toggle is sized for the desktop sidebar
+   (150px wide) - far too big for a 64px-tall mobile header, so it's
+   scaled down locally instead of shrinking the shared component
+   (which would also shrink it in the sidebar). Nudged down a few
+   pixels - the source artwork isn't perfectly centered in its own
+   frame, so flex centering alone left it looking slightly high next
+   to the search/profile icons. */
+.mobile-header-theme-toggle {
+  position: relative;
+  top: 3px;
+}
 .mobile-header-theme-toggle .theme-toggle {
   width: 80px;
 }
