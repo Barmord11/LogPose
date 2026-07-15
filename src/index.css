@@ -1115,7 +1115,10 @@ input, textarea { font-family: inherit; }
 /* ── 32. MOBILE HEADER RIGHT-ACTIONS GROUP ─────────────── */
 /* Search, profile, and the theme toggle sit inside one low-opacity
    glass pill so they read as a single grouped menu unit rather than
-   three loose icons floating in the header. */
+   three loose icons floating in the header. Light mode gets a blue
+   tint (matching the brand navy) instead of white - a white-on-white
+   tint was invisible against the mobile header's own light glass
+   background, which is why it only ever showed up in dark mode. */
 .mobile-header-actions {
   display: flex;
   align-items: center;
@@ -1123,8 +1126,9 @@ input, textarea { font-family: inherit; }
   height: 52px;
   padding: 0 10px;
   border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(0, 43, 91, 0.16);
+  border: 1px solid rgba(0, 43, 91, 0.30);
+  box-shadow: 0 4px 14px rgba(0, 23, 54, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.35);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   overflow: hidden;
