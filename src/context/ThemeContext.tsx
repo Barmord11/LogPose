@@ -27,22 +27,17 @@ const ThemeContext = createContext<{
   setTheme: (theme: Theme) => void
 } | null>(null)
 
-/** Reads a previously saved choice, then falls back to the OS-level
- *  preference, then finally to 'light'. Wrapped defensively since
- *  matchMedia isn't implemented in every test/SSR environment. */
+/** Reads a previously saved choice; otherwise the site always starts in
+ *  light mode. Deliberately does NOT fall back to the OS-level
+ *  prefers-color-scheme setting — a visitor whose system happens to be
+ *  in dark mode should still see LogPose's normal light theme unless
+ *  they've explicitly toggled it here before. */
 function getInitialTheme(): Theme {
   try {
     const saved = localStorage.getItem(STORAGE_KEY)
     if (saved === 'light' || saved === 'dark') return saved
   } catch {
     /* localStorage unavailable — fall through */
-  }
-  try {
-    if (window.matchMedia?.('(prefers-color-scheme: dark)').matches) {
-      return 'dark'
-    }
-  } catch {
-    /* matchMedia unavailable — fall through */
   }
   return 'light'
 }

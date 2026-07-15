@@ -30,10 +30,21 @@ afterEach(() => {
   document.documentElement.removeAttribute('data-theme')
 })
 
-it('defaults to light when nothing is saved and there is no matchMedia preference', () => {
+it('defaults to light when nothing is saved', () => {
   renderProbe()
   expect(screen.getByText('theme=light')).toBeInTheDocument()
   expect(document.documentElement.dataset.theme).toBe('light')
+})
+
+it('defaults to light even when the OS/browser prefers dark mode - the site never auto-picks dark for a first-time visitor', () => {
+  const matchMediaMock = vi.fn().mockReturnValue({ matches: true })
+  vi.stubGlobal('matchMedia', matchMediaMock)
+
+  renderProbe()
+  expect(screen.getByText('theme=light')).toBeInTheDocument()
+  expect(matchMediaMock).not.toHaveBeenCalled()
+
+  vi.unstubAllGlobals()
 })
 
 it('toggleTheme flips between light and dark, and mirrors the value onto <html data-theme>', () => {
@@ -56,16 +67,6 @@ it('persists the chosen theme to localStorage and restores it on the next mount'
 
   renderProbe()
   expect(screen.getByText('theme=dark')).toBeInTheDocument()
-})
-
-it('reads an OS-level dark preference via matchMedia when nothing is saved yet', () => {
-  const matchMediaMock = vi.fn().mockReturnValue({ matches: true })
-  vi.stubGlobal('matchMedia', matchMediaMock)
-
-  renderProbe()
-  expect(screen.getByText('theme=dark')).toBeInTheDocument()
-
-  vi.unstubAllGlobals()
 })
 
 it('useTheme throws when used outside a ThemeProvider', () => {

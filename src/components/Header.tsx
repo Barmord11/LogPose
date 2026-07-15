@@ -48,6 +48,7 @@ export default function Header({ navigate, activePage }: HeaderProps) {
           style={{ width: '36px', height: '36px', objectFit: 'contain' }}
         />
         <span
+          className="site-title"
           style={{
             fontFamily: 'var(--font)',
             fontSize: '22px',

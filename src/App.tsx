@@ -102,10 +102,6 @@ function App() {
 
       {/* ── Page Content ── */}
       <main className="app-main">
-        {/* Dark-mode background artwork (darkmode.png) - crossfades in via
-           opacity under [data-theme='dark'], see .app-main__dark-overlay
-           in index.css. Sits behind all real content (z-index:-1). */}
-        <div className="app-main__dark-overlay" aria-hidden="true" />
         <div className="page-enter" key={activePage}>
           {activePage === 'home'    && <HomePage    navigate={navigate} />}
           {activePage === 'search'  && <SearchPage  navigate={navigate} initialQuery={searchQuery} />}

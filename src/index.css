@@ -103,6 +103,10 @@
   --glow-orange:    0 0 20px rgba(254, 106, 52, 0.45);
   --glow-cyan:      0 0 20px rgba(42, 245, 255, 0.35);
   --glow-navy:      0 4px 20px rgba(0, 43, 91, 0.25);
+
+  /* .app-main's background-image source - overridden to darkmode.png
+     under [data-theme='dark'] below. */
+  --app-bg-image: url('/images/bg-wave-lighthouse.jpg');
 }
 
 /* ── 1b. DARK MODE TOKEN OVERRIDES ──────────────────────────
@@ -189,6 +193,12 @@
   --glow-orange:    0 0 20px rgba(255, 107, 53, 0.55);
   --glow-cyan:      0 0 20px rgba(211, 47, 47, 0.40);
   --glow-navy:      0 4px 20px rgba(0, 0, 0, 0.60);
+
+  /* .app-main's background-image source (see .app-main below) - swapped
+     to darkmode.png in dark mode. A plain custom property, not part of
+     the .app-main background shorthand, so it can be redefined here
+     without repeating the rest of that declaration. */
+  --app-bg-image: url('/images/darkmode.png');
 }
 
 /* .glass-panel and .glass-nav (below) hardcode their rgba() values
@@ -201,6 +211,25 @@
 :root[data-theme='dark'] .glass-nav {
   background: rgba(10, 8, 6, 0.85);
   border-color: rgba(255, 140, 60, 0.20);
+}
+
+/* Section headers (Popular This Week / Trending Now / Newly Released /
+   Favorites - see .glass-header usage in HomePage.tsx) set their <h2>
+   color via an inline style (color: var(--primary)), which now
+   resolves to black - unreadable on the dark glass panel behind it.
+   Inline styles beat any plain selector's specificity, so this needs
+   !important to actually win. */
+:root[data-theme='dark'] .glass-header h2 {
+  color: var(--secondary) !important;
+}
+
+/* The "LogPose" wordmark next to the logo (sidebar h1 on desktop,
+   .site-title span in the mobile header) is the same inline
+   color: var(--primary) story - forced to a light, readable color
+   against the dark sidebar/header glass instead of turning black. */
+:root[data-theme='dark'] .sidebar-logo h1,
+:root[data-theme='dark'] .site-title {
+  color: var(--on-surface) !important;
 }
 
 /* ── 2. RESET ─────────────────────────────────────────────── */
@@ -368,41 +397,18 @@ input, textarea { font-family: inherit; }
      more content, since a fixed offset can't track a footer whose
      position varies with how much is above it - bottom inherently
      does track it, since it's defined relative to the content's own
-     end, not the viewport. */
-  background: #f4f1ea url('/images/bg-wave-lighthouse.jpg') center bottom / 100% auto no-repeat local;
-  /* Containing block for .app-main__dark-overlay below. */
-  position: relative;
+     end, not the viewport. darkmode.png (dark theme) shares
+     bg-wave-lighthouse.jpg's (light theme) exact 1023×1537 dimensions,
+     so this same background-size/position math lines up identically
+     for both - --app-bg-image just swaps which file plays that role
+     (see the :root/[data-theme='dark'] definitions above). CSS can't
+     crossfade between two different background-image URLs, so this is
+     a hard swap rather than a dissolve. */
+  background: #f4f1ea var(--app-bg-image) center bottom / 100% auto no-repeat local;
 }
 
 :root[data-theme='dark'] .app-main {
   background-color: #0d0d0d;
-}
-
-/* Dark-mode background artwork (darkmode.png) - a separate layer rather
-   than swapping .app-main's own background-image directly, since CSS
-   can't crossfade between two different background-image URLs. This
-   overlay fades its opacity in/out instead, over the light artwork
-   underneath, so switching themes dissolves smoothly instead of
-   popping. .app-main's own background (its plain background property,
-   not a positioned child) always paints at the very bottom of the box
-   regardless of z-index, so it stays below this overlay automatically;
-   z-index:-1 here is what keeps the overlay itself below every real
-   (non-positioned) page-content descendant of .app-main, which all
-   render at the default stacking level above negative z-index
-   children. darkmode.png shares bg-wave-lighthouse.jpg's exact
-   1023×1537 dimensions, so the same background-size/position math
-   lines the two images up pixel-for-pixel as they crossfade. */
-.app-main__dark-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.6s ease-in-out;
-  background: #0d0d0d url('/images/darkmode.png') center bottom / 100% auto no-repeat local;
-}
-:root[data-theme='dark'] .app-main__dark-overlay {
-  opacity: 1;
 }
 
 /* Desktop main: offset for sidebar + topbar */
@@ -956,7 +962,7 @@ input, textarea { font-family: inherit; }
    reads as a smooth dissolve over the base rather than a hard cut. */
 .theme-toggle {
   position: relative;
-  width: 64px;
+  width: 78px;
   aspect-ratio: 3 / 2; /* matches the source images' native 300×200 ratio */
   padding: 0;
   border: none;
