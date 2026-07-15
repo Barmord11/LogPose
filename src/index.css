@@ -1075,11 +1075,22 @@ input, textarea { font-family: inherit; }
 
 /* ── 32. MOBILE HEADER THEME TOGGLE PLACEMENT ──────────── */
 /* Sits between the logo and the search/profile icons in the mobile
-   sticky header. The shared .theme-toggle is sized for the desktop
+   sticky header. Absolutely positioned + centered on the header itself
+   (the mobile-header element is position:sticky, which is a valid
+   positioning context) instead of relying on flexbox space-between -
+   the logo and the search/profile icons aren't the same width, so
+   space-between alone left the toggle visibly off-center, closer to
+   the right side. The shared .theme-toggle is sized for the desktop
    sidebar (150px wide) - far too big for a 64px-tall mobile header, so
    it's scaled down locally instead of shrinking the shared component
    (which would also shrink it in the sidebar). */
+.mobile-header-theme-toggle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
 .mobile-header-theme-toggle .theme-toggle {
-  width: 64px;
+  width: 80px;
 }
 
