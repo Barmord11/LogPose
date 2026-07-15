@@ -316,6 +316,21 @@
   color: var(--secondary) !important;
 }
 
+/* "Plan to Watch" item inside the Add-to-list dropdown (AddDropdown.tsx)
+   - the dropdown panel itself is a fixed near-white regardless of
+   theme, but this item's inactive-state text reads var(--on-surface),
+   which flips to near-white in dark mode and disappears against the
+   still-white panel. Hover is set via inline JS (onMouseEnter), not a
+   CSS :hover rule, but an external !important declaration still beats
+   a plain (non-important) inline style, so this reaches it too. */
+:root[data-theme='dark'] .drop-item--plan .material-symbols-outlined,
+:root[data-theme='dark'] .drop-item--plan p {
+  color: var(--secondary) !important;
+}
+:root[data-theme='dark'] .drop-item--plan:hover {
+  background: rgba(255, 107, 53, 0.14) !important;
+}
+
 /* Series detail page title, stat chip values, and the "X of Y episodes
    watched" counter - title reads as this page's own header, so it goes
    orange; the stat values and counter are just body text, so white. */

@@ -197,6 +197,7 @@ export function AddDropdownView({
             active={inPlan}
             activeColor="var(--on-tertiary-container)"
             onClick={inPlan ? removeFromList : addToPlan}
+            className="drop-item--plan"
           />
           {isAdded && (
             <button
@@ -261,7 +262,7 @@ export default function AddDropdown({
 
 /* ── Helper sub-component ── */
 function DropItem({
-  icon, label, sublabel, active, activeColor, onClick,
+  icon, label, sublabel, active, activeColor, onClick, className,
 }: {
   icon: string
   label: string
@@ -269,10 +270,20 @@ function DropItem({
   active: boolean
   activeColor: string
   onClick: () => void
+  /** The dropdown panel's own background is a fixed near-white
+   *  regardless of theme - fine for the default var(--on-surface)/
+   *  var(--outline) text in light mode, but that same text flips to
+   *  near-white in dark mode and disappears against the still-white
+   *  panel. "Plan to Watch" passes drop-item--plan here so a plain CSS
+   *  dark-mode override (see index.css) can force it orange - both the
+   *  default text color and the (JS-driven) hover background, since a
+   *  stylesheet !important rule beats a plain inline style either way. */
+  className?: string
 }) {
   return (
     <button
       onClick={onClick}
+      className={className}
       style={{
         width: '100%',
         display: 'flex',
