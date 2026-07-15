@@ -105,6 +105,104 @@
   --glow-navy:      0 4px 20px rgba(0, 43, 91, 0.25);
 }
 
+/* ── 1b. DARK MODE TOKEN OVERRIDES ──────────────────────────
+   Toggled via <html data-theme="dark"> (see ThemeContext.tsx). Every
+   component below already reads colors through these same custom
+   properties (var(--primary), var(--surface-container), etc.), so
+   redefining them here reskins the whole app to the black/orange/red
+   palette without touching component code. The attribute selector
+   gives this block higher specificity than the plain :root block
+   above, so these values win whenever the attribute is present. */
+:root[data-theme='dark'] {
+  /* Surface scale — black, with warm dark-gray steps for elevation */
+  --surface:                   #0d0d0d;
+  --surface-dim:                #000000;
+  --surface-bright:            #1a1a1a;
+  --surface-container-lowest:  #000000;
+  --surface-container-low:     #141414;
+  --surface-container:         #1c1c1c;
+  --surface-container-high:    #262626;
+  --surface-container-highest: #303030;
+  --on-surface:                #f5f0ea;
+  --on-surface-variant:        #c9beb4;
+  --inverse-surface:           #f5f0ea;
+  --inverse-on-surface:        #1a1a1a;
+
+  --outline:                   #7a7a7a;
+  --outline-variant:           #3a3a3a;
+  --surface-tint:              #ff6b35;
+
+  /* Primary — Black */
+  --primary:                   #000000;
+  --on-primary:                #ffffff;
+  --primary-container:         #1a1a1a;
+  --on-primary-container:      #ff8a5c;
+  --inverse-primary:           #ff6b35;
+  --primary-fixed:             #2a2a2a;
+  --primary-fixed-dim:         #1a1a1a;
+  --on-primary-fixed:          #ffffff;
+  --on-primary-fixed-variant:  #cccccc;
+
+  /* Secondary — Orange (unchanged accent, reads even stronger on black) */
+  --secondary:                 #ff6b35;
+  --on-secondary:              #000000;
+  --secondary-container:       #ab3500;
+  --on-secondary-container:    #ffd9c4;
+  --secondary-fixed:           #ff6b35;
+  --secondary-fixed-dim:       #cc4a1a;
+  --on-secondary-fixed:        #000000;
+  --on-secondary-fixed-variant:#4a1a00;
+
+  /* Tertiary — Red (replaces the light theme's teal accent) */
+  --tertiary:                  #d32f2f;
+  --on-tertiary:               #ffffff;
+  --tertiary-container:        #7a1a1a;
+  --on-tertiary-container:     #ff8a8a;
+  --tertiary-fixed:            #ff5252;
+  --tertiary-fixed-dim:        #d32f2f;
+  --on-tertiary-fixed:         #000000;
+  --on-tertiary-fixed-variant: #ffcccc;
+
+  /* Error — red, distinct enough from --tertiary to still read as "error" */
+  --error:                     #ff5252;
+  --on-error:                  #000000;
+  --error-container:           #4a0000;
+  --on-error-container:        #ffb3b3;
+
+  --background:                #0d0d0d;
+  --on-background:             #f5f0ea;
+  --surface-variant:           #262626;
+
+  --navy:        #000000;
+  --orange:      #ff6b35;
+  --orange-dark: #ab3500;
+  --cyan:        #d32f2f;
+  --white:       #f5f0ea;
+
+  /* Frosted glass reads as smoked black glass with a warm orange edge
+     instead of the light theme's white/misty look. */
+  --glass-bg:     rgba(18, 16, 14, 0.70);
+  --glass-border: rgba(255, 140, 60, 0.25);
+
+  --shadow-card:    0 2px 16px rgba(0, 0, 0, 0.45);
+  --shadow-float:   0 8px 32px rgba(0, 0, 0, 0.55);
+  --glow-orange:    0 0 20px rgba(255, 107, 53, 0.55);
+  --glow-cyan:      0 0 20px rgba(211, 47, 47, 0.40);
+  --glow-navy:      0 4px 20px rgba(0, 0, 0, 0.60);
+}
+
+/* .glass-panel and .glass-nav (below) hardcode their rgba() values
+   instead of reading --glass-bg/--glass-border like .glass-card and
+   .glass-header do, so they need their own explicit dark overrides. */
+:root[data-theme='dark'] .glass-panel {
+  background: rgba(18, 16, 14, 0.75);
+  border-color: rgba(255, 140, 60, 0.25);
+}
+:root[data-theme='dark'] .glass-nav {
+  background: rgba(10, 8, 6, 0.85);
+  border-color: rgba(255, 140, 60, 0.20);
+}
+
 /* ── 2. RESET ─────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-size: 16px; scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
@@ -120,6 +218,9 @@ body {
   min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+:root[data-theme='dark'] body {
+  background-color: #0d0d0d;
 }
 img, svg { display: block; max-width: 100%; }
 a { color: inherit; text-decoration: none; }
@@ -269,6 +370,39 @@ input, textarea { font-family: inherit; }
      does track it, since it's defined relative to the content's own
      end, not the viewport. */
   background: #f4f1ea url('/images/bg-wave-lighthouse.jpg') center bottom / 100% auto no-repeat local;
+  /* Containing block for .app-main__dark-overlay below. */
+  position: relative;
+}
+
+:root[data-theme='dark'] .app-main {
+  background-color: #0d0d0d;
+}
+
+/* Dark-mode background artwork (darkmode.png) - a separate layer rather
+   than swapping .app-main's own background-image directly, since CSS
+   can't crossfade between two different background-image URLs. This
+   overlay fades its opacity in/out instead, over the light artwork
+   underneath, so switching themes dissolves smoothly instead of
+   popping. .app-main's own background (its plain background property,
+   not a positioned child) always paints at the very bottom of the box
+   regardless of z-index, so it stays below this overlay automatically;
+   z-index:-1 here is what keeps the overlay itself below every real
+   (non-positioned) page-content descendant of .app-main, which all
+   render at the default stacking level above negative z-index
+   children. darkmode.png shares bg-wave-lighthouse.jpg's exact
+   1023×1537 dimensions, so the same background-size/position math
+   lines the two images up pixel-for-pixel as they crossfade. */
+.app-main__dark-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.6s ease-in-out;
+  background: #0d0d0d url('/images/darkmode.png') center bottom / 100% auto no-repeat local;
+}
+:root[data-theme='dark'] .app-main__dark-overlay {
+  opacity: 1;
 }
 
 /* Desktop main: offset for sidebar + topbar */
@@ -811,4 +945,62 @@ input, textarea { font-family: inherit; }
 @media (min-width: 768px) {
   .favorites-toggle { cursor: default; }
   .favorites-toggle__chevron { display: none; }
+}
+
+/* ── 30. THEME TOGGLE ────────────────────────────── */
+/* Three images stacked with absolute positioning instead of swapping
+   a single <img>'s src (which blinks the instant the new file paints).
+   toggle-neutral.png is the permanent base layer at z-index 0; the
+   dark/light state layers sit above it at the same size/position and
+   crossfade their own opacity between 0 and 1, so switching themes
+   reads as a smooth dissolve over the base rather than a hard cut. */
+.theme-toggle {
+  position: relative;
+  width: 64px;
+  aspect-ratio: 3 / 2; /* matches the source images' native 300×200 ratio */
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  border-radius: var(--r-lg);
+  transition: transform 0.15s ease;
+}
+.theme-toggle:hover  { transform: scale(1.05); }
+.theme-toggle:active { transform: scale(0.95); }
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--secondary);
+  outline-offset: 3px;
+}
+
+.theme-toggle__layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+/* Base layer — always fully opaque, everything else fades over it */
+.theme-toggle__layer:first-child { opacity: 1; z-index: 0; }
+
+.theme-toggle__layer--dark,
+.theme-toggle__layer--light {
+  opacity: 0;
+  z-index: 1;
+  transition: opacity 0.4s ease-in-out;
+}
+.theme-toggle__layer--dark.is-visible,
+.theme-toggle__layer--light.is-visible {
+  opacity: 1;
+}
+
+/* ── 31. DESKTOP SIDEBAR THEME TOGGLE PLACEMENT ────────── */
+/* Sits directly under the Captain's Cabin user card at the bottom of
+   the sidebar, same column as everything above it. */
+.sidebar-theme-toggle {
+  display: flex;
+  justify-content: center;
+  padding-top: 16px;
 }

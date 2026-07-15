@@ -1,5 +1,6 @@
 import type { Page } from '../App'
 import { useProfileStats } from '../context/AppContext'
+import ThemeToggle from './ThemeToggle'
 
 interface SidebarProps {
   activePage: Page
@@ -87,6 +88,11 @@ export default function Sidebar({ activePage, navigate }: SidebarProps) {
           </p>
         </div>
       </button>
+
+      {/* Theme toggle — directly under Captain's Cabin, bottom of the sidebar */}
+      <div className="sidebar-theme-toggle">
+        <ThemeToggle />
+      </div>
     </aside>
   )
 }
