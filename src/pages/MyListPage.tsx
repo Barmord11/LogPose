@@ -462,15 +462,6 @@ function LiveMyListCard({ row, navigate, onRemoved }: { row: TrackerRow; navigat
           <div style={{ width: '100%', height: '100%', background: 'var(--surface-container)' }} />
         )}
         <div className="mylist-card__overlay" />
-        <div
-          style={{
-            position: 'absolute', top: '10px', left: '10px', padding: '3px 10px', borderRadius: '9999px',
-            fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em',
-            background: 'rgba(255,255,255,0.85)', color: 'var(--primary)', backdropFilter: 'blur(8px)', zIndex: 2,
-          }}
-        >
-          AL
-        </div>
       </div>
 
       {/* Card body */}
