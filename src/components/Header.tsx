@@ -63,12 +63,8 @@ export default function Header({ navigate, activePage }: HeaderProps) {
         </span>
       </button>
 
-      {/* Theme toggle — sits between the logo and the search/profile icons */}
-      <div className="mobile-header-theme-toggle">
-        <ThemeToggle />
-      </div>
-
-      {/* Right actions */}
+      {/* Right actions — search, then profile, then the theme toggle
+         farthest right, per the requested left-to-right order. */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         {/* Search icon */}
         <button
@@ -118,6 +114,11 @@ export default function Header({ navigate, activePage }: HeaderProps) {
             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
           />
         </button>
+
+        {/* Theme toggle — far right */}
+        <div className="mobile-header-theme-toggle">
+          <ThemeToggle />
+        </div>
       </div>
     </header>
   )

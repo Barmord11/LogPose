@@ -107,6 +107,14 @@
   /* .app-main's background-image source - overridden to darkmode.png
      under [data-theme='dark'] below. */
   --app-bg-image: url('/images/bg-wave-lighthouse.jpg');
+
+  /* Series detail page: the page's own background wash + the fade that
+     dissolves the hero image into it. Both overridden under
+     [data-theme='dark'] below - they were hardcoded to a near-white
+     color regardless of theme, which showed up as a stray white patch
+     over the hero image once the rest of the page went dark. */
+  --detail-bg-gradient: linear-gradient(180deg, rgba(247,249,251,0.55) 0%, rgba(238,242,247,0.75) 100%);
+  --detail-hero-fade: linear-gradient(180deg, rgba(25,28,30,0) 0%, rgba(247,249,251,1) 90%);
 }
 
 /* ── 1b. DARK MODE TOKEN OVERRIDES ──────────────────────────
@@ -199,6 +207,13 @@
      the .app-main background shorthand, so it can be redefined here
      without repeating the rest of that declaration. */
   --app-bg-image: url('/images/darkmode.png');
+
+  /* Series detail page background wash + hero fade - a dark neutral
+     grey instead of the light theme's near-white, so the hero image
+     dissolves into the same dark surface the rest of the page sits on
+     rather than leaving a white patch behind. */
+  --detail-bg-gradient: linear-gradient(180deg, rgba(13,13,13,0.55) 0%, rgba(20,20,20,0.85) 100%);
+  --detail-hero-fade: linear-gradient(180deg, rgba(13,13,13,0) 0%, rgba(20,20,20,1) 90%);
 }
 
 /* .glass-panel and .glass-nav (below) hardcode their rgba() values
@@ -299,6 +314,17 @@
    text on a dark surface in dark mode. */
 :root[data-theme='dark'] .progress-input {
   color: var(--secondary) !important;
+}
+
+/* Series detail page title, stat chip values, and the "X of Y episodes
+   watched" counter - title reads as this page's own header, so it goes
+   orange; the stat values and counter are just body text, so white. */
+:root[data-theme='dark'] .detail-title {
+  color: var(--secondary) !important;
+}
+:root[data-theme='dark'] .detail-stat-value,
+:root[data-theme='dark'] .detail-episode-counter {
+  color: var(--on-surface) !important;
 }
 
 /* ── 2. RESET ─────────────────────────────────────────────── */
@@ -1081,22 +1107,12 @@ input, textarea { font-family: inherit; }
 }
 
 /* ── 32. MOBILE HEADER THEME TOGGLE PLACEMENT ──────────── */
-/* Sits between the logo and the search/profile icons in the mobile
-   sticky header. Absolutely positioned + centered on the header itself
-   (the mobile-header element is position:sticky, which is a valid
-   positioning context) instead of relying on flexbox space-between -
-   the logo and the search/profile icons aren't the same width, so
-   space-between alone left the toggle visibly off-center, closer to
-   the right side. The shared .theme-toggle is sized for the desktop
-   sidebar (150px wide) - far too big for a 64px-tall mobile header, so
-   it's scaled down locally instead of shrinking the shared component
-   (which would also shrink it in the sidebar). */
-.mobile-header-theme-toggle {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-}
+/* Sits as the last item in the right-actions cluster (search, then
+   profile, then the toggle) - a normal flex child now, no special
+   positioning needed. The shared .theme-toggle is sized for the
+   desktop sidebar (150px wide) - far too big for a 64px-tall mobile
+   header, so it's scaled down locally instead of shrinking the shared
+   component (which would also shrink it in the sidebar). */
 .mobile-header-theme-toggle .theme-toggle {
   width: 80px;
 }

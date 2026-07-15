@@ -108,7 +108,7 @@ function StatChip({ label, value, accent }: { label: string; value: string; acce
       <p style={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--on-surface-variant)', marginBottom: '4px' }}>
         {label}
       </p>
-      <p style={{ fontFamily: 'var(--font)', fontSize: '20px', fontWeight: 800, color: accent ? 'var(--secondary-container)' : 'var(--primary)', lineHeight: 1 }}>
+      <p className="detail-stat-value" style={{ fontFamily: 'var(--font)', fontSize: '20px', fontWeight: 800, color: accent ? 'var(--secondary-container)' : 'var(--primary)', lineHeight: 1 }}>
         {value}
       </p>
     </div>
@@ -216,7 +216,7 @@ function MockDetail({ animeId, navigate, backTo }: { animeId: number; navigate: 
   const allWatched = watchedEps.length === anime.episodes
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(180deg, rgba(247,249,251,0.55) 0%, rgba(238,242,247,0.75) 100%)' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--detail-bg-gradient)' }}>
 
       {/* ══ HERO BANNER ════════════════════════════════════════ */}
       <div style={{ position: 'relative', height: '55vh', minHeight: '320px', overflow: 'hidden' }}>
@@ -225,7 +225,7 @@ function MockDetail({ animeId, navigate, backTo }: { animeId: number; navigate: 
           alt={anime.title}
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }}
         />
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(25,28,30,0) 0%, rgba(247,249,251,1) 90%)' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'var(--detail-hero-fade)' }} />
         <BackButton onClick={() => navigate(backTo)} />
       </div>
 
@@ -291,7 +291,7 @@ function MockDetail({ animeId, navigate, backTo }: { animeId: number; navigate: 
                   <span key={g} className="chip chip-navy">{g}</span>
                 ))}
               </div>
-              <h1 style={{ fontFamily: 'var(--font)', fontSize: 'clamp(26px, 4vw, 44px)', fontWeight: 800, color: 'var(--primary)', letterSpacing: '-0.02em', lineHeight: 1.1, marginBottom: '6px' }}>
+              <h1 className="detail-title" style={{ fontFamily: 'var(--font)', fontSize: 'clamp(26px, 4vw, 44px)', fontWeight: 800, color: 'var(--primary)', letterSpacing: '-0.02em', lineHeight: 1.1, marginBottom: '6px' }}>
                 {anime.title}
               </h1>
               {anime.altTitle && (
@@ -359,7 +359,7 @@ function MockDetail({ animeId, navigate, backTo }: { animeId: number; navigate: 
               <div className="page-enter">
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                   <div>
-                    <p style={{ fontFamily: 'var(--font)', fontSize: '16px', fontWeight: 700, color: 'var(--primary)' }}>
+                    <p className="detail-episode-counter" style={{ fontFamily: 'var(--font)', fontSize: '16px', fontWeight: 700, color: 'var(--primary)' }}>
                       {watchedEps.length} of {anime.episodes} episodes watched
                     </p>
                     <p style={{ fontSize: '12px', color: 'var(--on-surface-variant)', marginTop: '2px' }}>
@@ -627,7 +627,7 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
   const watchNowUrl = `https://anikototv.to/filter?${new URLSearchParams({ keyword: anime.title }).toString()}`
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(180deg, rgba(247,249,251,0.55) 0%, rgba(238,242,247,0.75) 100%)' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--detail-bg-gradient)' }}>
 
       {/* ══ HERO BANNER ════════════════════════════════════════ */}
       <div style={{ position: 'relative', height: '55vh', minHeight: '320px', overflow: 'hidden' }}>
@@ -638,7 +638,7 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }}
           />
         )}
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(25,28,30,0) 0%, rgba(247,249,251,1) 90%)' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'var(--detail-hero-fade)' }} />
         <BackButton onClick={() => navigate(backTo)} />
       </div>
 
@@ -807,7 +807,7 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
                   ))}
                 </div>
               )}
-              <h1 style={{ fontFamily: 'var(--font)', fontSize: 'clamp(26px, 4vw, 44px)', fontWeight: 800, color: 'var(--primary)', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+              <h1 className="detail-title" style={{ fontFamily: 'var(--font)', fontSize: 'clamp(26px, 4vw, 44px)', fontWeight: 800, color: 'var(--primary)', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
                 {anime.title}
               </h1>
             </div>
