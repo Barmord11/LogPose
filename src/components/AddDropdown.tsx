@@ -189,6 +189,7 @@ export function AddDropdownView({
             active={inWatched}
             activeColor="var(--secondary)"
             onClick={inWatched ? removeFromList : addToWatched}
+            className="drop-item--dark-accent"
           />
           <DropItem
             icon="bookmark"
@@ -197,7 +198,7 @@ export function AddDropdownView({
             active={inPlan}
             activeColor="var(--on-tertiary-container)"
             onClick={inPlan ? removeFromList : addToPlan}
-            className="drop-item--plan"
+            className="drop-item--dark-accent"
           />
           {isAdded && (
             <button

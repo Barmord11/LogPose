@@ -316,18 +316,23 @@
   color: var(--secondary) !important;
 }
 
-/* "Plan to Watch" item inside the Add-to-list dropdown (AddDropdown.tsx)
-   - the dropdown panel itself is a fixed near-white regardless of
-   theme, but this item's inactive-state text reads var(--on-surface),
-   which flips to near-white in dark mode and disappears against the
-   still-white panel. Hover is set via inline JS (onMouseEnter), not a
-   CSS :hover rule, but an external !important declaration still beats
-   a plain (non-important) inline style, so this reaches it too. */
-:root[data-theme='dark'] .drop-item--plan .material-symbols-outlined,
-:root[data-theme='dark'] .drop-item--plan p {
+/* "Watched" and "Plan to Watch" items inside the Add-to-list dropdown
+   (AddDropdown.tsx) - the dropdown panel itself is a fixed near-white
+   regardless of theme, but each item's inactive-state text reads
+   var(--on-surface), which flips to near-white in dark mode and
+   disappears against the still-white panel ("Watched" happened to
+   still read fine once *active*, since its activeColor already is
+   var(--secondary) - but inactive, it had the same invisible-text bug
+   as "Plan to Watch"). Both share this same orange treatment so they
+   read as one consistent color, not just one of the two. Hover is set
+   via inline JS (onMouseEnter), not a CSS :hover rule, but an external
+   !important declaration still beats a plain (non-important) inline
+   style, so this reaches it too. */
+:root[data-theme='dark'] .drop-item--dark-accent .material-symbols-outlined,
+:root[data-theme='dark'] .drop-item--dark-accent p {
   color: var(--secondary) !important;
 }
-:root[data-theme='dark'] .drop-item--plan:hover {
+:root[data-theme='dark'] .drop-item--dark-accent:hover {
   background: rgba(255, 107, 53, 0.14) !important;
 }
 
