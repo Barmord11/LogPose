@@ -22,12 +22,17 @@ export default function Sidebar({ activePage, navigate }: SidebarProps) {
   return (
     <aside className="sidebar glass-nav">
 
-      {/* Logo */}
-      <div className="sidebar-logo">
+      {/* Logo — clickable, returns to Home like every other nav item */}
+      <button
+        className="sidebar-logo"
+        onClick={() => navigate('home')}
+        style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left', width: '100%' }}
+        aria-label="Go to home"
+      >
         <img
           src="/images/logo-compass.png"
           alt=""
-          style={{ width: '40px', height: '40px', objectFit: 'contain', flexShrink: 0 }}
+          style={{ width: '46px', height: '46px', objectFit: 'contain', flexShrink: 0 }}
         />
         <div>
           <h1 style={{ fontFamily: 'var(--font)', fontSize: '22px', fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--primary)', lineHeight: 1 }}>
@@ -37,7 +42,7 @@ export default function Sidebar({ activePage, navigate }: SidebarProps) {
             Grand Line Voyager
           </p>
         </div>
-      </div>
+      </button>
 
       {/* Nav items */}
       <nav style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
