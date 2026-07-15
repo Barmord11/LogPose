@@ -109,6 +109,23 @@ export default function ProfilePage({ navigate }: NavProps) {
               }}
             />
           ))}
+
+          {/* LogPose mark — top-left of the banner, noticeably bigger than
+             the 46px sidebar/homepage logo since this is a hero moment. */}
+          <img
+            src="/images/logo-compass.png"
+            alt="LogPose"
+            style={{
+              position: 'absolute',
+              top: '20px',
+              left: '24px',
+              width: '76px',
+              height: '76px',
+              objectFit: 'contain',
+              filter: 'drop-shadow(0 2px 10px rgba(0,0,0,0.3))',
+            }}
+          />
+
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'flex-end', padding: '0 16px 0' }}>
             <span className="material-symbols-outlined" style={{ fontSize: '16px', color: 'rgba(255,255,255,0.3)', marginBottom: '16px', fontVariationSettings: "'FILL' 1" }}>
               anchor
