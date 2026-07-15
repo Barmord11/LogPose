@@ -294,27 +294,43 @@
   .detail-left-col { max-width: 280px; }
 }
 
-/* ── MYLIST LAYOUT: main column + favorites side panel ────── */
-.mylist-layout {
+/* ── MYLIST LAYOUT: title/toggle/favorites/main via grid-areas ──────
+   Mobile stacks title → favorites (collapsible) → tab toggle → list,
+   so Favorites sits at the top of the page above the toggle instead of
+   being buried under the watch list. Desktop keeps the original two-row
+   layout: title+toggle on top, main list beside the favorites sidebar. */
+.mylist-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 24px;
+  grid-template-areas:
+    "title"
+    "favorites"
+    "toggle"
+    "main";
+  row-gap: 24px;
+  column-gap: 16px;
 }
 
 @media (min-width: 1024px) {
-  .mylist-layout {
+  .mylist-grid {
     grid-template-columns: minmax(0, 1fr) 300px;
+    grid-template-areas:
+      "title toggle"
+      "main favorites";
     align-items: start;
   }
 }
 
+.mylist-grid__title      { grid-area: title; }
+.mylist-grid__toggle     { grid-area: toggle; }
+.mylist-grid__favorites  { grid-area: favorites; }
+.mylist-grid__main       { grid-area: main; min-width: 0; }
+
 /* ── MYLIST FAVORITES PANEL COLLAPSE ──────────────────────── */
-/* Below 1024px the favorites panel stacks full-width beneath the main
-   watch list (see .mylist-layout above) instead of sitting beside it as
-   a slim sidebar - collapsed by default there so it doesn't push the
-   watch list itself further down the page. Desktop ignores the
-   collapsed state entirely (chevron hidden, panel always open), same
-   as the sidebar's original always-visible layout. */
+/* Below 1024px the favorites panel is collapsed by default so it
+   doesn't push the tab toggle and watch list further down the page.
+   Desktop ignores the collapsed state entirely (chevron hidden, panel
+   always open), same as the sidebar's original always-visible layout. */
 @media (max-width: 1023px) {
   .mylist-favorites-body { display: none; }
   .mylist-favorites-body.is-open { display: block; }

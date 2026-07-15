@@ -56,21 +56,16 @@ export default function MyListPage({ navigate }: NavProps) {
   return (
     <div style={{ minHeight: '100vh', paddingBottom: '48px' }}>
 
-      {/* ══ PAGE HEADER ════════════════════════════════════════ */}
-      <section
-        className="page-enter"
-        style={{
-          padding: '32px 16px 24px',
-          maxWidth: '1280px',
-          margin: '0 auto',
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: '16px',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
+      {/* ══ TITLE / TOGGLE / FAVORITES / MAIN LIST ══════════════
+          A single grid whose areas are reordered per breakpoint (see
+          .mylist-grid in responsive.css): mobile stacks Favorites above
+          the watch/plan toggle; desktop keeps title+toggle on one row
+          with Favorites as a sidebar beside the main list. */}
+      <div
+        className="mylist-grid page-enter"
+        style={{ padding: '32px 16px 24px', maxWidth: '1280px', margin: '0 auto' }}
       >
-        <div>
+        <div className="mylist-grid__title">
           <h1 style={{ fontFamily: 'var(--font)', fontSize: 'clamp(28px, 4vw, 36px)', fontWeight: 800, color: 'var(--primary)', letterSpacing: '-0.02em', marginBottom: '4px' }}>
             My Log
           </h1>
@@ -81,12 +76,14 @@ export default function MyListPage({ navigate }: NavProps) {
 
         {/* Tab toggle pill — watch lists only; favorites live in their own panel */}
         <div
+          className="mylist-grid__toggle"
           style={{
             display: 'flex',
             background: 'var(--surface-container)',
             borderRadius: '9999px',
             padding: '4px',
             border: '1px solid rgba(196,198,208,0.2)',
+            width: 'fit-content',
           }}
         >
           {([
@@ -137,13 +134,12 @@ export default function MyListPage({ navigate }: NavProps) {
             </button>
           ))}
         </div>
-      </section>
 
-      {/* ══ MAIN + FAVORITES SIDE PANEL ════════════════════════ */}
-      <div className="mylist-layout" style={{ padding: '0 16px', maxWidth: '1280px', margin: '0 auto' }}>
+        {/* Favorites panel — collapsible strip above the toggle on mobile, sidebar on desktop */}
+        <FavoritesPanel navigate={navigate} />
 
         {/* Main column: active watch list (mock catalogue + live tracked series) */}
-        <section style={{ minWidth: 0 }}>
+        <section className="mylist-grid__main">
           {mockList.length === 0 && liveList.length === 0 ? (
             <EmptyState tab={activeTab} navigate={navigate} />
           ) : (
@@ -157,9 +153,6 @@ export default function MyListPage({ navigate }: NavProps) {
             </div>
           )}
         </section>
-
-        {/* Right column: favorites */}
-        <FavoritesPanel navigate={navigate} />
       </div>
     </div>
   )
@@ -171,11 +164,11 @@ function FavoritesPanel({ navigate }: { navigate: NavProps['navigate'] }) {
   const favs = animes.filter(a => state.favorites.includes(a.id))
 
   const [liveFavs, setLiveFavs] = useState<FavoriteRow[]>([])
-  // Below the 1024px breakpoint (see .mylist-layout in responsive.css)
-  // this panel stacks full-width beneath the main watch list instead of
-  // sitting beside it, so it defaults collapsed there to keep the list
-  // itself the first thing a mobile/tablet visitor sees. Desktop ignores
-  // this via the matching CSS and always shows the panel body.
+  // Below the 1024px breakpoint (see .mylist-grid in responsive.css) this
+  // panel sits above the watch/plan toggle as a collapsible strip instead
+  // of a sidebar, so it defaults collapsed to keep the watch list itself
+  // reachable without extra scrolling. Desktop ignores this via the
+  // matching CSS and always shows the panel body.
   const [favoritesOpen, setFavoritesOpen] = useState(false)
 
   useEffect(() => {
@@ -196,7 +189,7 @@ function FavoritesPanel({ navigate }: { navigate: NavProps['navigate'] }) {
 
   return (
     <aside
-      className="glass-card"
+      className="glass-card mylist-grid__favorites"
       style={{
         borderRadius: '20px',
         padding: '18px',
