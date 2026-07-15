@@ -1,4 +1,5 @@
 import type { Page } from '../App'
+import ThemeToggle from './ThemeToggle'
 
 interface HeaderProps {
   navigate: (page: Page, animeId?: number) => void
@@ -61,6 +62,11 @@ export default function Header({ navigate, activePage }: HeaderProps) {
           LogPose
         </span>
       </button>
+
+      {/* Theme toggle — sits between the logo and the search/profile icons */}
+      <div className="mobile-header-theme-toggle">
+        <ThemeToggle />
+      </div>
 
       {/* Right actions */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

@@ -135,10 +135,19 @@
   padding: 10px 20px 10px 48px;
   font-size: 15px;
   font-family: var(--font);
-  color: var(--on-surface);
+  /* Fixed dark color, not a theme token - this input's background stays
+     a light gray in both themes, so the text must too, or dark mode's
+     near-white --on-surface makes it look washed out/broken. */
+  color: #14100d;
+  font-weight: 600;
   outline: none;
   width: 300px;
   transition: box-shadow 0.2s, background 0.2s;
+}
+.search-input-desktop::placeholder {
+  color: #14100d;
+  font-weight: 600;
+  opacity: 0.9;
 }
 .search-input-desktop:focus {
   background: rgba(255,255,255,0.95);

@@ -256,6 +256,44 @@
   color: var(--on-surface) !important;
 }
 
+/* Search page: "Find Your Way" hero title + the results-grid heading
+   ("Most Popular..."/"Results for...") both use the same inline
+   color: var(--primary) pattern as every other page heading - orange
+   in dark mode, matching the header-is-orange rule used everywhere
+   else. Both h1/h2 live inside the page's one unique wrapper, so no
+   extra classNames were needed. */
+:root[data-theme='dark'] .search-hero h1,
+:root[data-theme='dark'] .search-hero h2 {
+  color: var(--secondary) !important;
+}
+
+/* Profile page "Quick Navigation" heading - .section-header--border is
+   currently only used here, so it's safe to restyle directly. Body
+   text, not a section label like the others, so it goes bright white
+   instead of orange. */
+:root[data-theme='dark'] .section-header--border {
+  color: var(--on-surface) !important;
+}
+
+/* Sidebar "Captain's Cabin" user card - the card's own two text lines
+   read the same inline var(--primary)/var(--outline) pattern that goes
+   invisible/muddy on black. "Captain's Cabin" is the card's own label,
+   so it goes orange like a header; the "Lvl N Navigator" line under it
+   is just body text, so it goes bright white - the "mix of orange and
+   white" the rest of the app already uses. */
+:root[data-theme='dark'] .sidebar-user p:first-child {
+  color: var(--secondary) !important;
+}
+:root[data-theme='dark'] .sidebar-user p:last-child {
+  color: var(--on-surface) !important;
+}
+/* The card's own area, not just its text - a faint orange-tinted glass
+   wash on hover so it reads as a distinct, "bright" element sitting on
+   the black sidebar instead of blending flat into it. */
+:root[data-theme='dark'] .sidebar-user:hover {
+  background: rgba(255, 107, 53, 0.10);
+}
+
 /* ── 2. RESET ─────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-size: 16px; scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
@@ -986,7 +1024,7 @@ input, textarea { font-family: inherit; }
    reads as a smooth dissolve over the base rather than a hard cut. */
 .theme-toggle {
   position: relative;
-  width: 120px;
+  width: 150px;
   aspect-ratio: 3 / 2; /* matches the source images' native 300×200 ratio */
   padding: 0;
   border: none;
@@ -1034,3 +1072,14 @@ input, textarea { font-family: inherit; }
   justify-content: center;
   padding-top: 16px;
 }
+
+/* ── 32. MOBILE HEADER THEME TOGGLE PLACEMENT ──────────── */
+/* Sits between the logo and the search/profile icons in the mobile
+   sticky header. The shared .theme-toggle is sized for the desktop
+   sidebar (150px wide) - far too big for a 64px-tall mobile header, so
+   it's scaled down locally instead of shrinking the shared component
+   (which would also shrink it in the sidebar). */
+.mobile-header-theme-toggle .theme-toggle {
+  width: 64px;
+}
+
