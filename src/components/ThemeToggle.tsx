@@ -24,8 +24,8 @@ export default function ThemeToggle() {
       onClick={toggleTheme}
       role="switch"
       aria-checked={isDark}
-      aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-      title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+      aria-label={isDark ? 'Light Hero Mode' : 'Dark Villain Mode'}
+      title={isDark ? 'Light Hero Mode' : 'Dark Villain Mode'}
     >
       {/* Base layer — always visible, everything else fades over it */}
       <img src="/images/toggle-neutral.png" alt="" className="theme-toggle__layer" />

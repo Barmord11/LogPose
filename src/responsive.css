@@ -127,6 +127,20 @@
 }
 .desktop-footer a:hover { color: var(--secondary); }
 
+/* ── PROFILE HERO LOGO ────────────────────────────────────── */
+/* Mobile size is already "enough" - only bumped up further on desktop,
+   where the banner has more room to make it a proper hero moment. */
+.profile-hero-logo {
+  width: 104px;
+  height: 104px;
+}
+@media (min-width: 768px) {
+  .profile-hero-logo {
+    width: 150px;
+    height: 150px;
+  }
+}
+
 /* ── DESKTOP SEARCH INPUT ─────────────────────────────────── */
 .search-input-desktop {
   background: rgba(230, 232, 234, 0.5);

@@ -10,7 +10,7 @@ interface BottomNavProps {
 const NAV_ITEMS = [
   { page: 'home'    as Page, icon: 'home',          label: 'Home'    },
   { page: 'search'  as Page, icon: 'search',        label: 'Search'  },
-  { page: 'mylist'  as Page, icon: 'subscriptions', label: 'My List' },
+  { page: 'mylist'  as Page, icon: 'subscriptions', label: 'My Log' },
   { page: 'profile' as Page, icon: 'person',        label: 'Profile' },
 ]
 
@@ -92,8 +92,8 @@ export default function BottomNav({ navigate, activePage }: BottomNavProps) {
           }}
           onMouseDown={e => (e.currentTarget.style.transform = 'scale(0.9)')}
           onMouseUp={e => (e.currentTarget.style.transform = 'scale(1)')}
-          aria-label="Open a random anime"
-          title="Chart a random course"
+          aria-label="Random series"
+          title="Random series"
         >
           <span
             className="material-symbols-outlined"

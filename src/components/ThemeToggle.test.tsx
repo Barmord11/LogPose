@@ -66,3 +66,15 @@ it('clicking twice returns to light mode', () => {
   expect(button).toHaveAttribute('aria-checked', 'false')
   expect(document.documentElement.dataset.theme).toBe('light')
 })
+
+it('tooltip names the mode you are about to switch TO, not the current one', () => {
+  renderToggle()
+  const button = screen.getByRole('switch')
+
+  // Starts light - hovering shows the villain pitch for turning dark on.
+  expect(button).toHaveAttribute('title', 'Dark Villain Mode')
+
+  fireEvent.click(button)
+  // Now dark - hovering shows the hero pitch for turning light back on.
+  expect(button).toHaveAttribute('title', 'Light Hero Mode')
+})

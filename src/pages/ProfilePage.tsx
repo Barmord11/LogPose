@@ -114,13 +114,13 @@ export default function ProfilePage({ navigate }: NavProps) {
              the 46px sidebar/homepage logo since this is a hero moment. */}
           <img
             src="/images/logo-compass.png"
-            alt="LogPose"
+            alt="LogPose Profile"
+            title="LogPose Profile"
+            className="profile-hero-logo"
             style={{
               position: 'absolute',
               top: '20px',
               left: '24px',
-              width: '76px',
-              height: '76px',
               objectFit: 'contain',
               filter: 'drop-shadow(0 2px 10px rgba(0,0,0,0.3))',
             }}

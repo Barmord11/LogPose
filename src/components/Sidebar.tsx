@@ -11,7 +11,7 @@ interface SidebarProps {
 const NAV_ITEMS = [
   { page: 'home'    as Page, icon: 'home',          label: 'Home'    },
   { page: 'search'  as Page, icon: 'search',        label: 'Search'  },
-  { page: 'mylist'  as Page, icon: 'subscriptions', label: 'My List' },
+  { page: 'mylist'  as Page, icon: 'subscriptions', label: 'My Log' },
   { page: 'profile' as Page, icon: 'person',        label: 'Profile' },
 ]
 
