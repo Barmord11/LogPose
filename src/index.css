@@ -656,6 +656,31 @@ input, textarea { font-family: inherit; }
 .action-item:hover { background: rgba(42, 245, 255, 0.06); }
 .action-item:active { transform: scale(0.99); }
 
+/* Watch-source picker (Profile page, Quick Navigation) - styled to sit
+   inside an .action-item row in place of the usual chevron. */
+.source-select {
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary);
+  background: var(--surface-container);
+  border: 1.5px solid rgba(116, 119, 128, 0.25);
+  border-radius: var(--r-full);
+  padding: 8px 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.source-select:hover { border-color: var(--secondary); }
+.source-select:focus-visible {
+  outline: 2px solid var(--secondary);
+  outline-offset: 2px;
+}
+:root[data-theme='dark'] .source-select {
+  color: var(--on-surface) !important;
+  background: rgba(255, 140, 60, 0.08);
+  border-color: rgba(255, 140, 60, 0.25);
+}
+
 /* ── 17. SUNSET BUTTON ────────────────────────────────────── */
 .btn-sunset {
   display: inline-flex;

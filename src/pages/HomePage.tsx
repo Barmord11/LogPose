@@ -23,6 +23,7 @@ import { getTrackerRow, upsertStatus, removeFromTracker, type TrackerRow, type T
 import { fetchTrending, fetchPopular, fetchNewReleases, fetchAnimeInfo, type AnimeSearchResult, type AnimeInfo } from '../services/animeApi'
 import { getMyRating, setRating as submitRating, clearRating, type RatingValue } from '../services/ratings'
 import { isFavorite as fetchIsFavorite, toggleFavorite, listFavorites, removeFavorite, type FavoriteRow } from '../services/favorites'
+import { useSource } from '../context/SourceContext'
 
 export default function HomePage({ navigate }: NavProps) {
   // Mock catalogue's local stats + live (Supabase-backed) stats are
@@ -323,13 +324,16 @@ export default function HomePage({ navigate }: NavProps) {
    everywhere else) built for one purpose: quick access to a saved
    series' watch link. A play button appears over the box on hover
    (always visible on touch, same as .search-card__overlay elsewhere)
-   and opens AnikotoTV's search results for the title directly, so
-   there's no need to visit the detail page first just to watch. The
-   heart in the corner unfavorites in place. Clicking the rest of the
-   box still goes to the detail page, same as every other card. ── */
+   and opens the user's chosen source's search results for the title
+   directly (AniKoto by default - see SourceContext / the "Pick Source"
+   option on the Profile page), so there's no need to visit the detail
+   page first just to watch. The heart in the corner unfavorites in
+   place. Clicking the rest of the box still goes to the detail page,
+   same as every other card. ── */
 function FavoriteCard({ fav, navigate, onRemoved }: { fav: FavoriteRow; navigate: NavProps['navigate']; onRemoved: (anilistId: number) => void }) {
   const [removing, setRemoving] = useState(false)
-  const watchUrl = `https://anikototv.to/filter?${new URLSearchParams({ keyword: fav.title }).toString()}`
+  const { buildWatchUrl } = useSource()
+  const watchUrl = buildWatchUrl(fav.title)
 
   async function handleRemove(e: React.MouseEvent) {
     e.stopPropagation()

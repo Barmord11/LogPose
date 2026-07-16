@@ -15,6 +15,7 @@ import { formatWatchTime, EPISODE_MINUTES, navigatorLevel } from '../context/red
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 import { useLiveStats } from '../hooks/useLiveStats'
+import { useSource, WATCH_SOURCES } from '../context/SourceContext'
 
 export default function ProfilePage({ navigate }: NavProps) {
   // Mock catalogue's local stats + live (Supabase-backed) stats from
@@ -30,6 +31,7 @@ export default function ProfilePage({ navigate }: NavProps) {
     level:          navigatorLevel(mockStats.seriesWatched + liveStats.seriesWatched),
   }
   const { user, profile, logout, refreshProfile } = useAuth()
+  const { sourceId, setSourceId } = useSource()
   const [editing, setEditing] = useState(false)
   const [draft, setDraft]     = useState('')
   const [saving, setSaving]   = useState(false)
@@ -367,6 +369,54 @@ export default function ProfilePage({ navigate }: NavProps) {
               </span>
             </button>
           ))}
+
+          {/* Pick Source — which streaming site "Watch Now" / play
+             buttons send the user to. Not a button like the rows above
+             (a <select> can't sit inside one - button > select is
+             invalid HTML and the select's own clicks would also fire
+             the button's onClick), just a plain row reusing the same
+             .action-item layout/spacing. */}
+          <div
+            className="action-item"
+            style={{ cursor: 'default', borderTop: '1px solid rgba(196,198,208,0.15)' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, rgba(254,106,52,0.12), rgba(0,23,54,0.06))',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--secondary-container)', fontVariationSettings: "'FILL' 1" }}>
+                  travel_explore
+                </span>
+              </div>
+              <div>
+                <p style={{ fontFamily: 'var(--font)', fontSize: '14px', fontWeight: 700, color: 'var(--primary)', lineHeight: 1.3 }}>
+                  Pick Source
+                </p>
+                <p style={{ fontSize: '11px', color: 'var(--on-surface-variant)', marginTop: '2px' }}>
+                  Where Watch Now links send you
+                </p>
+              </div>
+            </div>
+            <select
+              className="source-select"
+              value={sourceId}
+              onChange={e => setSourceId(e.target.value)}
+              aria-label="Pick watch source"
+            >
+              {WATCH_SOURCES.map(s => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </section>
 

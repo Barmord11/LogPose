@@ -49,6 +49,7 @@ import {
   type RatingValue,
 } from '../services/ratings'
 import { isFavorite as fetchIsFavorite, toggleFavorite } from '../services/favorites'
+import { useSource } from '../context/SourceContext'
 
 type DetailTab = 'overview' | 'characters' | 'episodes'
 
@@ -424,6 +425,7 @@ function MockDetail({ animeId, navigate, backTo }: { animeId: number; navigate: 
    ══════════════════════════════════════════════════════════════════ */
 
 function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; navigate: NavProps['navigate']; backTo: Page }) {
+  const { buildWatchUrl } = useSource()
   const [anime, setAnime] = useState<AnimeInfo | null>(null)
   const [animeError, setAnimeError] = useState<string | null>(null)
   const [loadingAnime, setLoadingAnime] = useState(true)
@@ -616,15 +618,16 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
   const totalVotes = (ratingSummary?.upCount ?? 0) + (ratingSummary?.downCount ?? 0)
   const percentPositive = totalVotes > 0 ? Math.round(((ratingSummary?.upCount ?? 0) / totalVotes) * 100) : null
 
-  // Watch — searches AnikotoTV by the series title (English preferred,
-  // Romaji fallback - already resolved server-side into anime.title, see
-  // pickTitle() in api/_lib/anilist.ts) instead of the old per-episode
-  // Consumet/AnimeKai deep link. URLSearchParams handles encoding, so a
-  // title with spaces/symbols ("Attack on Titan", "Re:Zero") still
-  // produces a valid URL. Unlike the old link, this doesn't depend on a
-  // separate scrape succeeding - it's always available once the AniList
-  // details fetch itself succeeds.
-  const watchNowUrl = `https://anikototv.to/filter?${new URLSearchParams({ keyword: anime.title }).toString()}`
+  // Watch — searches the user's chosen source (AniKoto by default, see
+  // SourceContext / the "Pick Source" option on the Profile page) by the
+  // series title (English preferred, Romaji fallback - already resolved
+  // server-side into anime.title, see pickTitle() in api/_lib/anilist.ts)
+  // instead of the old per-episode Consumet/AnimeKai deep link.
+  // buildWatchUrl handles encoding, so a title with spaces/symbols
+  // ("Attack on Titan", "Re:Zero") still produces a valid URL. Unlike the
+  // old link, this doesn't depend on a separate scrape succeeding - it's
+  // always available once the AniList details fetch itself succeeds.
+  const watchNowUrl = buildWatchUrl(anime.title)
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--detail-bg-gradient)' }}>
