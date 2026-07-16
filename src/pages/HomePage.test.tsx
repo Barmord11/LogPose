@@ -101,6 +101,30 @@ it("opens a favorited series' AnikotoTV watch link from its hover play button, w
   expect(navigate).not.toHaveBeenCalled()
 })
 
+it('opens the same watch link from anywhere else on a Favorites card, not just the play button', async () => {
+  vi.mocked(favorites.listFavorites).mockResolvedValue([
+    { anilistId: 21, title: 'One Piece', imageUrl: null },
+  ])
+  const navigate = vi.fn()
+
+  render(
+    <AppProvider>
+      <HomePage navigate={navigate} />
+    </AppProvider>,
+  )
+
+  await waitFor(() => expect(screen.getByText('One Piece')).toBeInTheDocument())
+
+  const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
+  // Click the card's title text, not the dedicated play button - the
+  // whole Favorites card is a "watch this" shortcut, so this should
+  // behave identically to clicking the play button.
+  screen.getByText('One Piece').click()
+
+  expect(openSpy).toHaveBeenCalledWith('https://anikototv.to/filter?keyword=One+Piece', '_blank', 'noopener,noreferrer')
+  expect(navigate).not.toHaveBeenCalled()
+})
+
 it('removes a favorite from the Home Favorites section in place, without navigating to the detail page', async () => {
   vi.mocked(favorites.listFavorites).mockResolvedValue([
     { anilistId: 21, title: 'One Piece', imageUrl: null },
@@ -130,6 +154,29 @@ it('shows Trending Now when AniList returns live trending results', async () => 
 
   await waitFor(() => expect(screen.getByText('Trending Now')).toBeInTheDocument())
   expect(screen.getByText('Bar')).toBeInTheDocument()
+})
+
+it('opens the details page from anywhere on a Trending Now card, not just its title', async () => {
+  const result: AnimeSearchResult = { id: '30', title: 'Bar', image: null, releaseDate: null, totalEpisodes: 24 }
+  vi.mocked(animeApi.fetchTrending).mockResolvedValue([result])
+  const navigate = vi.fn()
+
+  render(
+    <AppProvider>
+      <HomePage navigate={navigate} />
+    </AppProvider>,
+  )
+
+  await waitFor(() => expect(screen.getByText('Bar')).toBeInTheDocument())
+
+  // Click the card's image-wrap area, not the title text itself - the
+  // whole card should be one big "open details" target, same as every
+  // series-name click would do.
+  const card = screen.getByText('Bar').closest('.search-card')
+  expect(card).not.toBeNull()
+  card!.querySelector('.search-card__img-wrap')!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+
+  expect(navigate).toHaveBeenCalledWith('detail', 30, 'live')
 })
 
 it('fetches tracker status, rating and favorite state for each trending card', async () => {

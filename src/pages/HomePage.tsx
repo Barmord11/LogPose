@@ -134,7 +134,7 @@ export default function HomePage({ navigate }: NavProps) {
           </div>
           <div className="anime-grid">
             {favorites.slice(0, 5).map(fav => (
-              <FavoriteCard key={fav.anilistId} fav={fav} navigate={navigate} onRemoved={handleFavoriteRemoved} />
+              <FavoriteCard key={fav.anilistId} fav={fav} onRemoved={handleFavoriteRemoved} />
             ))}
           </div>
         </section>
@@ -322,18 +322,23 @@ export default function HomePage({ navigate }: NavProps) {
 
 /* ── Favorites card — square "box" layout (not the 3/4 rectangle used
    everywhere else) built for one purpose: quick access to a saved
-   series' watch link. A play button appears over the box on hover
-   (always visible on touch, same as .search-card__overlay elsewhere)
-   and opens the user's chosen source's search results for the title
-   directly (AniKoto by default - see SourceContext / the "Pick Source"
-   option on the Profile page), so there's no need to visit the detail
-   page first just to watch. The heart in the corner unfavorites in
-   place. Clicking the rest of the box still goes to the detail page,
-   same as every other card. ── */
-function FavoriteCard({ fav, navigate, onRemoved }: { fav: FavoriteRow; navigate: NavProps['navigate']; onRemoved: (anilistId: number) => void }) {
+   series' watch link. Clicking anywhere on the card (not just the
+   play button) opens the user's chosen source's search results for
+   the title directly (AniKoto by default - see SourceContext / the
+   "Pick Source" option on the Profile page), so there's no need to
+   visit the detail page first just to watch - this card is entirely
+   about watching, not browsing details. The play button on hover is
+   just a visual affordance for the same action; its own stopPropagation
+   only exists so clicking it doesn't also fire the card's handler and
+   open two tabs. The heart in the corner unfavorites in place. ── */
+function FavoriteCard({ fav, onRemoved }: { fav: FavoriteRow; onRemoved: (anilistId: number) => void }) {
   const [removing, setRemoving] = useState(false)
   const { buildWatchUrl } = useSource()
   const watchUrl = buildWatchUrl(fav.title)
+
+  function handleWatch() {
+    window.open(watchUrl, '_blank', 'noopener,noreferrer')
+  }
 
   async function handleRemove(e: React.MouseEvent) {
     e.stopPropagation()
@@ -349,7 +354,7 @@ function FavoriteCard({ fav, navigate, onRemoved }: { fav: FavoriteRow; navigate
   }
 
   return (
-    <div className="search-card" onClick={() => navigate('detail', fav.anilistId, 'live')}>
+    <div className="search-card" onClick={handleWatch}>
       <div className="search-card__img-wrap" style={{ aspectRatio: '1/1' }}>
         {fav.imageUrl ? (
           <img src={fav.imageUrl} alt={fav.title} />
