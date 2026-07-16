@@ -10,15 +10,16 @@
  *     original design.
  *
  *   - source="live" (Search) — a real AniList series, identified
- *     by its AniList id. Two independent sources, both server-side:
+ *     by its AniList id. Two independent pieces:
  *       1. DETAILS — title, image, genres, synopsis, status, format,
  *          score, characters, episode count — from AniList's official
  *          GraphQL API — no key required, no crawl-based rate limit.
- *       2. WATCH LINK — the "Watch Now" button opens AnikotoTV's
- *          search results for this series' title in a new tab (see
- *          watchNowUrl in LiveDetail). LogPose never hosts or lists
- *          individual episodes — total episode count is shown as its
- *          own stat, separate from this outbound link.
+ *       2. WATCH LINK — built entirely client-side (see watchNowUrl in
+ *          LiveDetail): the "Watch Now" button opens the user's chosen
+ *          source's (AniKoto by default, see SourceContext) search
+ *          results for this series' title in a new tab. LogPose never
+ *          hosts or lists individual episodes — total episode count is
+ *          shown as its own stat, separate from this outbound link.
  *     List status (Watched / Plan to Watch), the isolated episode
  *     counter, and the Anchor Up/Down community rating are all
  *     LogPose's own data, read from and written to Supabase, scoped
@@ -421,7 +422,8 @@ function MockDetail({ animeId, navigate, backTo }: { animeId: number; navigate: 
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   LIVE — real AniList details + Consumet watch links + Supabase tracker
+   LIVE — real AniList details + a client-built watch link + Supabase
+   tracker
    ══════════════════════════════════════════════════════════════════ */
 
 function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; navigate: NavProps['navigate']; backTo: Page }) {
@@ -621,12 +623,11 @@ function LiveDetail({ anilistId, navigate, backTo }: { anilistId: number; naviga
   // Watch — searches the user's chosen source (AniKoto by default, see
   // SourceContext / the "Pick Source" option on the Profile page) by the
   // series title (English preferred, Romaji fallback - already resolved
-  // server-side into anime.title, see pickTitle() in api/_lib/anilist.ts)
-  // instead of the old per-episode Consumet/AnimeKai deep link.
+  // server-side into anime.title, see pickTitle() in api/_lib/anilist.ts).
   // buildWatchUrl handles encoding, so a title with spaces/symbols
-  // ("Attack on Titan", "Re:Zero") still produces a valid URL. Unlike the
-  // old link, this doesn't depend on a separate scrape succeeding - it's
-  // always available once the AniList details fetch itself succeeds.
+  // ("Attack on Titan", "Re:Zero") still produces a valid URL, and it's
+  // always available once the AniList details fetch itself succeeds -
+  // no separate scrape/lookup needs to succeed first.
   const watchNowUrl = buildWatchUrl(anime.title)
 
   return (
