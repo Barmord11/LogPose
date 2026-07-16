@@ -116,10 +116,36 @@ it('opens the same watch link from anywhere else on a Favorites card, not just t
   await waitFor(() => expect(screen.getByText('One Piece')).toBeInTheDocument())
 
   const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
-  // Click the card's title text, not the dedicated play button - the
+  // Click the card's title text - not the dedicated play button - the
   // whole Favorites card is a "watch this" shortcut, so this should
   // behave identically to clicking the play button.
   screen.getByText('One Piece').click()
+
+  expect(openSpy).toHaveBeenCalledWith('https://anikototv.to/filter?keyword=One+Piece', '_blank', 'noopener,noreferrer')
+  expect(navigate).not.toHaveBeenCalled()
+})
+
+it('opens the watch link when clicking over the image itself, not just the title or the play button', async () => {
+  vi.mocked(favorites.listFavorites).mockResolvedValue([
+    { anilistId: 21, title: 'One Piece', imageUrl: null },
+  ])
+  const navigate = vi.fn()
+
+  render(
+    <AppProvider>
+      <HomePage navigate={navigate} />
+    </AppProvider>,
+  )
+
+  await waitFor(() => expect(screen.getByText('One Piece')).toBeInTheDocument())
+
+  const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
+  // .search-card__overlay sits directly on top of the image (inset: 0)
+  // and used to swallow clicks with its own stopPropagation-only
+  // handler - a click landing here (anywhere over the image that isn't
+  // the play button itself) must still reach the card's own handler.
+  const card = screen.getByText('One Piece').closest('.search-card')
+  card!.querySelector('.search-card__overlay')!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
 
   expect(openSpy).toHaveBeenCalledWith('https://anikototv.to/filter?keyword=One+Piece', '_blank', 'noopener,noreferrer')
   expect(navigate).not.toHaveBeenCalled()
@@ -169,14 +195,36 @@ it('opens the details page from anywhere on a Trending Now card, not just its ti
 
   await waitFor(() => expect(screen.getByText('Bar')).toBeInTheDocument())
 
-  // Click the card's image-wrap area, not the title text itself - the
-  // whole card should be one big "open details" target, same as every
-  // series-name click would do.
+  // .search-card__overlay sits directly on top of the whole image
+  // (inset: 0) and used to swallow clicks with its own
+  // stopPropagation-only handler - a click landing here (anywhere over
+  // the image that isn't one of the action-rail buttons) must still
+  // reach the card's own onClick and open the details page.
   const card = screen.getByText('Bar').closest('.search-card')
   expect(card).not.toBeNull()
-  card!.querySelector('.search-card__img-wrap')!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  card!.querySelector('.search-card__overlay')!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
 
   expect(navigate).toHaveBeenCalledWith('detail', 30, 'live')
+})
+
+it('does not open the details page when clicking the favorite heart button inside a Trending Now card', async () => {
+  const result: AnimeSearchResult = { id: '30', title: 'Bar', image: null, releaseDate: null, totalEpisodes: 24 }
+  vi.mocked(animeApi.fetchTrending).mockResolvedValue([result])
+  vi.mocked(favorites.isFavorite).mockResolvedValue(false)
+  vi.mocked(favorites.toggleFavorite).mockResolvedValue(true)
+  const navigate = vi.fn()
+
+  render(
+    <AppProvider>
+      <HomePage navigate={navigate} />
+    </AppProvider>,
+  )
+
+  await waitFor(() => expect(screen.getByText('Bar')).toBeInTheDocument())
+  screen.getByTitle('Favorite').click()
+
+  await waitFor(() => expect(favorites.toggleFavorite).toHaveBeenCalled())
+  expect(navigate).not.toHaveBeenCalled()
 })
 
 it('fetches tracker status, rating and favorite state for each trending card', async () => {

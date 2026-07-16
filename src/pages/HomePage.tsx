@@ -364,11 +364,15 @@ function FavoriteCard({ fav, onRemoved }: { fav: FavoriteRow; onRemoved: (anilis
 
         {/* Hover overlay - a single centered play button, unlike the
            top-right action rail used elsewhere, since watching is the
-           only action this card exists for. */}
+           only action this card exists for. No onClick/stopPropagation
+           here on purpose - this div sits on top of the whole image
+           (inset: 0), so swallowing its clicks would silently eat every
+           click that lands on the image instead of the button itself.
+           PlayButton already stops its own propagation, so a click that
+           actually lands on the button still can't double-fire. */}
         <div
           className="search-card__overlay"
           style={{ alignItems: 'center', justifyContent: 'center' }}
-          onClick={e => e.stopPropagation()}
         >
           <PlayButton watchUrl={watchUrl} variant="icon" color="orange" />
         </div>
@@ -506,8 +510,16 @@ function TrendingCard({ result, navigate }: { result: AnimeSearchResult; navigat
             <div style={{ width: '100%', height: '100%', background: 'var(--surface-container)' }} />
           )}
 
-          {/* Hover/tap action rail — vertical, pinned top-right (see .search-card__overlay) */}
-          <div className="search-card__overlay" onClick={e => e.stopPropagation()}>
+          {/* Hover/tap action rail — vertical, pinned top-right (see
+             .search-card__overlay). No onClick/stopPropagation on this
+             wrapper itself - it covers the entire image (inset: 0), so
+             swallowing clicks here would eat every click on the image
+             that doesn't land on one of the buttons below, instead of
+             letting it reach the card's own onClick (open details).
+             AddDropdownView and AnchorRatingView already stop their own
+             propagation internally; the heart button below does the
+             same explicitly. */}
+          <div className="search-card__overlay">
             <div className="search-card__action-rail">
               <AddDropdownView
                 inWatched={tracker?.status === 'Watched'}
@@ -523,7 +535,7 @@ function TrendingCard({ result, navigate }: { result: AnimeSearchResult; navigat
               <button
                 className={`heart-btn${favorite ? ' active' : ''}`}
                 title={favorite ? 'Unfavorite' : 'Favorite'}
-                onClick={handleToggleFavorite}
+                onClick={e => { e.stopPropagation(); handleToggleFavorite() }}
                 disabled={favoriteBusy}
                 style={{ color: '#fff', opacity: favoriteBusy ? 0.6 : 1 }}
               >
