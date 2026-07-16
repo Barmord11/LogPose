@@ -104,9 +104,10 @@ their own row.
    > public.anime_ratings, public.anime_favorites;`. If you have real
    > data to preserve, look up each row's correct AniList id by title
    > and `update` it by hand instead of truncating.
-3. **Copy your env vars** — `cp .env.example .env.local` and fill in
-   `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` from
-   Project Settings → API.
+3. **Set your env vars** — create a `.env.local` file in the repo root
+   with `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`, both from
+   Project Settings → API. `.env.local` (like every `.env*` file) is
+   gitignored, so this stays local to your machine.
 4. `npm install`
 
 ## Scripts

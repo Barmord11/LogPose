@@ -13,10 +13,11 @@ dist-ssr
 *.local
 
 # Environment files — real Supabase keys live here, never commit them.
-# (.env.example is intentionally NOT matched by these — it stays tracked.)
+# .env.example is a plain local reference template, not meant to be
+# tracked either - it's covered by the .env.* rule below like every
+# other env file.
 .env
 .env.*
-!.env.example
 
 # Editor directories and files
 .vscode/*
