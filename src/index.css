@@ -652,6 +652,12 @@ input, textarea { font-family: inherit; }
   cursor: pointer;
   transition: background 0.2s;
   font-family: var(--font);
+  /* .action-item is a <button> - browsers default button text to
+     text-align: center, which nothing here ever overrode. That
+     centered the label/sub <p>s within their own box instead of
+     hugging the icon on the left like every other list-row pattern in
+     the app. */
+  text-align: left;
 }
 .action-item:hover { background: rgba(42, 245, 255, 0.06); }
 .action-item:active { transform: scale(0.99); }
