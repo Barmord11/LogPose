@@ -48,3 +48,16 @@ dist-ssr
 
 # Vercel
 .vercel
+
+# Loose design-source files that keep landing at repo root (PSD
+# originals + duplicate/staging PNG exports from asset drops) - the
+# real, in-use copies live under public/images/ and src/assets/.
+# Nothing in the app references a file at repo root, so these are
+# always safe to delete if they reappear locally.
+/*.psd
+/BackgroundProper*.png
+/NewLogo copy.png
+/darkmode.png
+/toggle-neutral.png
+/toggledark.png
+/togglelight.png
