@@ -9,7 +9,18 @@
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,600;1,700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet" />
+    <!-- Body font: swap is right here - showing the fallback system font
+         immediately (then swapping once loaded) beats leaving text
+         invisible. -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,600;1,700&display=swap" rel="stylesheet" />
+    <!-- Icon font: split out with display=block instead of swap. This is
+         a ligature font (the icon's own name, e.g. "home", is the glyph's
+         literal text) - "swap" was letting that raw word render at full
+         size on a slow connection, which spilled out of every icon's
+         tightly-sized box and overlapped neighboring UI (reported on
+         Android). "block" briefly hides the icon instead, which is a far
+         safer failure mode for icons than showing garbled fallback text. -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block" rel="stylesheet" />
   </head>
   <body>
     <div id="root"></div>

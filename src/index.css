@@ -383,6 +383,20 @@ input, textarea { font-family: inherit; }
   display: inline-block;
   user-select: none;
   vertical-align: middle;
+  /* Guard against the icon font not being ready/loaded yet (slow or
+     flaky connections - seen on Android where the fallback window is
+     more likely to be caught mid-load). Without this, the ligature
+     text itself ("home", "search", "explore", "trending_up"...) briefly
+     renders at full size instead of the glyph, and since every icon's
+     layout box was sized for a compact 24px square, that fallback text
+     spills out and overlaps neighboring elements. Clipping to a 1em
+     square keeps that failure state visually contained - a hidden
+     sliver at worst - instead of garbled overlapping words across the
+     header/nav. */
+  width: 1em;
+  height: 1em;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 /* ── 4. GLASS SURFACES ────────────────────────────────────── */
