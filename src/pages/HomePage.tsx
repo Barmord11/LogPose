@@ -291,11 +291,27 @@ export default function HomePage({ navigate }: NavProps) {
 
       {/* Desktop footer */}
       <footer className="desktop-footer" style={{ maxWidth: '1280px', marginLeft: 'auto', marginRight: 'auto', padding: '24px 16px 0' }}>
-        <p>© 742 LogPose Navigational Systems. Set Sail into Adventure.</p>
-        <div style={{ display: 'flex', gap: '32px' }}>
-          <a href="#">Terms of Service</a>
-          <a href="#">Privacy Policy</a>
-          <a href="#">Contact Support</a>
+        <div className="desktop-footer-top">
+          <p>© 742 LogPose Navigational Systems. Set Sail into Adventure.</p>
+          <div style={{ display: 'flex', gap: '32px' }}>
+            <a href="#">Terms of Service</a>
+            <a href="#">Privacy Policy</a>
+            <a href="#">Contact Support</a>
+          </div>
+        </div>
+
+        {/* About — placeholder copy, real text to come later */}
+        <div className="desktop-footer-about">
+          <img src="/images/logo-compass.png" alt="LogPose" className="desktop-footer-about-logo" />
+          <div>
+            <h3 className="desktop-footer-about-title">About LogPose</h3>
+            <p className="desktop-footer-about-text">
+              LogPose is a placeholder voyage log for anime — chart a course through
+              new series, keep your crew's watch progress in order, and let the
+              compass point you toward whatever you're meant to watch next. This
+              text is just here to hold the spot; real copy is coming soon.
+            </p>
+          </div>
         </div>
       </footer>
     </div>

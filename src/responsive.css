@@ -102,20 +102,28 @@
 /* ── DESKTOP FOOTER ───────────────────────────────────────── */
 .desktop-footer {
   display: none;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 24px;
   padding: 24px 40px;
   border-top: 1px solid rgba(196, 198, 208, 0.1);
   margin-top: 40px;
   color: var(--on-surface-variant);
   font-size: 12px;
   font-weight: 700;
-  gap: 24px;
-  flex-wrap: wrap;
 }
 
 @media (min-width: 768px) {
   .desktop-footer { display: flex; }
+}
+
+/* Original row - copyright + legal links, unchanged from before */
+.desktop-footer-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  width: 100%;
 }
 
 .desktop-footer a {
@@ -126,6 +134,37 @@
   font-weight: 700;
 }
 .desktop-footer a:hover { color: var(--secondary); }
+
+/* About row - sits at the bottom-left under the copyright/links row,
+   logo on the left, heading + placeholder blurb to its right. */
+.desktop-footer-about {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  align-self: flex-start;
+  max-width: 560px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(196, 198, 208, 0.08);
+}
+.desktop-footer-about-logo {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.desktop-footer-about-title {
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--on-surface);
+  margin-bottom: 6px;
+}
+.desktop-footer-about-text {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.6;
+  color: var(--on-surface-variant);
+}
 
 /* ── PROFILE HERO LOGO ────────────────────────────────────── */
 /* Mobile: centered horizontally above the avatar (which is itself

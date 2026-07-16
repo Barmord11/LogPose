@@ -224,7 +224,13 @@
   border-color: rgba(255, 140, 60, 0.25);
 }
 :root[data-theme='dark'] .glass-nav {
-  background: rgba(10, 8, 6, 0.85);
+  /* Was rgba(10, 8, 6, ...) - almost the same value as .app-main's own
+     #0d0d0d dark background, so the sidebar/bottom-nav/mobile-header
+     barely read as a separate surface (unlike light mode, where the
+     near-white nav clearly stands apart from the cream page). Lightened
+     a step and given a slight blue lean so it stands out the same way,
+     without going fully navy. */
+  background: rgba(24, 27, 36, 0.88);
   border-color: rgba(255, 140, 60, 0.20);
 }
 
