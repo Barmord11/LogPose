@@ -300,16 +300,17 @@ export default function HomePage({ navigate }: NavProps) {
           </div>
         </div>
 
-        {/* About — placeholder copy, real text to come later */}
+        {/* About */}
         <div className="desktop-footer-about">
           <img src="/images/logo-compass.png" alt="LogPose" className="desktop-footer-about-logo" />
           <div>
             <h3 className="desktop-footer-about-title">About LogPose</h3>
             <p className="desktop-footer-about-text">
-              LogPose is a placeholder voyage log for anime — chart a course through
-              new series, keep your crew's watch progress in order, and let the
-              compass point you toward whatever you're meant to watch next. This
-              text is just here to hold the spot; real copy is coming soon.
+              Navigate through a vast sea of Anime series with Logpose, a swift
+              tracker that keeps your watch progress and alerts you to the newest
+              seasonal updates. Logpose sets your course by linking you directly
+              to an available, external streaming service so you can watch the
+              action unfold.
             </p>
           </div>
         </div>

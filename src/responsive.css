@@ -97,11 +97,21 @@
   margin-top: auto;
   border-top: 1px solid rgba(196, 198, 208, 0.18);
   padding-top: 24px;
+  transition: background 0.2s;
 }
 
-/* ── DESKTOP FOOTER ───────────────────────────────────────── */
+/* Light mode hover: blue wash, using the light theme's own primary
+   navy. Dark mode already gets an orange hover from the more specific
+   :root[data-theme='dark'] .sidebar-user:hover rule in index.css,
+   which wins over this one there since it has higher specificity. */
+.sidebar-user:hover {
+  background: rgba(0, 23, 54, 0.08);
+}
+
+/* ── FOOTER (was desktop-only - now shown on mobile too; the
+   class name is a holdover from that) ────────────────────── */
 .desktop-footer {
-  display: none;
+  display: flex;
   flex-direction: column;
   gap: 24px;
   padding: 24px 40px;
@@ -110,10 +120,6 @@
   color: var(--on-surface-variant);
   font-size: 12px;
   font-weight: 700;
-}
-
-@media (min-width: 768px) {
-  .desktop-footer { display: flex; }
 }
 
 /* Original row - copyright + legal links, unchanged from before */
@@ -147,8 +153,8 @@
   border-top: 1px solid rgba(196, 198, 208, 0.08);
 }
 .desktop-footer-about-logo {
-  width: 44px;
-  height: 44px;
+  width: 96px;
+  height: 96px;
   object-fit: contain;
   flex-shrink: 0;
 }

@@ -230,7 +230,7 @@
      near-white nav clearly stands apart from the cream page). Lightened
      a step and given a slight blue lean so it stands out the same way,
      without going fully navy. */
-  background: rgba(24, 27, 36, 0.88);
+  background: rgba(19, 22, 30, 0.88);
   border-color: rgba(255, 140, 60, 0.20);
 }
 
@@ -1105,7 +1105,14 @@ input, textarea { font-family: inherit; }
   cursor: pointer;
   flex-shrink: 0;
   border-radius: var(--r-lg);
-  transition: transform 0.15s ease;
+  transition: transform 0.15s ease, filter 0.15s ease;
+  /* Subtle lift so the switch reads as sitting above its surface rather
+     than flat against it - same soft shadow in both themes, it's dark
+     enough to show against the light-mode background and the dark
+     glass nav surface alike. drop-shadow (not box-shadow) so it hugs
+     the actual pill artwork's alpha shape instead of the full
+     transparent 150x100 button box, which read as too wide/loose. */
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.28));
 }
 .theme-toggle:hover  { transform: scale(1.05); }
 .theme-toggle:active { transform: scale(0.95); }
