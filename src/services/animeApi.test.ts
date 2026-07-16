@@ -20,7 +20,7 @@ describe('fetchAnimeInfo', () => {
   it('fetches /api/anime/:id and returns the parsed body', async () => {
     vi.mocked(globalThis.fetch).mockResolvedValue({
       ok: true,
-      json: async () => ({ id: '21', title: 'One Piece', image: null, totalEpisodes: 1000, episodes: [] }),
+      json: async () => ({ id: '21', title: 'One Piece', image: null, totalEpisodes: 1000 }),
     } as Response)
 
     const result = await fetchAnimeInfo(21)
@@ -126,7 +126,7 @@ describe('client-side caching', () => {
   it('keeps separate cache entries per series id, per search query, and does not cache the random pick', async () => {
     vi.mocked(globalThis.fetch).mockResolvedValue({
       ok: true,
-      json: async () => ({ id: '1', title: 'One Piece', image: null, totalEpisodes: 1000, episodes: [] }),
+      json: async () => ({ id: '1', title: 'One Piece', image: null, totalEpisodes: 1000 }),
     } as Response)
 
     await fetchAnimeInfo(1)

@@ -11,14 +11,13 @@
  * the character list.
  *
  * This is LogPose's DETAILS + SEARCH source (title, image, genres,
- * synopsis, status, format, score, characters, episode count) — see
- * api/_lib/consumet.ts for the separate WATCH LINK job, which is
- * unrelated and best-effort.
+ * synopsis, status, format, score, characters, episode count). The
+ * WATCH LINK (an outbound search-by-title URL to the user's chosen
+ * streaming site) isn't a server-side lookup at all — see
+ * src/context/SourceContext.tsx, built entirely client-side.
  *
  * Series are identified by their AniList id everywhere in the app and
- * database (`anilist_id`) — not a MyAnimeList id. Consumet's own
- * Anilist meta-provider (`META.Anilist`) accepts that same id
- * directly, so no id crosswalk between the two sources is needed.
+ * database (`anilist_id`) — not a MyAnimeList id.
  */
 
 const ANILIST_GRAPHQL_URL = 'https://graphql.anilist.co'

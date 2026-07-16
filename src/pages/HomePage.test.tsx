@@ -26,7 +26,6 @@ function animeInfo(overrides: Partial<AnimeInfo> = {}): AnimeInfo {
     score: null,
     characters: [],
     totalEpisodes: 0,
-    episodes: [],
     ...overrides,
   }
 }
@@ -163,7 +162,7 @@ it('renders the hero and Popular This Week grid from real AniList popular data',
     { id: '2', title: 'Second Popular Show', image: null, releaseDate: 2023, totalEpisodes: 24 },
   ]
   vi.mocked(animeApi.fetchPopular).mockResolvedValue(popular)
-  vi.mocked(animeApi.fetchAnimeInfo).mockResolvedValue(animeInfo({ id: '1', title: 'Most Popular Show', episodes: [] }))
+  vi.mocked(animeApi.fetchAnimeInfo).mockResolvedValue(animeInfo({ id: '1', title: 'Most Popular Show' }))
 
   renderPage()
 
@@ -171,6 +170,12 @@ it('renders the hero and Popular This Week grid from real AniList popular data',
   // LiveHero's fetched info) and once as its own card in the grid below.
   await waitFor(() => expect(screen.getAllByText('Most Popular Show').length).toBeGreaterThanOrEqual(2))
   expect(screen.getAllByText('Second Popular Show').length).toBeGreaterThanOrEqual(1)
+
+  // The hero's own Watch Now link is built client-side from the title
+  // against the default source (AniKoto) - same as every other Watch
+  // Now link in the app, no per-episode lookup involved.
+  const watchLink = screen.getByText('Watch Now').closest('a')
+  expect(watchLink).toHaveAttribute('href', 'https://anikototv.to/filter?keyword=Most+Popular+Show')
 })
 
 it('shows Newly Released when AniList returns new-release results', async () => {

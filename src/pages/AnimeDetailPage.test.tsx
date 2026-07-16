@@ -25,10 +25,6 @@ const mockAnime: AnimeInfo = {
   score: 8.73,
   characters: [],
   totalEpisodes: 3,
-  episodes: [
-    { id: 'e1', number: 1, title: 'Romance Dawn', image: null, url: 'https://watch.example/ep1' },
-    { id: 'e2', number: 2, title: 'That Little Girl...', image: null, url: null },
-  ],
 }
 
 function trackedRow(overrides: Partial<TrackerRow> = {}): TrackerRow {
@@ -76,16 +72,6 @@ it('renders a single outbound Watch Now link to AnikotoTV\'s search filter, keye
   expect(watchLink).toHaveAttribute('href', 'https://anikototv.to/filter?keyword=One+Piece')
   expect(watchLink).toHaveAttribute('target', '_blank')
   expect(watchLink).toHaveAttribute('rel', expect.stringContaining('noopener'))
-})
-
-it('still links to AnikotoTV even when Consumet/AnimeKai returns no per-episode links at all', async () => {
-  // The Watch button no longer depends on the Consumet scrape succeeding -
-  // it's a title search on a third-party site, so it's available as soon
-  // as the AniList details fetch itself succeeds.
-  vi.mocked(animeApi.fetchAnimeInfo).mockResolvedValue({ ...mockAnime, episodes: [] })
-  await renderLive()
-  const watchLink = screen.getByText('Watch Now').closest('a')
-  expect(watchLink).toHaveAttribute('href', 'https://anikototv.to/filter?keyword=One+Piece')
 })
 
 it('shows the total episode count as its own stat, with no Episodes tab', async () => {

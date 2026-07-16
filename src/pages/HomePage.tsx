@@ -554,11 +554,12 @@ function TrendingCard({ result, navigate }: { result: AnimeSearchResult; navigat
 }
 
 /* ── Live Hero — real AniList series (all-time most popular #1).
-   Fetches full details (for synopsis + outbound watch link via Consumet)
-   plus the same tracker/rating/favorite state as TrendingCard, so the
-   hero's Add/Rate/Favorite controls are fully live. ── */
+   Fetches full details (for the synopsis) plus the same tracker/
+   rating/favorite state as TrendingCard, so the hero's Add/Rate/
+   Favorite controls are fully live. ── */
 function LiveHero({ result, navigate }: { result: AnimeSearchResult; navigate: NavProps['navigate'] }) {
   const anilistId = Number(result.id)
+  const { buildWatchUrl } = useSource()
 
   const [info, setInfo] = useState<AnimeInfo | null>(null)
   const [tracker, setTracker] = useState<TrackerRow | null>(null)
@@ -626,10 +627,10 @@ function LiveHero({ result, navigate }: { result: AnimeSearchResult; navigate: N
     }
   }
 
-  // "Watch Now" opens episode 1's outbound AnimeKai link (best-effort, via
-  // Consumet) — same source LogPose uses everywhere else. LogPose never
-  // hosts episodes itself.
-  const playEpisode = info?.episodes.find(ep => ep.number === 1 && ep.url) ?? info?.episodes.find(ep => ep.url) ?? null
+  // "Watch Now" opens the user's chosen source's search results for this
+  // title (AniKoto by default, see SourceContext) — same as every other
+  // Watch Now link in the app. LogPose never hosts episodes itself.
+  const heroWatchUrl = buildWatchUrl(info?.title ?? result.title)
   const heroImage = info?.bannerImage ?? info?.image ?? result.image
 
   return (
@@ -686,18 +687,16 @@ function LiveHero({ result, navigate }: { result: AnimeSearchResult; navigate: N
         )}
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
-          {playEpisode?.url ? (
-            <a
-              href={playEpisode.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-sunset active-glow"
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '14px 24px', fontSize: '14px', fontWeight: 700, letterSpacing: '0.03em', borderRadius: '9999px', textDecoration: 'none', color: '#fff' }}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: '22px', fontVariationSettings: "'FILL' 1" }}>play_arrow</span>
-              Watch Now
-            </a>
-          ) : null}
+          <a
+            href={heroWatchUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-sunset active-glow"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '14px 24px', fontSize: '14px', fontWeight: 700, letterSpacing: '0.03em', borderRadius: '9999px', textDecoration: 'none', color: '#fff' }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '22px', fontVariationSettings: "'FILL' 1" }}>play_arrow</span>
+            Watch Now
+          </a>
           <button
             onClick={() => navigate('detail', anilistId, 'live')}
             className="btn-glass"

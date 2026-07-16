@@ -4,8 +4,9 @@ An anime tracker with a nautical theme. Create an account, search real
 anime via the official [AniList](https://anilist.co) GraphQL API, track
 a series as **Watched** or **Plan to Watch**, update your episode
 progress, and cast your own Anchor Up/Down vote — then jump straight to
-AnimeKai to actually watch it. LogPose never hosts or embeds video;
-every "Watch" button is an outbound link opened in a new tab.
+your chosen streaming source (AniKoto by default — see "Watch link
+sources" below) to actually watch it. LogPose never hosts or embeds
+video; every "Watch" button is an outbound link opened in a new tab.
 
 ## Architecture
 
@@ -14,18 +15,16 @@ every "Watch" button is an outbound link opened in a new tab.
   built-in Auth (email/password). The frontend talks to Supabase
   directly via `@supabase/supabase-js`, secured by Row Level Security
   (a signed-in user can only ever see/edit their own rows).
-- **Anime data** — two independent sources, both wrapped by small
-  Vercel serverless functions under `api/` so they run server-side:
-  - [AniList](https://anilist.co/graphiql) (`api/_lib/anilist.ts`) — the
-    official, free, key-free GraphQL API at `https://graphql.anilist.co`.
-    This is LogPose's **details and search** source: title, image,
-    banner art, genres, synopsis, status, format, score, characters,
-    episode count — all in a single POST request per query.
-  - [Consumet](https://github.com/consumet/consumets.wiki)
-    (`api/_lib/consumet.ts`, `@consumet/extensions`) — used for exactly
-    one thing: resolving **per-episode watch links on AnimeKai**. This
-    is HTML scraping under the hood, so it's treated as best-effort —
-    see "Why two sources" below.
+- **Anime data** — [AniList](https://anilist.co/graphiql)
+  (`api/_lib/anilist.ts`), the official, free, key-free GraphQL API at
+  `https://graphql.anilist.co`, wrapped by a small Vercel serverless
+  function under `api/` so it runs server-side. This is LogPose's only
+  server-side source: title, image, banner art, genres, synopsis,
+  status, format, score, characters, episode count — all in a single
+  POST request per query. The outbound "Watch Now" link isn't fetched
+  from anywhere — it's built entirely client-side from the series title
+  against the user's chosen streaming source (see "Watch link sources"
+  below).
 - **Hosting** — [Vercel](https://vercel.com): one `vercel deploy` ships
   the static frontend and the `api/` functions together. There is no
   separate backend server to run or keep alive. Every `/api/anime/*`
@@ -34,7 +33,7 @@ every "Watch" button is an outbound link opened in a new tab.
   Serverless Functions, so rather than one file per route, one file
   routes internally to all of them.
 
-### Why two sources
+### Why AniList
 
 LogPose previously used [Jikan](https://jikan.moe) (a REST API over
 MyAnimeList data) for details and search. Jikan's rate limit — roughly
@@ -44,28 +43,26 @@ calls, plus Home's trending and continue-watching calls) tripped 429s
 constantly and made the app feel broken. AniList's GraphQL API has no
 API key, a far more forgiving ~90 req/min per-IP limit, and returns
 details + the character list in one round trip instead of two, so
-LogPose moved to it for the reliable half of the app.
-
-Consumet's own HTML-scraping providers are dependent on third-party
-sites' live structure — they throw Cloudflare timeouts, DNS failures,
-and break whenever a site changes or goes down. That's an acceptable
-risk for a "nice to have" watch link, but not for the core
-details/search experience, so that job stays separate:
-
-1. **Details + search — AniList.** Official, key-free, generous rate
-   limit, no scraping. If this fails, the details page shows an error —
-   but in practice it's the reliable half.
-2. **Watch link — Consumet, on AnimeKai.** Kept because per-episode
-   watch links aren't something AniList provides at all. The `:id` route
-   inside `api/[...path].ts` fetches this *separately* from the AniList
-   call and treats a failure as "no watch link right now" rather than
-   failing the whole request — one flaky scraper should never take down
-   the details page.
+LogPose moved to it.
 
 Series are identified by **AniList id** (`anilist_id`) everywhere in
-the app and the database. Consumet's own AniList meta-provider
-(`META.Anilist`) accepts that same id directly, so no id crosswalk
-between the two sources is needed.
+the app and the database.
+
+### Watch link sources
+
+LogPose never hosts or scrapes episodes — every "Watch Now" button is a
+plain outbound title-search link to a third-party streaming site's own
+search page (e.g. `https://anikototv.to/filter?keyword=One+Piece`),
+built entirely client-side in `src/context/SourceContext.tsx`. There's
+no per-episode lookup and nothing that can fail server-side — the link
+is available as soon as a series' title is known.
+
+`WATCH_SOURCES` in `SourceContext.tsx` currently lists two sources
+(AniKoto, the default, and AniChi), both sharing the same
+`/filter?keyword=<title>` URL shape. A signed-in user's choice is saved
+to `localStorage` (not synced across devices) and surfaced as "Pick
+Source" under Profile → Quick Navigation. Adding another source that
+follows the same URL pattern is a one-line addition to that list.
 
 ### LogPose's own community rating
 
@@ -129,10 +126,10 @@ run in production.
 
 ## Business rules
 
-- **No video hosting** — every episode's "Watch" action opens the
-  external AnimeKai `url` Consumet returns, via `target="_blank"`. If
-  Consumet has no link for an episode (or is down entirely), the tile
-  is disabled rather than linking nowhere.
+- **No video hosting** — every "Watch Now" button opens an outbound
+  title-search link to the user's chosen streaming source (AniKoto by
+  default), built client-side via `target="_blank"` — see "Watch link
+  sources" above.
 - **Restricted lists** — a tracked series can only be `'Watched'` or
   `'Plan to Watch'`. There is no "Watching" status anywhere in the
   schema, the API, or the UI.
@@ -141,16 +138,13 @@ run in production.
   and Home never touch it.
 - **One details page** — there is exactly one details screen
   (`AnimeDetailPage`). Opening it from Search (`source="live"`) fetches
-  real AniList/Consumet/Supabase data; opening it from Home or My List
+  real AniList/Supabase data; opening it from Home or My List
   (`source="mock"`, the default) shows the built-in demo catalogue.
   Same layout either way.
 - **Own ratings, not imported ones** — the Anchor Up/Down score is
   calculated from LogPose users' own votes, not scraped or copied from
   AniList. Each user gets exactly one vote per series; voting the same
   direction again removes it.
-- **A flaky watch-link scraper never breaks the details page** —
-  details (AniList) and the watch link (Consumet) are fetched and
-  error-handled independently server-side.
 
 ## Structure
 
@@ -158,20 +152,19 @@ run in production.
 api/
   _lib/anilist.ts        AniList GraphQL wrapper — details, search,
                           trending, popular, and genre browsing (see
-                          "Why two sources"), with a 5-minute
-                          in-memory response cache
-  _lib/consumet.ts        Consumet wrapper — watch links only, best-effort
+                          "Why AniList"), with a 5-minute in-memory
+                          response cache
   [...path].ts             single catch-all Serverless Function for every
                           /api/anime/* route (one Function total, to stay
                           under Vercel's Hobby-plan 12-Function cap) —
                           reads the path segments from req.query.path and
                           dispatches internally:
-                            GET /api/anime/:id        merges the two sources
+                            GET /api/anime/:id        AniList details only
                             GET /api/anime/search?q=...   AniList only
                             GET /api/anime/trending    AniList trending list
                             GET /api/anime/popular     AniList all-time popular
                             GET /api/anime/genre?g=... AniList by genre
-  _tests/                  vitest coverage for the above (mocked fetch/Consumet)
+  _tests/                  vitest coverage for the above (mocked fetch)
 
   Both _lib/ and _tests/ are prefixed with "_" so Vercel excludes them
   from the Function count entirely (only [...path].ts itself compiles
@@ -229,7 +222,9 @@ series added via Search:
   (the `popular` route in `api/[...path].ts` — all-time most popular,
   not airing-only), replacing the old hardcoded mock catalogue there.
   The hero also fetches full details (`fetchAnimeInfo`) for its
-  synopsis and outbound watch link. The "Director's Choice" bento tile
+  synopsis; its outbound Watch Now link is built client-side the same
+  way as every other card (see "Watch link sources"). The "Director's
+  Choice" bento tile
   uses the #2 popular pick for the same reason — no fictional series
   presented as real data. Home also shows two more live sections when
   there's data for them: a Favorites section (series you've saved for

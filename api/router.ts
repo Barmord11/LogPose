@@ -9,7 +9,6 @@ import {
   searchAnime,
   searchByGenre,
 } from './_lib/anilist.js'
-import { ConsumetLookupError, fetchWatchEpisodes } from './_lib/consumet.js'
 import { setPublicCache, setNoStore } from './_lib/cache.js'
 
 /**
@@ -41,10 +40,10 @@ import { setPublicCache, setNoStore } from './_lib/cache.js'
  * from this file's name.
  *
  * The actual per-route logic didn't move. It always lived in
- * _lib/anilist.ts and _lib/consumet.ts (already excluded from the
- * Function count by their own "_" prefix) - this file is just the
- * router that used to be six separate entry-point files, each doing
- * little more than picking query params apart and calling into _lib.
+ * _lib/anilist.ts (already excluded from the Function count by its own
+ * "_" prefix) - this file is just the router that used to be six
+ * separate entry-point files, each doing little more than picking
+ * query params apart and calling into _lib.
  *
  * Route table (unchanged from before - src/services/animeApi.ts's
  * fetch URLs don't need to change):
@@ -244,18 +243,9 @@ async function handleById(res: VercelResponse, anilistId: string) {
     return
   }
 
-  let episodes: Awaited<ReturnType<typeof fetchWatchEpisodes>> = []
-  try {
-    episodes = await fetchWatchEpisodes(anilistId)
-  } catch (err) {
-    // Best-effort: AnimeKai/Consumet being down means no watch links
-    // today, not a broken details page.
-    if (!(err instanceof ConsumetLookupError)) console.error(err)
-  }
-
   // Same details for every visitor and rarely changes - longer TTL
   // than the browsing lists since a series' own info page is worth
   // keeping warm at the edge for a while.
   setPublicCache(res, 600, 3600)
-  res.status(200).json({ ...anime, episodes })
+  res.status(200).json(anime)
 }

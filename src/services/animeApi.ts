@@ -1,10 +1,10 @@
 /**
  * Thin fetch wrapper around the Vercel serverless functions in
- * /api/anime, which combine two independent sources server-side:
- *  - AniList's official GraphQL API for details + search — see
- *    api/_lib/anilist.ts
- *  - Consumet/AnimeKai for the (best-effort) per-episode watch link —
- *    see api/_lib/consumet.ts
+ * /api/anime, backed by AniList's official GraphQL API for details +
+ * search — see api/_lib/anilist.ts. The "Watch Now" link itself isn't
+ * server-provided at all — it's built client-side from the series
+ * title against the user's chosen source (AniKoto/AniChi/etc, see
+ * src/context/SourceContext.tsx), not fetched from here.
  * Relative paths are same-origin both on Vercel and under `vercel dev`.
  */
 
@@ -88,15 +88,6 @@ export function __resetAnimeApiCacheForTests(): void {
   }
 }
 
-export interface AnimeEpisode {
-  id: string
-  number: number
-  title: string | null
-  image: string | null
-  /** External watch link (AnimeKai). LogPose never hosts video — always opened via target="_blank". Null when Consumet couldn't resolve one. */
-  url: string | null
-}
-
 export interface AnimeCharacter {
   id: string
   name: string
@@ -122,8 +113,6 @@ export interface AnimeInfo {
   score: number | null
   characters: AnimeCharacter[]
   totalEpisodes: number
-  /** Best-effort - empty when Consumet/AnimeKai couldn't be reached. */
-  episodes: AnimeEpisode[]
 }
 
 export interface AnimeSearchResult {
@@ -143,7 +132,7 @@ async function parseJsonOrThrow(res: Response) {
   return body
 }
 
-/** GET /api/anime/:id — full series details (AniList) + episode list with outbound AnimeKai watch links (Consumet, best-effort). Cached — reopening a series you already viewed this session/tab is instant. */
+/** GET /api/anime/:id — full series details from AniList. Cached — reopening a series you already viewed this session/tab is instant. */
 export async function fetchAnimeInfo(anilistId: string | number): Promise<AnimeInfo> {
   return withCache(`anime:${anilistId}`, async () => {
     const res = await fetch(`${BASE_URL}/api/anime/${encodeURIComponent(String(anilistId))}`)

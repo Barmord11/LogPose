@@ -11,7 +11,6 @@ import {
   searchByGenre,
   AnilistLookupError,
 } from '../_lib/anilist.js'
-import { fetchWatchEpisodes, ConsumetLookupError } from '../_lib/consumet.js'
 
 vi.mock('../_lib/anilist.js', () => ({
   fetchAnimeInfo: vi.fn(),
@@ -22,11 +21,6 @@ vi.mock('../_lib/anilist.js', () => ({
   searchAnime: vi.fn(),
   searchByGenre: vi.fn(),
   AnilistLookupError: class AnilistLookupError extends Error {},
-}))
-
-vi.mock('../_lib/consumet.js', () => ({
-  fetchWatchEpisodes: vi.fn(),
-  ConsumetLookupError: class ConsumetLookupError extends Error {},
 }))
 
 function mockRes() {
@@ -89,36 +83,17 @@ describe('GET /api/anime/:id', () => {
     totalEpisodes: 1000,
   }
 
-  it('merges AniList details with Consumet episodes into one payload', async () => {
+  it('returns the AniList details payload as-is', async () => {
     vi.mocked(fetchAnimeInfo).mockResolvedValue(detailsPayload)
-    vi.mocked(fetchWatchEpisodes).mockResolvedValue([
-      { id: 'e1', number: 1, title: null, image: null, url: 'https://watch.example/ep1' },
-    ])
 
     const req = reqFor(['anime', '21'])
     const res = mockRes()
     await handler(req, res)
 
     expect(fetchAnimeInfo).toHaveBeenCalledWith('21')
-    expect(fetchWatchEpisodes).toHaveBeenCalledWith('21')
     expect(res.status).toHaveBeenCalledWith(200)
-    expect(res.json).toHaveBeenCalledWith({
-      ...detailsPayload,
-      episodes: [{ id: 'e1', number: 1, title: null, image: null, url: 'https://watch.example/ep1' }],
-    })
+    expect(res.json).toHaveBeenCalledWith(detailsPayload)
     expect(res.setHeader).toHaveBeenCalledWith('Cache-Control', expect.stringContaining('s-maxage'))
-  })
-
-  it('degrades to an empty episode list when Consumet/AnimeKai fails, without failing the request', async () => {
-    vi.mocked(fetchAnimeInfo).mockResolvedValue(detailsPayload)
-    vi.mocked(fetchWatchEpisodes).mockRejectedValue(new ConsumetLookupError('Cloudflare 522'))
-
-    const req = reqFor(['anime', '21'])
-    const res = mockRes()
-    await handler(req, res)
-
-    expect(res.status).toHaveBeenCalledWith(200)
-    expect(res.json).toHaveBeenCalledWith({ ...detailsPayload, episodes: [] })
   })
 
   it('404s when the AniList lookup fails with AnilistLookupError', async () => {
@@ -127,7 +102,6 @@ describe('GET /api/anime/:id', () => {
     const res = mockRes()
     await handler(req, res)
     expect(res.status).toHaveBeenCalledWith(404)
-    expect(fetchWatchEpisodes).not.toHaveBeenCalled()
   })
 
   it('502s on an unexpected AniList error', async () => {

@@ -28,9 +28,9 @@
    its rate limit (~60 req/min *and* a ~3 req/sec burst cap) made
    ordinary use trip 429s constantly; AniList's GraphQL API is
    key-free, far more forgiving, and returns details + characters in
-   one round trip. Consumet's own AniList meta-provider is still used,
-   separately and best-effort, purely to resolve the Watch button's
-   external link — see api/_lib/consumet.ts.
+   one round trip. The Watch button's external link is built entirely
+   client-side from the series title against the user's chosen
+   streaming source — see src/context/SourceContext.tsx.
 
    MIGRATION NOTE (upgrading an existing installation from the Jikan
    era): the block right below renames each table's `mal_id` column to
